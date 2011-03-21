@@ -1,0 +1,17 @@
+Welcome to the miniDHT project
+
+	My aim was to make a DHT (Distributed Hash Table) written in C++ with not
+	too many dependencies. The DHT itself is based on Kademlia protocol. This
+	is the implemetation used in many project including BitTorrent.
+
+Shord description of warious part :
+
+	bdb_* used as a STL kind of interface to Berkley DB.
+	miniDHT_* actual DHT (only part needed if you want to use it).
+	*.cpp various examples.
+
+Dependencies :
+
+	 - boost (ASIO & serialization)
+	 - openSSL (SHA256 or even MD5 if you enable it)
+	 - Berkley DB (if you want to use it -DWITH_BDB)
