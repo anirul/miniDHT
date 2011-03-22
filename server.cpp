@@ -60,9 +60,11 @@ void watch(boost::asio::deadline_timer* t) {
 int main(int ac, char** av) {
 	unsigned short listen = 4048;
 	unsigned short port = 0;
+	size_t max_record = -1;
 	std::string address = "";
 	bool is_port = false;
 	bool is_address = false;
+	bool is_max_record = false;
 	try {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
@@ -70,6 +72,7 @@ int main(int ac, char** av) {
 			("listen,l", boost::program_options::value<unsigned short>(), "set the listen port")
 			("port,p", boost::program_options::value<unsigned short>(), "set the bootstrap port")
 			("address,a", boost::program_options::value<std::string>(), "set the bootstrap address")
+			("max-record,m", boost::program_options::value<size_t>(), "set the maximum number of local record")
 		;
 		boost::program_options::variables_map vm;
 		boost::program_options::store(
@@ -123,6 +126,18 @@ int main(int ac, char** av) {
 				<< "Bootstrap address was not set."
 				<< std::endl;
 		}
+		if (vm.count("max-record")) {
+			std::cout
+				<< "Max record was set to "
+				<< vm["max-record"].as<size_t>()
+				<< "." << std::endl;
+			max_record = vm["max-record"].as<size_t>();
+			is_max_record = true;
+		} else {
+			std::cout
+				<< "Max record was not set (default is 8Gb)."
+				<< std::endl;
+		}
 		{
 			boost::asio::io_service ios;
 			if (is_port && is_address) {
@@ -136,6 +151,8 @@ int main(int ac, char** av) {
 			} else {
 				pDht = new miniDHT::miniDHT<key_size, token_size>(ios, listen);
 			}
+			if (is_max_record)
+				pDht->set_max_record(max_record);
 			boost::asio::deadline_timer t(
 				ios, 
 				boost::posix_time::seconds(10));

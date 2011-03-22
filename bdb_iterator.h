@@ -89,10 +89,10 @@ namespace bdb {
 		DBC* m_cursor;
 
 		bdb_iterator() 
-			:	m_db(NULL), m_cursor(NULL), m_end(true) {}
+			:	m_end(true), m_db(NULL), m_cursor(NULL) {}
 		
 		bdb_iterator(DB* pdb, unsigned int flags) 
-			:	m_db(pdb), m_cursor(NULL), m_end(true) 
+			:	m_end(true), m_db(pdb), m_cursor(NULL) 
 		{
 			if (flags == DB_LAST){ 
 				m_end = true;
@@ -121,7 +121,7 @@ namespace bdb {
 		}
 		
 		bdb_iterator(DB* pdb, DBT key, DBT data) 
-			:	m_db(pdb), m_cursor(NULL), m_end(true)
+			:	m_end(true), m_db(pdb), m_cursor(NULL)
 		{
 			int ret = 0;
 			if (!pdb) {
@@ -153,7 +153,7 @@ namespace bdb {
 		}
 
 		bdb_iterator(const bdb_iterator& i)
-			:	m_db(NULL), m_end(true), m_cursor(NULL)
+			:	m_end(true), m_db(NULL), m_cursor(NULL)
 		{
 			m_end = i.is_end();
 			m_db = i.m_db;

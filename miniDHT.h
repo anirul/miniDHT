@@ -28,8 +28,17 @@
 #ifndef MINIDHT_HEADER_DEFINED
 #define MINIDHT_HEADER_DEFINED
 
-// #define SERIALIZE_XML
-#define SERIALIZE_BINARY
+#define DEFAULT_MAX_RECORDS (1024 * 1024)
+
+#ifdef SERIALIZE_BINARY
+	#ifdef SERIALIZE_XML
+		#undef SERIALIZE_XML
+	#endif // SERIALIZE_XML
+#else // !SERIZLIZE_BINARY
+	#ifndef SERIALIZE_XML
+		#define SERIALIZE_BINARY
+	#endif // !SERIALIZE_XML
+#endif // SERIALIZE_BINARY
 
 // STL
 #include <iostream>
@@ -131,6 +140,7 @@ namespace miniDHT {
 	
 		const boost::posix_time::time_duration periodic_;
 		const key_t id_;
+		size_t max_records_;
 		boost::asio::io_service& io_service_;
 		boost::asio::deadline_timer dt_;
 		boost::asio::ip::udp::socket socket_;
@@ -151,9 +161,13 @@ namespace miniDHT {
 						
 	public :
 	
-		miniDHT(boost::asio::io_service& io_service, short port)
+		miniDHT(
+			boost::asio::io_service& io_service, 
+			short port,
+			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				id_(local_key<KEY_SIZE>(port)),
+				max_records_(max_records),
 				io_service_(io_service),
 				dt_(
 					io_service, 
@@ -185,9 +199,11 @@ namespace miniDHT {
 			boost::asio::io_service& io_service, 
 			short port,
 			const std::string& target_name,
-			const std::string& target_port)
+			const std::string& target_port,
+			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				id_(local_key<KEY_SIZE>(port)),
+				max_records_(max_records),
 				io_service_(io_service),
 				dt_(
 					io_service, 
@@ -227,7 +243,8 @@ namespace miniDHT {
 			boost::asio::io_service& io_service, 
 			short port,
 			std::list<std::string>& list_name,
-			std::list<std::string>& list_port)
+			std::list<std::string>& list_port,
+			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				io_service_(io_service),
 				dt_(
@@ -239,6 +256,7 @@ namespace miniDHT {
 						boost::asio::ip::udp::v4(), 
 						port)),
 				id_(local_key<KEY_SIZE>(port)),
+				max_records_(max_records),
 				contact_list(id_)
 		{
 			std::stringstream ss("");
@@ -351,6 +369,8 @@ namespace miniDHT {
 			return socket_.local_endpoint(); 
 		}
 		size_t sorage_wait_queue() const { return map_store_digest.size(); }
+		void set_max_record(size_t val) { max_records_ = val; }
+		size_t get_max_record() const { return max_records_; }
 	
 	protected :
 	
@@ -366,8 +386,25 @@ namespace miniDHT {
 		}
 		
 		void insert_db(const key_t& k, const data_item_t& d) {
+			// flush (force database update)
+			db_storage.flush();
+			// check is the element already exist
 			db_key_data_item_iterator ite = db_storage.find(k);
 			if (ite == db_storage.end()) {
+				// check if size limit is reached
+				while (db_storage.size() >= max_records_) {
+					// drop the oldest record
+					db_key_data_item_iterator ite = db_storage.begin();
+					db_key_data_item_iterator oldest_ite = db_storage.begin();
+					for (; ite != db_storage.end(); ++ite) {
+						if ((ite->second.time + ite->second.ttl) < 
+							(oldest_ite->second.time + oldest_ite->second.ttl)) 
+							oldest_ite = ite;
+					}
+					// clean the oldest record & flush
+					db_storage.erase(oldest_ite);
+					db_storage.flush();
+				}
 				db_storage.insert(make_pair(k, d));
 				return;
 			}
