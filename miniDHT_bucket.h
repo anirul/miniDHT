@@ -123,7 +123,7 @@ namespace miniDHT {
 		
 		key_t random_key_in_bucket(unsigned int bn) {
 			key_t ret = local_key_;
-			for (int i = bn; i < KEY_SIZE; ++i) 
+			for (unsigned int i = bn; i < KEY_SIZE; ++i)
 				ret[i] = (random() % 2) != 0;
 			return ret;
 		}

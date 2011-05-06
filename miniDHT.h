@@ -179,6 +179,11 @@ namespace miniDHT {
 						port)),
 				contact_list(id_)
 		{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+			OpenSSL_add_all_digests();
+			OpenSSL_add_all_ciphers();
+#pragma clang diagnostic pop
 			std::stringstream ss("");
 			ss << "localhost.store." << port << ".db";
 			db_storage.open(ss.str().c_str());
@@ -450,7 +455,7 @@ namespace miniDHT {
 				}
 			}
 			// try to diversify the bucket list
-			for (int i = 0; i < (KEY_SIZE - 1); ++i) {
+			for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 				if (contact_list.count(i)) continue;
 				key_t skey = contact_list.random_key_in_bucket(i);
 				iterativeFindNode(skey);
@@ -556,7 +561,7 @@ namespace miniDHT {
 				}
 				map_search.erase(t);
 			} else {
-				for (int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
+				for (unsigned int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
 					send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
 			}
 		}
@@ -568,7 +573,7 @@ namespace miniDHT {
 		{
 			map_search[t].update_list(lc);
 			// iterativeFindValue
-			for (int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
+			for (unsigned int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
 				send_FIND_VALUE(map_search[t].get_node_endpoint(), k, t);
 		}
 		
@@ -588,7 +593,7 @@ namespace miniDHT {
 				// free some local space
 				map_search.erase(t);
 			} else {
-				for (int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
+				for (unsigned int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
 					send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
 			}
 		}
@@ -775,8 +780,8 @@ namespace miniDHT {
 		{
 			std::string address = ep.address().to_string();
 			unsigned short port = ep.port();
+			std::stringstream ss("");
 			try {
-				std::stringstream ss("");
 #ifdef SERIALIZE_BINARY
 				boost::archive::binary_oarchive xoa(ss);
 				xoa << m;
@@ -793,7 +798,8 @@ namespace miniDHT {
 				socket_.send_to(boost::asio::buffer(ss.str()), uep);
 			} catch (std::exception& e) {
 				std::cerr 
-					<< "Exception in send_MESSAGE(" << ep
+					<< "Exception in send_MESSAGE(" << ep << " - " 
+					<< ss.str().size()
 					<< ") : " << e.what() 
 					<< std::endl;				
 			}

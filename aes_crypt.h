@@ -45,6 +45,8 @@ public :
 		unsigned char key[32];
 		unsigned char iv[32];
 		unsigned char salt = T_SALT;
+		memset(key, 0, 32);
+		memset(iv, 0, 32);
 		i = EVP_BytesToKey(
 			EVP_aes_256_cbc(), 
 			EVP_sha1(), 
@@ -59,48 +61,44 @@ public :
 		EVP_DecryptInit_ex(&d_ctx_, EVP_aes_256_cbc(), NULL, key, iv);
 	}
 	std::string encrypt(const std::string& cleartext) {
-//		EVP_EncryptInit_ex(&e_ctx_, NULL, NULL, NULL, NULL);
-		int outl = cleartext.size() + AES_BLOCK_SIZE - 1;
-		std::string ciphertext;
-		ciphertext.resize(outl);
+		std::string out;
+		int len = cleartext.size();
+		int c_len = len + AES_BLOCK_SIZE;
+		int f_len = 0;
+		unsigned char *ciphertext = (unsigned char *)malloc(c_len);
+		EVP_EncryptInit_ex(&e_ctx_, NULL, NULL, NULL, NULL);
 		EVP_EncryptUpdate(
-			&e_ctx_,
-			(unsigned char*)&ciphertext[0], 
-			&outl,
-			(unsigned char*)&cleartext[0],
-			cleartext.size());
-		ciphertext.resize(outl);
-		return ciphertext;
-	}
-	std::string encrypt_end(const std::string& cleartext) {
-		std::string ciphertext;
-		ciphertext.resize(cleartext.size());
-		int f_len = cleartext.size();
-		EVP_EncryptFinal_ex(&e_ctx_, (unsigned char*)&ciphertext[0], &f_len);
-		ciphertext.resize(f_len);
-		return ciphertext;
+			&e_ctx_, 
+			ciphertext, 
+			&c_len, 
+			(unsigned char const*)cleartext.c_str(), 
+			len);
+		EVP_EncryptFinal_ex(&e_ctx_, ciphertext + c_len, &f_len);
+		len = c_len + f_len;
+		out.resize(len);
+		memcpy(&out[0], ciphertext, len);
+		free(ciphertext);
+		return out;
 	}
 	std::string decrypt(const std::string& ciphertext) {
-//		EVP_DecryptInit_ex(&d_ctx_, NULL, NULL, NULL, NULL);
-		std::string cleartext;
-		cleartext.resize(ciphertext.size());
-		int p_len = ciphertext.size();
+		std::string out;
+		int len = ciphertext.size();
+		int p_len = len;
+		int f_len = 0;
+		unsigned char *plaintext = (unsigned char *)malloc(p_len);
+		EVP_DecryptInit_ex(&d_ctx_, NULL, NULL, NULL, NULL);
 		EVP_DecryptUpdate(
-			&d_ctx_,
-			(unsigned char*)&cleartext[0],
-			&p_len,
-			(unsigned char*)&ciphertext[0],
-			ciphertext.size());
-		cleartext.resize(p_len);
-		return cleartext;
-	}
-	std::string decrypt_end(const std::string& ciphertext) {
-		std::string cleartext;
-		cleartext.resize(ciphertext.size());
-		int f_len = ciphertext.size();
-		EVP_DecryptFinal(&d_ctx_, (unsigned char*)&cleartext[0], &f_len);
-		cleartext.resize(f_len);
-		return cleartext;
+			&d_ctx_, 
+			plaintext, 
+			&p_len, 
+			(unsigned char const*)ciphertext.c_str(), 
+			len);
+		EVP_DecryptFinal_ex(&d_ctx_, plaintext + p_len, &f_len);
+		len = p_len + f_len;
+		out.resize(len);
+		memcpy(&out[0], plaintext, len);
+		free(plaintext);
+		return out;
 	}
 };
 

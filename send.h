@@ -25,10 +25,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef SEND_HEADER_DEFINED
+#define SEND_HEADER_DEFINED
+
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
 const unsigned int wait_settle = 10;
-const size_t buf_size = 8192;
+const size_t buf_size = 4096;
 
 enum upload_state_t {
 	WAIT,
@@ -61,7 +64,11 @@ public :
 	void crypt(size_t index);
 	void upload(size_t index);
 	void check(size_t index);
+	void received(size_t index);
 	void found(const std::list<miniDHT::data_item_t>& b);
 	void run_once(boost::asio::deadline_timer* t);
 	bool is_end() const { return end_; }
+	std::string encode(const std::string& key, const std::string& data);
 };
+
+#endif // SEND_HEADER_DEFINED

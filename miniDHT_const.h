@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2010, anirul
+ * Copyright (c) 2009-2011, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,7 @@
 #ifndef MINIDHT_CONST_HEADER_DEFINED
 #define MINIDHT_CONST_HEADER_DEFINED
 
-#define USE_SHA256 1
-
-#ifdef USE_MD5
-#include <openssl/md5.h>
-#endif // USE_MD5
-#ifdef USE_SHA256
-#include <openssl/sha.h>
-#endif // USE_SHA256
+#include <openssl/evp.h>
 #ifdef WIN32
 #define srandom srand
 #define random rand
@@ -44,12 +37,7 @@
 
 namespace miniDHT {
 
-#ifdef USE_MD5
-	const unsigned int DIGEST_LENGTH = 16;
-#endif // USE_MD5
-#ifdef USE_SHA256
 	const unsigned int DIGEST_LENGTH = 32;
-#endif // USE_SHA256
 	
 	template <size_t KEY_SIZE>
 	void fake_callback(std::list<std::bitset<KEY_SIZE> > k) {}
@@ -94,7 +82,7 @@ namespace miniDHT {
 	};
 	
 	inline bool operator==(const digest_t& a, const digest_t& b) {
-		for (int i = 0; i < DIGEST_LENGTH; ++i)
+		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i)
 			if (a.c[i] != b.c[i]) return false;
 		return true;
 	}
@@ -109,7 +97,7 @@ namespace miniDHT {
 	{
 		char temp[(DIGEST_LENGTH * 2) + 1];
 		memset(temp, 0, (DIGEST_LENGTH * 2) + 1);
-		for (int i = 0; i < DIGEST_LENGTH; ++i)
+		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i)
 			sprintf(&temp[i*2], "%02x", (int)digest.c[i]);
 		os << temp;
 		return os;
@@ -119,7 +107,7 @@ namespace miniDHT {
 		std::istream& is,
 		digest_t& digest) 
 	{
-		for (int i = 0; i < DIGEST_LENGTH; ++i) {
+		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i) {
 			std::string hex_hash = "";
 			is.width(2);
 			is >> hex_hash;
@@ -137,51 +125,37 @@ namespace miniDHT {
 	}
 	
 	inline void digest_sum(digest_t& digest, const void* p, size_t s) {
-#ifdef USE_MD5
-		MD5_CTX ctx;
-		MD5_Init(&ctx);
-		MD5_Update(&ctx, p, s);
-		MD5_Final(digest.c, &ctx);
-#endif // USE_MD5
-#ifdef USE_SHA256
-		SHA256_CTX ctx;
-		SHA256_Init(&ctx);
-		SHA256_Update(&ctx, p, s);
-		SHA256_Final(digest.c, &ctx);
-#endif // USE_SHA256
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+		EVP_MD_CTX* ctx = EVP_MD_CTX_create();
+		unsigned int digest_size = DIGEST_LENGTH;
+		EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+		EVP_DigestUpdate(ctx, p, s);
+		EVP_DigestFinal_ex(ctx, digest.c, &digest_size);
+		EVP_MD_CTX_destroy(ctx);
+#pragma clang diagnostic pop
 	}
     
-    inline int digest_file(digest_t& digest, const char* path) {
-        const size_t buf_size = 32768;
-        FILE* file = fopen(path, "rb");
-        if (!file) return -534;
-        size_t bytes_read = 0;
-        char buffer[buf_size];
-#ifdef USE_MD5
-        MD5_CTX ctx;
-        MD5_Init(&ctx);
-#endif // USE_MD5
-#ifdef USE_SHA256
-        SHA256_CTX ctx;
-        SHA256_Init(&ctx);
-#endif // USE_SHA256
-        while ((bytes_read = fread(buffer, 1, buf_size, file))) {
-#ifdef USE_MD5
-            MD5_Update(&ctx, buffer, bytes_read);
-#endif // USE_MD5
-#ifdef USE_SHA256
-            SHA256_Update(&ctx, buffer, bytes_read);
-#endif // USE_SHA256
-        }
-#ifdef USE_MD5
-        MD5_Final(digest.c, &ctx);
-#endif // USE_MD5
-#ifdef USE_SHA256
-        SHA256_Final(digest.c, &ctx);
-#endif // USE_SHA256
-        fclose(file);
-        return 0;
-    }
+	inline int digest_file(digest_t& digest, const char* path) {
+		const size_t buf_size = 32768;
+		FILE* file = fopen(path, "rb");
+		if (!file) return -534;
+		size_t bytes_read = 0;
+		char buffer[buf_size];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+		EVP_MD_CTX* ctx = EVP_MD_CTX_create();
+		unsigned int digest_size = DIGEST_LENGTH;
+		EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+		while ((bytes_read = fread(buffer, 1, buf_size, file))) {
+			EVP_DigestUpdate(ctx, buffer, bytes_read);
+		}
+		EVP_DigestFinal_ex(ctx, digest.c, &digest_size);
+		EVP_MD_CTX_destroy(ctx);
+#pragma clang diagnostic pop
+		fclose(file);
+		return 0;
+	}
 	
 	inline bool operator==(const data_item_t& l, const data_item_t& r) {
 		return ((l.title == r.title) && (l.data == r.data));
@@ -199,13 +173,7 @@ namespace miniDHT {
 		int i = SIZE;
 		std::stringstream ret("");
 		const size_t rest = SIZE % 8;
-		if (rest) {
-			i -= rest;
-			std::bitset<rest> front;
-			for (int j = 0; j < rest; ++j)
-				front[j] = b[i + j];
-			ret << std::hex << front.to_ulong();
-		}
+		if (rest) throw "Key (SIZE % 8) != 0";
 		for (i -= 8; i >= 0; i -= 8) {
 			std::bitset<8> byte;
 			for (int j = 0; j < 8; ++j)
@@ -220,7 +188,7 @@ namespace miniDHT {
 	template <size_t SIZE>
 	std::bitset<SIZE> digest_to_bitset(const digest_t& digest) {
 		std::bitset<SIZE> ret;
-		for (int i = 0; i < SIZE; ++i)
+		for (unsigned int i = 0; i < SIZE; ++i)
 			ret[i] = ((digest.c[(i / 8) % DIGEST_LENGTH]) & (0x01 << (i % 8))) != 0;
 		return ret;
 	}
@@ -269,7 +237,7 @@ namespace miniDHT {
 	template <size_t SIZE>
 	bool operator< (const std::bitset<SIZE>& a, const std::bitset<SIZE>& b) {
 		if (a == b) return false;
-		for (int pos = 1; pos <= SIZE; ++pos) {
+		for (unsigned int pos = 1; pos <= SIZE; ++pos) {
 			if (a[SIZE - pos]) { // a
 				if (!b[SIZE - pos]) // !b
 					return false;
@@ -303,7 +271,7 @@ namespace miniDHT {
 		const std::bitset<SIZE>& k2) 
 	{
 		const int last_bit = SIZE - 1;
-		for (int i = 0; i < SIZE; ++i)
+		for (unsigned int i = 0; i < SIZE; ++i)
 			if (k1[last_bit - i] != k2[last_bit - i]) 
 				return i;
 		return SIZE;
@@ -312,7 +280,7 @@ namespace miniDHT {
 	template <size_t SIZE>
 	std::bitset<SIZE> random_bitset() {
 		std::bitset<SIZE> bs;
-		for (int i = 0; i < SIZE; ++i)
+		for (unsigned int i = 0; i < SIZE; ++i)
 			bs[i] = (random() % 2) != 0;
 		return bs;
 	}

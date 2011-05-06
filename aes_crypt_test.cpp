@@ -108,24 +108,19 @@ int main(int ac, char** av) {
 	}
 	try {
 		aes_crypt<5, 42> ac(key);
-		while (!feof(ifd)) {
-			std::string buffer;
-			buffer.resize(8 * 1024);
-			int rd = fread(&buffer[0], 1, buffer.size(), ifd);
-			buffer.resize(rd);
-			if (encrypt) {
-				buffer = ac.encrypt(buffer);
-			} else if (decrypt) {
-				buffer = ac.decrypt(buffer);
-			}
-			fwrite(&buffer[0], 1, buffer.size(), ofd);
+		std::string buffer;
+		fseeko(ifd, 0, SEEK_END);
+		size_t total = ftello(ifd);
+		fseeko(ifd, 0, SEEK_SET);
+		buffer.resize(total);
+		int rd = fread(&buffer[0], 1, buffer.size(), ifd);
+		buffer.resize(rd);
+		if (encrypt) {
+			buffer = ac.encrypt(buffer);
+		} else if (decrypt) {
+			buffer = ac.decrypt(buffer);
 		}
-		std::string end_buffer = "";
-		if (encrypt)
-			end_buffer = ac.encrypt_end(end_buffer);
-		else 
-			end_buffer = ac.decrypt_end(end_buffer);
-		fwrite(&end_buffer[0], 1, end_buffer.size(), ofd);
+		fwrite(&buffer[0], 1, buffer.size(), ofd);
 	} catch (const char* msg) {
 		std::cerr << "Error : " << msg << std::endl;
 		return -1;

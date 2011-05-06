@@ -302,7 +302,7 @@ namespace bdb {
 		// not suppose to be writable
 		const pointer operator->() {
 			m_temp_value = this->operator*();
-			return (std::pair<const Key, T>*)(&m_temp_value);
+			return (pointer)(&m_temp_value);
 		}
 		
 	};

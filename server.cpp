@@ -69,14 +69,20 @@ int main(int ac, char** av) {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
 			("help,h", "produce help message")
-			("listen,l", boost::program_options::value<unsigned short>(), "set the listen port")
-			("port,p", boost::program_options::value<unsigned short>(), "set the bootstrap port")
-			("address,a", boost::program_options::value<std::string>(), "set the bootstrap address")
-			("max-record,m", boost::program_options::value<size_t>(), "set the maximum number of local record")
+			("listen,l", boost::program_options::value<unsigned short>(), 
+				"set the listen port")
+			("port,p", boost::program_options::value<unsigned short>(), 
+				"set the bootstrap port")
+			("address,a", boost::program_options::value<std::string>(), 
+				"set the bootstrap address")
+			("max-record,m", boost::program_options::value<size_t>(), 
+				"set the maximum number of local record")
 		;
 		boost::program_options::variables_map vm;
 		boost::program_options::store(
-			boost::program_options::command_line_parser(ac, av).options(desc).run(), 
+			boost::program_options::command_line_parser(
+				ac, 
+				av).options(desc).run(), 
 			vm);
 		boost::program_options::notify(vm);
 		if (vm.count("help")) {
@@ -161,6 +167,7 @@ int main(int ac, char** av) {
 		}
 	} catch (std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;
+		return -1;
 	}
     return 0;
 }
