@@ -1,7 +1,7 @@
 ALL = miniDHT_server miniDHT_test miniDHT_send miniDHT_recv aes_crypt_test
 CXX = clang++
 FLAGS = -g -I/usr/local/include -I.. -DWITH_BDB
-LIBS = -L/usr/local/lib -lboost_thread-mt -lboost_serialization-mt -lboost_system-mt -lboost_program_options-mt -lboost_date_time-mt -lcrypto -ldb
+LIBS = -L/usr/local/lib -lboost_thread-mt -lboost_serialization-mt -lboost_system-mt -lboost_program_options-mt -lboost_date_time-mt -lboost_filesystem-mt -lcrypto -ldb
 MINIDHT_HEADERS = miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h
 BDB_HEADERS = bdb_basic_db.h bdb_btree.h bdb_hash.h bdb_iterator.h bdb_multibtree.h bdb_serialize.h
 

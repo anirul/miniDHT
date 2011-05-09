@@ -30,7 +30,7 @@
 
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
-const unsigned int wait_settle = 10;
+const unsigned int wait_settle = 5;
 const size_t buf_size = 4096;
 
 enum upload_state_t {

@@ -30,7 +30,7 @@
 
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
-const unsigned int wait_settle = 10;
+const unsigned int wait_settle = 5;
 const size_t buf_size = 4096;
 
 enum download_state_t {
@@ -56,7 +56,6 @@ private :
 	std::map<size_t, size_t> map_index_counter_;
 public :
 	dht_recv_file(
-		const std::string& file_name,
 		const miniDHT::digest_t& digest,
 		miniDHT::miniDHT<key_size, token_size>* pDht);
 	~dht_recv_file();

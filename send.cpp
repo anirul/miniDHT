@@ -35,6 +35,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <boost/filesystem.hpp>
+
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -55,10 +57,11 @@ dht_send_file::dht_send_file(
 	const std::string& file_name,
 	miniDHT::miniDHT<key_size, token_size>* pDht) 
 {	
-	file_name_ = file_name;
 	ifile_ = NULL;
 	pDht_ = pDht;
 	end_ = false;
+	boost::filesystem::path p(file_name);
+	file_name_ = p.filename().string();
 	std::cout 
 		<< "Compute DIGEST of file [" 
 		<< file_name 
@@ -136,6 +139,7 @@ void dht_send_file::upload(size_t index) {
 		ss << digest_;
 		ss << " " << std::dec << index;
 		ss << " " << std::dec << packet_total_;
+		ss << " " << file_name_;
 		title_data = ss.str();
 	}
 	miniDHT::data_item_t data;
@@ -330,7 +334,7 @@ int main(int ac, char** av) {
                 << "File to send set to ["
                 << vm["file"].as<std::string>()
                 << "]." << std::endl;
-            file_name = vm["file"].as<std::string>();
+            file_name = vm["file"].as<std::string>();		
         } else {
             std::cout
                 << "No file specified bailing out!"

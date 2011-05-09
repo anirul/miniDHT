@@ -29,6 +29,7 @@
 #include <openssl/evp.h>
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -53,20 +54,14 @@ std::string dht_recv_file::decode(
 }
 
 dht_recv_file::dht_recv_file(
-	const std::string& file_name,
 	const miniDHT::digest_t& digest,
 	miniDHT::miniDHT<key_size, token_size>* pDht)
 {
-	file_name_ = file_name;
 	ofile_ = NULL;
 	pDht_ = pDht;
 	end_ = false;
 	packet_total_ = 0;
 	digest_ = digest;
-	std::cout << " -> DIGEST : [" << digest_ << "]" << std::endl;
-	ofile_ = fopen(file_name.c_str(), "wb");
-	if (!ofile_)
-		throw "Invalid file cannot write.";
 	// try to get the 5 first part (don't know yet how many there is)
 	for (unsigned int i = 0; i < 5; ++i)
 		map_state_.insert(std::make_pair<size_t, download_state_t>(
@@ -136,6 +131,8 @@ void dht_recv_file::decrypt(size_t index) {
 }
 
 void dht_recv_file::write(size_t index) {
+	if (!ofile_) ofile_ = fopen(file_name_.c_str(), "wb");
+	if (!ofile_) throw "Invalid file cannot write.";
 	fseeko(ofile_, (index * buf_size), SEEK_SET);
 	std::string buffer = map_crypt_[index];
 	fwrite(&buffer[0], 1, buffer.size(), ofile_);
@@ -172,34 +169,29 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 			ss << digest_;
 			key = ss.str();
 		}
-		std::string title = ite->title;
-
-		std::cout << "title : [";
-		for (int i = 0; i < title.size(); ++i) {
-			unsigned char c = title[i];
-			if (c < 0x0f) std::cout << "0";
-			std::cout << (int)c;
-		}
-		std::cout << "]" << std::endl;
-		
+		std::string title = ite->title;		
 		std::string title_string_id;
 		size_t packet_number;
 		size_t packet_total;
 		std::string decrypted_title = decode(key, title);
 		if (!decrypted_title.size()) throw "unable to decode title";
-		std::cout 
-			<< "decrypted string : ["
-			<< decrypted_title
-			<< "]" << std::endl;
-		std::stringstream ss(decrypted_title);
-		ss >> title_string_id;
-		if (title_string_id != key) throw "incorrect packet";
-		ss >> packet_number;
-		ss >> packet_total;
+		{
+			std::stringstream ss(decrypted_title);
+			ss >> title_string_id;
+			if (title_string_id != key) throw "incorrect packet";
+			ss >> packet_number;
+			ss >> packet_total;
+			size_t pos = 0;
+			pos = ss.str().find(" ", pos + 1);
+			pos = ss.str().find(" ", pos + 1);
+			pos = ss.str().find(" ", pos + 1);
+			pos++;
+			file_name_ = ss.str().substr(pos);
+		}
 		std::cout 
 			<< "\t[" << packet_number 
 			<< "/" << packet_total 
-			<< "] found in : [" << decrypted_title
+			<< "] found : [" << file_name_
 			<< "]";
 		std::cout << " OK!" << std::endl;
 		// update packet total
@@ -214,6 +206,13 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 				}
 			}
 		}
+		std::map<size_t, download_state_t>::iterator dite;
+		for (dite = map_state_.begin(); dite != map_state_.end(); ++dite) {
+			if (dite->first >= packet_total) {
+				map_state_.erase(dite->first);
+				dite = map_state_.begin();
+			}
+		}		 
 		map_load_.insert(std::pair<size_t, std::string>(
 				packet_number,
 				ite->data));
@@ -270,7 +269,6 @@ int main(int ac, char** av) {
 	unsigned short listen = 4048;
     unsigned short port = 0;
     std::string address = "";
-    std::string file_name = "out";
     std::string digest_string = "";
     miniDHT::digest_t digest;
     bool is_port = false;
@@ -282,8 +280,7 @@ int main(int ac, char** av) {
         ("listen,l", boost::program_options::value<unsigned short>(), "set the listen port")
         ("port,p", boost::program_options::value<unsigned short>(), "set the bootstrap port")
         ("address,a", boost::program_options::value<std::string>(), "set the bootstrap address")
-        ("file,f", boost::program_options::value<std::string>(), "file to be send to the DHT")
-		("digest,d", boost::program_options::value<std::string>(), "digest of the file to be received")
+		  ("digest,d", boost::program_options::value<std::string>(), "digest of the file to be received")
         ;
         boost::program_options::variables_map vm;
         boost::program_options::store(
@@ -337,18 +334,6 @@ int main(int ac, char** av) {
                 << "Bootstrap address was not set."
                 << std::endl;
         }
-        if (vm.count("file")) {
-            std::cout
-                << "File to receive ["
-                << vm["file"].as<std::string>()
-                << "]." << std::endl;
-            file_name = vm["file"].as<std::string>();
-        } else {
-            std::cerr
-                << "No file specified bailing out!"
-                << std::endl;
-            return -1;
-        }
 		if (vm.count("digest")) {
 			std::cout
 				<< "Digest of the file ["
@@ -357,7 +342,6 @@ int main(int ac, char** av) {
 			digest_string = vm["digest"].as<std::string>();
 			std::stringstream ss(digest_string);
 			ss >> digest;
-			std::cout << digest << std::endl;
 		} else {
 			std::cerr
 				<< "No digest secified bailing out!"
@@ -386,7 +370,7 @@ int main(int ac, char** av) {
 				<< std::dec 
 				<< wait_settle 
 				<< " seconds)." << std::endl;
-			dht_recv_file drf(file_name, digest, pDht);
+			dht_recv_file drf(digest, pDht);
 			t.async_wait(boost::bind(&dht_recv_file::run_once, &drf, &t));
 			while (!drf.is_end()) {
 				ios.run_one();
