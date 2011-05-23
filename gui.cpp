@@ -48,19 +48,24 @@ bool MyApp::OnInit() {
 		wxPoint(50,50), 
 		wxSize(800,600));
 
+#ifdef __WXMAC__
+	wxApp::SetExitOnFrameDelete(false);
+#endif // __WXMAC__
+
+//	wxMenuBar::MacSetCommonMenuBar(menubar);
 	wxMenuBar* menubar = new wxMenuBar();
 	wxMenu* main_menu = new  wxMenu();
-
-	main_menu->Append(wxID_ANY, _("Upload..."));
-	main_menu->Append(wxID_ANY, _("Download..."));
 
 	main_menu->Append(wxID_ABOUT, _("About"));
 	main_menu->Append(wxID_HELP, _("Help"));
 	main_menu->Append(wxID_PREFERENCES, _("Preferences"));
 	main_menu->Append(wxID_EXIT, _("Exit")); 
 
+	main_menu->Append(wxID_ANY, _("Upload..."));
+	main_menu->Append(wxID_ANY, _("Download..."));
+
 	menubar->Append(main_menu, _("File"));
- 
+
 	frame->SetMenuBar(menubar);
 	frame->Show();
 
@@ -93,5 +98,9 @@ void MyApp::OnPrefs(wxCommandEvent& evt) {
 void MyApp::OnQuit(wxCommandEvent& evt) {
 	// should do some cleanup
 	exit(0);
+}
+
+void MyApp::MacOpenFile(const wxString& filename) {
+	wxMessageBox(_("MacOpenFile(") + filename + _(")"));
 }
 

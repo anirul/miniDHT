@@ -38,6 +38,7 @@ public:
 	void OnQuit(wxCommandEvent& evt);
 	void OnUpload(wxCommandEvent& evt);
 	void OnDownload(wxCommandEvent& evt);
+	void MacOpenFile(const wxString& fileName);
 };
 
 #endif // MINIDHT_GUI_HEADER_DEFINED
