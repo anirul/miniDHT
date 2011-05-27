@@ -53,7 +53,7 @@ void watch(boost::asio::deadline_timer* t) {
 	std::cout << miniDHT::update_time() << std::endl;
 	for (ite = ls.begin(); ite != ls.end(); ++ite)
 		std::cout << (*ite) << std::endl;
-	t->expires_at(t->expires_at() + boost::posix_time::seconds(10));
+	t->expires_at(t->expires_at() + boost::posix_time::seconds(1));
 	t->async_wait(boost::bind(watch, t));
 }
 
@@ -145,32 +145,33 @@ int main(int ac, char** av) {
 				<< std::endl;
 		}
 		{
-			boost::asio::io_service ios_dht;
-			boost::asio::io_service ios_watch;
+			boost::asio::io_service ios;
+//			boost::asio::io_service ios_watch;
 			if (is_port && is_address) {
 				std::stringstream ss("");
 				ss << port;
 				pDht = new miniDHT::miniDHT<key_size, token_size>(
-					ios_dht,
+					ios,
 					listen,
 					address,
 					ss.str());
 			} else {
 				pDht = new miniDHT::miniDHT<key_size, token_size>(
-					ios_dht, 
+					ios, 
 					listen);
 			}
 			if (is_max_record) pDht->set_max_record(max_record);
 			boost::asio::deadline_timer t(
-				ios_watch, 
+				ios, 
 				boost::posix_time::seconds(5));
 			t.async_wait(boost::bind(watch, &t));
-			boost::thread watch_thread(
-				boost::bind(&boost::asio::io_service::run, &ios_watch));
-			boost::thread dht_thread(
-				boost::bind(&boost::asio::io_service::run, &ios_dht));
-			watch_thread.join();
-			dht_thread.join();
+//			boost::thread watch_thread(
+//				boost::bind(&boost::asio::io_service::run, &ios_watch));
+//			boost::thread dht_thread(
+//				boost::bind(&boost::asio::io_service::run, &ios_dht));
+//			watch_thread.join();
+//			dht_thread.join();
+			ios.run();
 		}
 	} catch (std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;

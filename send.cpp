@@ -256,123 +256,126 @@ inline bool is_port_valid(unsigned short port) {
 }
 
 int main(int ac, char** av) {
-    unsigned short listen = 4048;
-    unsigned short port = 0;
-    std::string address = "";
+	unsigned short listen = 4048;
+	unsigned short port = 0;
+	std::string address = "";
 	std::string file_name = "";
-    bool is_port = false;
-    bool is_address = false;
+	bool is_port = false;
+	bool is_address = false;
 	try {
-        boost::program_options::options_description desc("Allowed options");
-        desc.add_options()
-        ("help,h", "produce help message")
-        ("listen,l", boost::program_options::value<unsigned short>(), 
+		boost::program_options::options_description desc("Allowed options");
+		desc.add_options()
+		("help,h", "produce help message")
+		("listen,l", boost::program_options::value<unsigned short>(), 
 			"set the listen port")
-        ("port,p", boost::program_options::value<unsigned short>(), 
+		("port,p", boost::program_options::value<unsigned short>(), 
 			"set the bootstrap port")
-        ("address,a", boost::program_options::value<std::string>(), 
+		("address,a", boost::program_options::value<std::string>(), 
 			"set the bootstrap address")
-        ("file,f", boost::program_options::value<std::string>(), 
+		("file,f", boost::program_options::value<std::string>(), 
 			"file to be send to the DHT")
-        ;
-        boost::program_options::variables_map vm;
-        boost::program_options::store(
+		;
+		boost::program_options::variables_map vm;
+		boost::program_options::store(
 			boost::program_options::command_line_parser(
 				ac, 
 				av).options(desc).run(), 
 			vm);
-        boost::program_options::notify(vm);
-        if (vm.count("help")) {
-            std::cout << desc << std::endl;
-            return 1;
-        }
-        if (vm.count("listen")) {
-            std::cout 
-                << "Listen port was set to "
-                << vm["listen"].as<unsigned short>() 
-                << "." << std::endl;
-            listen = vm["listen"].as<unsigned short>();
-            if (!is_port_valid(listen)) {
-                std::cerr << "error: Invalid port [1-65535]." << std::endl;
-                return 1;
-            }
-        } else {
-            std::cout
-                << "Listen port was not set use default 4048."
-                << std::endl;
-        }
-        if (vm.count("port")) {
-            std::cout
-                << "Bootstrap port was set to "
-                << vm["port"].as<unsigned short>() 
-                << "." << std::endl;
-            port = vm["port"].as<unsigned short>();
-            if (!is_port_valid(port)) {
-                std::cerr << "error: Invalid port [1-65535]." << std::endl;
-                return 1;
-            }
-            is_port = true;
-        } else {
-            std::cout
-                << "Boostrap port was not set."
-                << std::endl;
-        }
-        if (vm.count("address")) {
-            std::cout
-                << "Bootstrap address was set to "
-                << vm["address"].as<std::string>() 
-                << "." << std::endl;
-            address = vm["address"].as<std::string>();
-            is_address = true;
-        } else {
-            std::cout
-                << "Bootstrap address was not set."
-                << std::endl;
-        }
-        if (vm.count("file")) {
-            std::cout
-                << "File to send set to ["
-                << vm["file"].as<std::string>()
-                << "]." << std::endl;
-            file_name = vm["file"].as<std::string>();		
-        } else {
-            std::cout
-                << "No file specified bailing out!"
-                << std::endl;
-            return -1;
-        }
-        {
-            boost::asio::io_service ios;
+		boost::program_options::notify(vm);
+		if (vm.count("help")) {
+			std::cout << desc << std::endl;
+			return 1;
+		}
+		if (vm.count("listen")) {
+			std::cout 
+				<< "Listen port was set to "
+				<< vm["listen"].as<unsigned short>() 
+				<< "." << std::endl;
+			listen = vm["listen"].as<unsigned short>();
+			if (!is_port_valid(listen)) {
+				std::cerr << "error: Invalid port [1-65535]." << std::endl;
+				return 1;
+			}
+		} else {
+			std::cout
+				<< "Listen port was not set use default 4048."
+				<< std::endl;
+		}
+		if (vm.count("port")) {
+			std::cout
+				<< "Bootstrap port was set to "
+				<< vm["port"].as<unsigned short>() 
+				<< "." << std::endl;
+			port = vm["port"].as<unsigned short>();
+			if (!is_port_valid(port)) {
+				std::cerr << "error: Invalid port [1-65535]." << std::endl;
+				return 1;
+			}
+			is_port = true;
+		} else {
+			std::cout
+				<< "Boostrap port was not set."
+				<< std::endl;
+		}
+		if (vm.count("address")) {
+			std::cout
+				<< "Bootstrap address was set to "
+				<< vm["address"].as<std::string>() 
+				<< "." << std::endl;
+			address = vm["address"].as<std::string>();
+			is_address = true;
+		} else {
+			std::cout
+				<< "Bootstrap address was not set."
+				<< std::endl;
+		}
+		if (vm.count("file")) {
+			std::cout
+				<< "File to send set to ["
+				<< vm["file"].as<std::string>()
+				<< "]." << std::endl;
+			file_name = vm["file"].as<std::string>();		
+		} else {
+			std::cout
+				<< "No file specified bailing out!"
+				<< std::endl;
+			return -1;
+		}
+		{
+			boost::asio::io_service ios;
+//			boost::asio::io_service ios_send;
 			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+			if (is_port && is_address) {
+				std::stringstream ss("");
+				ss << port;
+				pDht = new miniDHT::miniDHT<key_size, token_size>(
+					ios,
+					listen,
+					address,
+					ss.str());
+			} else {
+				pDht = new miniDHT::miniDHT<key_size, token_size>(
+					ios, 
+					listen);
+			}
+			std::cout 
+				<< "Waiting to the DHT to settle ("
+				<< std::dec 
+				<< wait_settle 
+				<< " seconds)." << std::endl;
 			boost::asio::deadline_timer t(
 				ios,
 				boost::posix_time::seconds(wait_settle));
-            if (is_port && is_address) {
-                std::stringstream ss("");
-                ss << port;
-                pDht = new miniDHT::miniDHT<key_size, token_size>(
-                    ios,
-                    listen,
-                    address,
-                    ss.str());
-            } else {
-                pDht = 
-					new miniDHT::miniDHT<key_size, token_size>(ios, listen);
-            }
-			
-            std::cout 
-                << "Waiting to the DHT to settle ("
-				<< std::dec 
-                << wait_settle 
-                << " seconds)." << std::endl;
 			dht_send_file dsf(file_name, pDht);
 			t.async_wait(boost::bind(&dht_send_file::run_once, &dsf, &t));
+//			boost::thread send_thread(
+//				boost::bind(&boost::asio::io_service::run, &ios_send));
 			while (!dsf.is_end()) {
 				ios.run_one();
 			}
 			std::cout << std::endl << "Finished." << std::endl;
 			return 0;
-        }
+		}
 	} catch (std::exception& e) {
 		std::cerr << "exception : " << e.what() << std::endl;
 	} catch (const char* msg) {
@@ -380,3 +383,4 @@ int main(int ac, char** av) {
 	}
 	return 0;
 }
+

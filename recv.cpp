@@ -109,7 +109,12 @@ void dht_recv_file::received(size_t index) {
 		std::make_pair<size_t, size_t>(index, 1));
 	}
 	// timeout didn't receive yet so ask for it again
-	if (map_index_counter_[index] > 10) {
+	if (map_index_counter_[index] > 20) {
+		std::cout 
+			<< std::endl 
+			<< "Warning packet " 
+			<< index 
+			<< " missing requery." << std::endl;
 		map_index_counter_.erase(
 		map_index_counter_.find(index));
 		map_state_[index] = WAIT;
@@ -143,6 +148,7 @@ void dht_recv_file::write(size_t index) {
 
 void dht_recv_file::check() {
 	std::cout 
+		<< std::endl
 		<< "Check DIGEST of file ["
 		<< file_name_
 		<< "] please wait." << std::endl;
@@ -188,12 +194,13 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 			pos++;
 			file_name_ = ss.str().substr(pos);
 		}
-		std::cout 
-			<< "\t[" << packet_number 
-			<< "/" << packet_total 
-			<< "] found : [" << file_name_
-			<< "]";
-		std::cout << " OK!" << std::endl;
+//		std::cout 
+//			<< "\t[" << packet_number 
+//			<< "/" << packet_total 
+//			<< "] found : [" << file_name_
+//			<< "]";
+//		std::cout << " OK!" << std::endl;
+		std::cout << ".";
 		// update packet total
 		if (!packet_total_) {
 			packet_total_ = packet_total;

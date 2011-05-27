@@ -31,7 +31,7 @@
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
 const unsigned int wait_settle = 5;
-const size_t buf_size = 4096;
+const size_t buf_size = 8192;
 
 enum download_state_t {
 	WAIT,

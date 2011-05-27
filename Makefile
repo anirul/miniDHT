@@ -1,4 +1,6 @@
-ALL = miniDHT_server miniDHT_test miniDHT_send miniDHT_recv miniDHT_gui BitSmear.app
+ALL = miniDHT_server miniDHT_test \
+	miniDHT_send miniDHT_recv miniDHT_gui \
+	BitSmear.app
 CXX = clang++
 FLAGS = -g -I/usr/local/include -I.. -DWITH_BDB
 LIBS = -L/usr/local/lib -lboost_thread-mt -lboost_serialization-mt -lboost_system-mt -lboost_program_options-mt -lboost_date_time-mt -lboost_filesystem-mt -lcrypto -ldb
@@ -40,4 +42,5 @@ BitSmear.app: Info.plist miniDHT_gui
 	cp miniDHT_gui BitSmear.app/Contents/MacOS/BitSmear
 
 clean:
-	rm -f *.o core $(ALL)	
+	rm -rf *.o core $(ALL)	
+
