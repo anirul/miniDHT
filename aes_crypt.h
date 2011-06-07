@@ -37,8 +37,11 @@ const int AES_BLOCK_SIZE = 256;
 template <int T_ROUND = 5, unsigned char T_SALT = 42>
 class aes_crypt { 
 protected :
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 	EVP_CIPHER_CTX e_ctx_;
 	EVP_CIPHER_CTX d_ctx_;
+#pragma clang diagnostic pop
 public :
 	aes_crypt(const std::string& digest) {
 		int i;
@@ -47,6 +50,8 @@ public :
 		unsigned char salt = T_SALT;
 		memset(key, 0, 32);
 		memset(iv, 0, 32);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		i = EVP_BytesToKey(
 			EVP_aes_256_cbc(), 
 			EVP_sha1(), 
@@ -59,6 +64,7 @@ public :
 		EVP_EncryptInit_ex(&e_ctx_, EVP_aes_256_cbc(), NULL, key, iv);
 		EVP_CIPHER_CTX_init(&d_ctx_);
 		EVP_DecryptInit_ex(&d_ctx_, EVP_aes_256_cbc(), NULL, key, iv);
+#pragma clang diagnostic pop
 	}
 	std::string encrypt(const std::string& cleartext) {
 		std::string out;
@@ -66,6 +72,8 @@ public :
 		int c_len = len + AES_BLOCK_SIZE;
 		int f_len = 0;
 		unsigned char *ciphertext = (unsigned char *)malloc(c_len);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		EVP_EncryptInit_ex(&e_ctx_, NULL, NULL, NULL, NULL);
 		EVP_EncryptUpdate(
 			&e_ctx_, 
@@ -74,6 +82,7 @@ public :
 			(unsigned char const*)cleartext.c_str(), 
 			len);
 		EVP_EncryptFinal_ex(&e_ctx_, ciphertext + c_len, &f_len);
+#pragma clang diagnostic pop
 		len = c_len + f_len;
 		out.resize(len);
 		memcpy(&out[0], ciphertext, len);
@@ -86,6 +95,8 @@ public :
 		int p_len = len;
 		int f_len = 0;
 		unsigned char *plaintext = (unsigned char *)malloc(p_len);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 		EVP_DecryptInit_ex(&d_ctx_, NULL, NULL, NULL, NULL);
 		EVP_DecryptUpdate(
 			&d_ctx_, 
@@ -94,6 +105,7 @@ public :
 			(unsigned char const*)ciphertext.c_str(), 
 			len);
 		EVP_DecryptFinal_ex(&d_ctx_, plaintext + p_len, &f_len);
+#pragma clang diagnostic pop
 		len = p_len + f_len;
 		out.resize(len);
 		memcpy(&out[0], plaintext, len);
