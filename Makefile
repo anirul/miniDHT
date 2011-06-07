@@ -1,6 +1,12 @@
+# hand made Makefile sorry I m lazy...
+
 ALL = miniDHT_server miniDHT_test \
-	miniDHT_send miniDHT_recv miniDHT_gui \
-	BitSmear.app
+	miniDHT_send miniDHT_recv miniDHT_gui 
+
+ifeq ($(OSTYPE), darwin)
+ALL += BitSmear.app
+endif
+
 CXX = clang++
 FLAGS = -g -I/usr/local/include -I.. -DWITH_BDB
 LIBS = -L/usr/local/lib -lboost_thread-mt -lboost_serialization-mt -lboost_system-mt -lboost_program_options-mt -lboost_date_time-mt -lboost_filesystem-mt -lcrypto -ldb
@@ -31,6 +37,7 @@ miniDHT_recv: recv.o
 miniDHT_gui: gui.o
 	$(CXX) -o miniDHT_gui gui.o $(LIBS) `wx-config --libs`
 
+ifeq ($(OSTYPE), darwin)
 BitSmear.app: Info.plist miniDHT_gui
 	-mkdir BitSmear.app
 	-mkdir BitSmear.app/Contents
@@ -40,6 +47,7 @@ BitSmear.app: Info.plist miniDHT_gui
 	cp Info.plist BitSmear.app/Contents
 	echo -n 'APPL????' > BitSmear.app/Contents/PkgInfo
 	cp miniDHT_gui BitSmear.app/Contents/MacOS/BitSmear
+endif
 
 clean:
 	rm -rf *.o core $(ALL)	
