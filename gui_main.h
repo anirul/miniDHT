@@ -25,20 +25,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MINIDHT_GUI_HEADER_DEFINED
-#define MINIDHT_GUI_HEADER_DEFINED
+#ifndef MINIDHT_GUI_MAIN_HEADER_DEFINED
+#define MINIDHT_GUI_MAIN_HEADER_DEFINED
 
-class MyApp: public wxApp {
+class gui_main : public wxApp {
 	bool OnInit();
-	wxFrame *frame;
+	wxFrame* frame_;
+	wxDataViewListCtrl* data_list_ctrl_;
 public:
 	DECLARE_EVENT_TABLE()
 	void OnAbout(wxCommandEvent& evt);
 	void OnPrefs(wxCommandEvent& evt);
 	void OnQuit(wxCommandEvent& evt);
+	void OnConnect(wxCommandEvent& evt);
 	void OnUpload(wxCommandEvent& evt);
 	void OnDownload(wxCommandEvent& evt);
+	void OnCancel(wxCommandEvent& evt);
+	void OnInfo(wxCommandEvent& evt);
+	void OnNetworkStatus(wxCommandEvent& evt);
+#ifdef __WXMAC__
 	void MacOpenFile(const wxString& fileName);
+#endif // __WXMAC__
 };
 
-#endif // MINIDHT_GUI_HEADER_DEFINED
+#endif // MINIDHT_GUI_MAIN_HEADER_DEFINED
