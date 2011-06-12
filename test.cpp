@@ -126,7 +126,7 @@ void store_value(boost::asio::deadline_timer* t) {
 	data.data = test;
 	miniDHT::miniDHT<key_size, token_size>* pDHT = 
 		list_ptd.at(random() % list_ptd.size());
-	std::list<std::string> ls = pDHT->nodes_description();
+//	std::list<std::string> ls = pDHT->nodes_description();
 //	std::cout 
 //		<< "get local ID <<"
 //		<< miniDHT::key_to_string<key_size>(pDHT->get_local_key())

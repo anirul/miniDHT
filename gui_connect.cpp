@@ -36,7 +36,10 @@ gui_connect::gui_connect(const wxString& title)
 			title, 
 			wxDefaultPosition, 
 			wxSize(250, 150), 
-			wxSTAY_ON_TOP | wxSYSTEM_MENU)
+			wxSTAY_ON_TOP | wxCAPTION),
+		hostname_ctrl_(NULL),
+		port_ctrl_(NULL),
+		title_(title)
 {
 	wxPanel *panel = new wxPanel(this, -1);
 
@@ -45,24 +48,24 @@ gui_connect::gui_connect(const wxString& title)
 
 	wxStaticText *st1 = new wxStaticText(
 		panel,
-		-1,
+		wxID_ANY,
 		_("Host name"),
 		wxPoint(15, 20));
-	wxTextCtrl *tc = new wxTextCtrl(
+	hostname_ctrl_ = new wxTextCtrl(
 		panel, 
-		-1, 
-		_(""), 
+		wxID_ANY, 
+		_("localhost"), 
 		wxPoint(95, 20));
 
 	wxStaticText *st2 = new wxStaticText(
 		panel,
-		-1,
+		wxID_ANY,
 		_("Port"),
 		wxPoint(15, 50));
-	wxSpinCtrl* sc = new wxSpinCtrl(
+	port_ctrl_ = new wxSpinCtrl(
 		panel,
-		-1,
-		_("4242"),
+		wxID_ANY,
+		_("4000"),
 		wxPoint(95, 50),
 		wxSize(80, -1),
 		wxSP_ARROW_KEYS,
@@ -88,9 +91,26 @@ gui_connect::gui_connect(const wxString& title)
 	vbox->Add(panel, 1);
 	vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
 
+	this->Start(250);
 	this->SetSizer(vbox);
-
 	this->Center();
-	this->EndModal(-1);
+}
+
+void gui_connect::Notify() {
+	{
+		static wxString moving_string[] = {
+			_(".oOo.| %s |.oOo."),
+			_("oOo..| %s |..oOo"),
+			_("Oo..o| %s |o..oO"),
+			_("o..oO| %s |Oo..o"),
+			_("..oOo| %s |oOo..")
+		};
+		static unsigned int count = 0;
+		this->SetTitle(
+			wxString::Format(
+				moving_string[count % 5], 
+				title_));
+		count++;
+	}
 }
 

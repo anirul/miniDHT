@@ -27,12 +27,15 @@
 
 #include <wx/wx.h>
 #include <wx/dataview.h>
+#include <wx/spinctrl.h>
 #include <wx/stdpaths.h>
 #ifdef __WXMAC__
 #include <ApplicationServices/ApplicationServices.h>
 #endif // __WXMAC__
 #include "gui_main.h" 
 #include "gui_connect.h"
+#include "gui_info.h"
+#include "gui_network_status.h"
  
 IMPLEMENT_APP(gui_main)
 
@@ -72,12 +75,20 @@ END_EVENT_TABLE()
 
 bool gui_main::OnInit() {
 	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+	title_ = _("BitSmear");
 	frame_ = new wxFrame(
 		(wxFrame *)NULL, 
 		-1,  
-		_(".oO BitSmear Oo."), 
+		title_, 
 		wxPoint(50,50), 
 		wxSize(800,600));
+	Connect(
+		wxID_ANY,
+		wxEVT_TIMER,
+		wxTimerEventHandler(gui_main::OnTimer),
+		NULL,
+		this);
+	timer_.Start(250);	
 
 #ifdef __WXMAC__
 	wxApp::SetExitOnFrameDelete(false);
@@ -99,7 +110,7 @@ bool gui_main::OnInit() {
 
 		wxMenu* tool_menu = new wxMenu();
 		
-		tool_menu->Append(wxID_NETWORK, _("Network status..."));
+		tool_menu->Append(wxID_NETWORK_STATUS, _("Network status..."));
 		
 		menubar->Append(file_menu, _("File"));
 		menubar->Append(tool_menu, _("Tools"));
@@ -108,8 +119,9 @@ bool gui_main::OnInit() {
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	{	// toolbar
 		wxImage::AddHandler(new wxPNGHandler);		
+#ifdef __WXMAC__
 		wxString path = wxStandardPathsCF::Get().GetResourcesDir() + _("/");
-
+#endif // __WXMAC__
 		wxBitmap download(path + _("Knob Download.png"), wxBITMAP_TYPE_PNG);
 		wxBitmap upload(path + _("Knob Upload.png"), wxBITMAP_TYPE_PNG);
 		wxBitmap connected(path + _("Knob Record On.png"), wxBITMAP_TYPE_PNG);
@@ -125,7 +137,9 @@ bool gui_main::OnInit() {
 			disconnected, 
 			wxITEM_NORMAL,
 			_("Connect to a server"));
-//		toolbar->AddSeparator();
+#ifndef __WXMAC__
+		toolbar->AddSeparator();
+#endif // __WXMAC__
 		toolbar->AddTool(
 			wxID_TOOLBAR_DOWNLOAD, 
 			_("Download"), 
@@ -138,7 +152,9 @@ bool gui_main::OnInit() {
 			_("Upload"), 
 			upload, 
 			_("Upload a file"));
-//		toolbar->AddSeparator();
+#ifndef __WXMAC__
+		toolbar->AddSeparator();
+#endif // __WXMAC__
 		toolbar->AddTool(
 			wxID_TOOLBAR_CANCEL,
 			_("Cancel"),
@@ -183,6 +199,7 @@ bool gui_main::OnInit() {
 		data_list_ctrl_->AppendProgressColumn("Progress");
 		data_list_ctrl_->AppendToggleColumn("Finish");
 	}
+
 	frame_->Centre();
 	frame_->SetMenuBar(menubar);
 	frame_->Show();
@@ -197,10 +214,15 @@ bool gui_main::OnInit() {
 } 
 
 void gui_main::OnConnect(wxCommandEvent& evt) {
-	// connect window
 	gui_connect dialog;
-	if (dialog.ShowModal() == wxID_OK)
-		wxMessageBox(_("TODO : Connect to a server."));
+	if (dialog.ShowModal() == wxID_OK) {
+		wxString temp;
+		temp = _("TODO : Connect to server : ");
+		temp += dialog.get_hostname();
+		temp += _(":");
+		temp += wxString::Format(wxT("%i"), dialog.get_port());
+		wxMessageBox(temp);
+	}
 }
 
 void gui_main::OnUpload(wxCommandEvent& evt) {
@@ -228,17 +250,19 @@ void gui_main::OnCancel(wxCommandEvent& evt) {
 }
 
 void gui_main::OnInfo(wxCommandEvent& evt) {
-	// info on some action
-	wxMessageBox(_("TODO : Info on some action."));
+	gui_info dialog;
+	if (dialog.ShowModal() == wxID_OK)
+		wxMessageBox(_("TODO : Info on some action."));
 }
 
 void gui_main::OnNetworkStatus(wxCommandEvent& evt) {
-	// show network status
-	wxMessageBox(_("TODO : Network Status."));
+	gui_network_status dialog;
+	if (dialog.ShowModal() == wxID_OK)
+		wxMessageBox(_("TODO : Fillup network info."));
 }
 
 void gui_main::OnQuit(wxCommandEvent& evt) {
-	// should do some cleanup
+	wxMessageBox(_("TODO : Some cleanup?"));
 	exit(0);
 }
 
@@ -247,4 +271,23 @@ void gui_main::MacOpenFile(const wxString& filename) {
 	wxMessageBox(_("MacOpenFile(") + filename + _(")"));
 }
 #endif // __WXMAC__
+
+void gui_main::OnTimer(wxTimerEvent& evt) {
+	{
+		static wxString moving_string[] = {
+			_(".oOo.| %s |.oOo."),
+			_("oOo..| %s |..oOo"),
+			_("Oo..o| %s |o..oO"),
+			_("o..oO| %s |Oo..o"),
+			_("..oOo| %s |oOo..")
+		};
+		static unsigned int count = 0;
+		frame_->SetTitle(
+			wxString::Format(
+				moving_string[count % 5], 
+				title_));
+		count++;
+	}
+}
+
 

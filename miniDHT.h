@@ -166,6 +166,7 @@ namespace miniDHT {
 		miniDHT(
 			boost::asio::io_service& io_service, 
 			short port,
+			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				id_(local_key<KEY_SIZE>(port)),
@@ -183,9 +184,9 @@ namespace miniDHT {
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			std::stringstream ss("");
-			ss << "localhost.store." << port << ".db";
+			ss << path << "localhost.store." << port << ".db";
 			db_storage.open(ss.str().c_str());
-			restore_from_backup(port);
+			restore_from_backup(path, port);
 			socket_.async_receive_from(
 				boost::asio::buffer(packet_buffer_recv, PACKET_SIZE), 
 				sender_endpoint_,
@@ -203,6 +204,7 @@ namespace miniDHT {
 			short port,
 			const std::string& target_name,
 			const std::string& target_port,
+			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				id_(local_key<KEY_SIZE>(port)),
@@ -220,9 +222,9 @@ namespace miniDHT {
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			std::stringstream ss("");
-			ss << "localhost.store." << port << ".db";
+			ss << path << "localhost.store." << port << ".db";
 			db_storage.open(ss.str().c_str());
-			restore_from_backup(port);
+			restore_from_backup(path, port);
 			boost::asio::ip::udp::resolver resolver(io_service);
 			boost::asio::ip::udp::resolver::query query(
 				boost::asio::ip::udp::v4(), 
@@ -248,6 +250,7 @@ namespace miniDHT {
 			short port,
 			std::list<std::string>& list_name,
 			std::list<std::string>& list_port,
+			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				io_service_(io_service),
@@ -265,7 +268,7 @@ namespace miniDHT {
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			std::stringstream ss("");
-			ss << "localhost.store." << port << ".db";
+			ss << path << "localhost.store." << port << ".db";
 			db_storage.open(ss.str().c_str());
 			restore_from_backup(port);
 			std::list<std::string>::iterator it_name = list_name.begin();
@@ -385,18 +388,12 @@ namespace miniDHT {
 	
 	public :
 	
-		std::list<std::string> nodes_description() {
+		std::list<contact_t> nodes_description() {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::list<std::string> ls;
+			std::list<contact_t> ls;
 			bucket_iterator ite = contact_list.begin();
-			for (; ite != contact_list.end(); ++ite) {
-				std::stringstream ss("");
-				ss 
-					<< "[" << common_bits<KEY_SIZE>(id_, ite->second.key) 
-					<< "] <<" << key_to_string<KEY_SIZE>(ite->second.key)
-					<< ">>";
-				ls.push_back(ss.str());
-			}
+			for (; ite != contact_list.end(); ++ite)
+				ls.push_back(ite->second);
 			return ls;
 		}
 
@@ -437,9 +434,12 @@ namespace miniDHT {
 	
 	protected :
 	
-		void restore_from_backup(unsigned short port) {
+		void restore_from_backup(
+			const std::string& path,
+			unsigned short port) 
+		{
 			std::stringstream sb("");
-			sb << "localhost.buckets." << port << ".db";
+			sb << path << "localhost.buckets." << port << ".db";
 			db_backup.open(sb.str().c_str());
 			db_key_endpoint_iterator dbit;
 			for (dbit = db_backup.begin(); dbit != db_backup.end(); ++dbit) {

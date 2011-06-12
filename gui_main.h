@@ -32,6 +32,8 @@ class gui_main : public wxApp {
 	bool OnInit();
 	wxFrame* frame_;
 	wxDataViewListCtrl* data_list_ctrl_;
+	wxString title_;
+	wxTimer timer_;
 public:
 	DECLARE_EVENT_TABLE()
 	void OnAbout(wxCommandEvent& evt);
@@ -43,6 +45,7 @@ public:
 	void OnCancel(wxCommandEvent& evt);
 	void OnInfo(wxCommandEvent& evt);
 	void OnNetworkStatus(wxCommandEvent& evt);
+	void OnTimer(wxTimerEvent& evt);
 #ifdef __WXMAC__
 	void MacOpenFile(const wxString& fileName);
 #endif // __WXMAC__

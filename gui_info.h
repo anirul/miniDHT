@@ -25,19 +25,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GUI_CONNECT_HEADER_DEFINED
-#define GUI_CONNECT_HEADER_DEFINED
+#ifndef GUI_INFO_HEADER_DEFINED
+#define GUI_INFO_HEADER_DEFINED
 
-class gui_connect : private wxTimer, public wxDialog {
-	wxTextCtrl* hostname_ctrl_;
-	wxSpinCtrl* port_ctrl_;
+class gui_info : private wxTimer, public wxDialog {
 	wxString title_;
 	void Notify();
-public:
-	gui_connect(const wxString& title = _("Connect to host"));
-	wxString get_hostname() const { return hostname_ctrl_->GetValue(); }
-	unsigned short get_port() const { return port_ctrl_->GetValue(); }
+public :
+	gui_info(const wxString& title = _("Action Info"));
 };
 
-#endif // GUI_CONNECT_HEADER_DEFINED
+#endif // GUI_INFO_HEADER_DEFINED
 

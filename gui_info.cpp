@@ -25,19 +25,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GUI_CONNECT_HEADER_DEFINED
-#define GUI_CONNECT_HEADER_DEFINED
+#include <wx/wx.h>
+#include "gui_info.h"
 
-class gui_connect : private wxTimer, public wxDialog {
-	wxTextCtrl* hostname_ctrl_;
-	wxSpinCtrl* port_ctrl_;
-	wxString title_;
-	void Notify();
-public:
-	gui_connect(const wxString& title = _("Connect to host"));
-	wxString get_hostname() const { return hostname_ctrl_->GetValue(); }
-	unsigned short get_port() const { return port_ctrl_->GetValue(); }
-};
+gui_info::gui_info(const wxString& title)
+	: 	wxDialog(
+			NULL,
+			wxID_ANY,
+			title,
+			wxDefaultPosition,
+			wxSize(250, 250),
+			wxSTAY_ON_TOP | wxSYSTEM_MENU),
+		title_(title)
+{
+	wxPanel *panel = new wxPanel(this, -1);
 
-#endif // GUI_CONNECT_HEADER_DEFINED
+	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
+
+	wxButton *okButton = new wxButton(
+		this, 
+		wxID_OK, 
+		wxT("Ok"), 
+      wxDefaultPosition, 
+		wxSize(70, 30));
+
+	hbox->Add(okButton, 1);
+
+	vbox->Add(panel, 1);
+	vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+
+	this->Start(250);
+	this->SetSizer(vbox);
+	this->Center();
+}
+
+void gui_info::Notify() {
+	{
+		static wxString moving_string[] = {
+			_(".oOo.| %s |.oOo."),
+			_("oOo..| %s |..oOo"),
+			_("Oo..o| %s |o..oO"),
+			_("o..oO| %s |Oo..o"),
+			_("..oOo| %s |oOo..")
+		};
+		static unsigned int count = 0;
+		this->SetTitle(
+			wxString::Format(
+				moving_string[count % 5], 
+				title_));
+		count++;
+	}
+}
 
