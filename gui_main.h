@@ -33,6 +33,8 @@ class gui_main : public wxApp {
 	wxFrame* frame_;
 	wxDataViewListCtrl* data_list_ctrl_;
 	wxString title_;
+	wxString temp_path_;
+	wxString ressources_path_;
 	wxTimer timer_;
 public:
 	DECLARE_EVENT_TABLE()

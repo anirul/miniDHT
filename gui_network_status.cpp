@@ -28,6 +28,7 @@
 #include <wx/wx.h>
 #include <wx/dataview.h>
 #include "gui_network_status.h"
+#include "gui_dht.h"
 
 gui_network_status::gui_network_status(const wxString& title)
 	:	wxDialog(
@@ -87,7 +88,28 @@ void gui_network_status::Notify() {
 				title_));
 		count++;
 	}
-	// TODO update the list from the DHT
+	data_list_ctrl_->DeleteAllItems();		
+	std::list<miniDHT_t::contact_t> ls = gui_dht::instance()->status();
+	std::list<miniDHT_t::contact_t>::iterator ite = ls.begin();
+	for (; ite != ls.end(); ++ite) {
+		wxVector<wxVariant> data;
+		{
+			std::stringstream ss("");
+			ss << ite->ep;
+			data.push_back(ss.str().c_str());
+		}
+		{
+			std::stringstream ss("");
+			ss << ite->key;
+			data.push_back(ss.str().c_str());
+		}
+		{
+			std::stringstream ss("");
+			ss << ite->ttl;
+			data.push_back(ss.str().c_str());
+		}
+		data_list_ctrl_->AppendItem(data);
+	}
 }
 
 

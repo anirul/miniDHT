@@ -901,7 +901,7 @@ namespace miniDHT {
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			send_PING(ep, token);
+			send_PING_nolock(ep, token);
 		}
 
 	protected :

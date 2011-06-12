@@ -36,6 +36,7 @@
 #include "gui_connect.h"
 #include "gui_info.h"
 #include "gui_network_status.h"
+#include "gui_dht.h"
  
 IMPLEMENT_APP(gui_main)
 
@@ -115,20 +116,29 @@ bool gui_main::OnInit() {
 		menubar->Append(file_menu, _("File"));
 		menubar->Append(tool_menu, _("Tools"));
 	}
-
+	{	// set some path related stuff
+#ifdef __WXMAC__
+		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _("/");
+		temp_path_ = wxStandardPathsCF::Get().GetTempDir() + ("/");
+#else
+		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _("/");
+		temp_path_ = wxStandardPaths::Get().GetTempDir() + ("/");
+#endif // __WXMAC__
+		wxMessageBox(
+			_("INFO : setting paths to : \n") +
+			_("ressources\t: ") + ressources_path_ + _("\n") +
+			_("temp\t: ") + temp_path_);
+	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	{	// toolbar
 		wxImage::AddHandler(new wxPNGHandler);		
-#ifdef __WXMAC__
-		wxString path = wxStandardPathsCF::Get().GetResourcesDir() + _("/");
-#endif // __WXMAC__
-		wxBitmap download(path + _("Knob Download.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap upload(path + _("Knob Upload.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap connected(path + _("Knob Record On.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap disconnected(path + _("Knob Record Off.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap info(path + _("Knob Info.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap cancel(path + _("Knob Cancel.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap grey(path + _("Knob Grey.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap download(ressources_path_ + _("Knob Download.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap upload(ressources_path_ + _("Knob Upload.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap connected(ressources_path_ + _("Knob Record On.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap disconnected(ressources_path_ + _("Knob Record Off.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap info(ressources_path_ + _("Knob Info.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap cancel(ressources_path_ + _("Knob Cancel.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap grey(ressources_path_ + _("Knob Grey.png"), wxBITMAP_TYPE_PNG);
 
 		toolbar->AddTool(
 			wxID_TOOLBAR_CONNECT, 
@@ -204,6 +214,8 @@ bool gui_main::OnInit() {
 	frame_->SetMenuBar(menubar);
 	frame_->Show();
 
+	gui_dht::instance(std::string(temp_path_.mb_str()))->start(11235);
+
 #ifdef __WXMAC__
 	ProcessSerialNumber PSN;
 	GetCurrentProcess(&PSN);
@@ -215,14 +227,10 @@ bool gui_main::OnInit() {
 
 void gui_main::OnConnect(wxCommandEvent& evt) {
 	gui_connect dialog;
-	if (dialog.ShowModal() == wxID_OK) {
-		wxString temp;
-		temp = _("TODO : Connect to server : ");
-		temp += dialog.get_hostname();
-		temp += _(":");
-		temp += wxString::Format(wxT("%i"), dialog.get_port());
-		wxMessageBox(temp);
-	}
+	if (dialog.ShowModal() == wxID_OK)
+		gui_dht::instance(std::string(temp_path_))->ping(
+			std::string(dialog.get_hostname().mb_str()),
+			dialog.get_port());
 }
 
 void gui_main::OnUpload(wxCommandEvent& evt) {
@@ -257,12 +265,11 @@ void gui_main::OnInfo(wxCommandEvent& evt) {
 
 void gui_main::OnNetworkStatus(wxCommandEvent& evt) {
 	gui_network_status dialog;
-	if (dialog.ShowModal() == wxID_OK)
-		wxMessageBox(_("TODO : Fillup network info."));
+	dialog.ShowModal();
 }
 
 void gui_main::OnQuit(wxCommandEvent& evt) {
-	wxMessageBox(_("TODO : Some cleanup?"));
+	gui_dht::instance(std::string(temp_path_.mb_str()))->release();
 	exit(0);
 }
 
