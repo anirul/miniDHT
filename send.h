@@ -28,10 +28,18 @@
 #ifndef SEND_HEADER_DEFINED
 #define SEND_HEADER_DEFINED
 
-const unsigned int key_size = 256;
-const unsigned int token_size = 32;
-const unsigned int wait_settle = 5;
-const size_t buf_size = 8192;
+#ifndef key_size
+#define key_size 256
+#endif
+#ifndef token_size
+#define token_size 32
+#endif
+#ifndef wait_settle
+#define wait_settle 5
+#endif
+#ifndef buf_size
+#define buf_size 8192
+#endif
 
 enum upload_state_t {
 	WAIT,

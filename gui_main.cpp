@@ -29,6 +29,7 @@
 #include <wx/dataview.h>
 #include <wx/spinctrl.h>
 #include <wx/stdpaths.h>
+#include <wx/filectrl.h>
 #ifdef __WXMAC__
 #include <ApplicationServices/ApplicationServices.h>
 #endif // __WXMAC__
@@ -235,7 +236,18 @@ void gui_main::OnConnect(wxCommandEvent& evt) {
 
 void gui_main::OnUpload(wxCommandEvent& evt) {
 	// open file for upload
-	wxMessageBox(_("TODO : Upload a file to the network."));
+	 wxFileDialog open_file_dialog(
+		frame_, 
+		_("Open file to be uploaded!"), 
+		wxEmptyString, 
+		wxEmptyString,
+      wxFileSelectorDefaultWildcardStr, 
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if (open_file_dialog.ShowModal() == wxID_CANCEL) return;
+	wxMessageBox(
+		_("TODO : Upload \n[") + 
+		open_file_dialog.GetPath() + 
+		_("]\nto the network."));
 }
 
 void gui_main::OnDownload(wxCommandEvent& evt) {

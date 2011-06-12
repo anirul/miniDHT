@@ -255,6 +255,7 @@ inline bool is_port_valid(unsigned short port) {
 	return (port > 0);
 }
 
+#ifdef SEND_MAIN_TEST
 int main(int ac, char** av) {
 	unsigned short listen = 4048;
 	unsigned short port = 0;
@@ -383,4 +384,5 @@ int main(int ac, char** av) {
 	}
 	return 0;
 }
+#endif // SEND_MAIN_TEST
 

@@ -36,8 +36,12 @@
 
 #include "miniDHT.h"
 
-const unsigned int key_size = 256;
-const unsigned int token_size = 32;
+#ifndef key_size
+#define key_size 256
+#endif
+#ifndef token_size
+#define token_size 32
+#endif
 
 miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
 
@@ -53,7 +57,7 @@ void watch(boost::asio::deadline_timer* t) {
 	std::cout << miniDHT::update_time() << std::endl;
 	for (ite = ls.begin(); ite != ls.end(); ++ite)
 		std::cout 
-			<< "<<" << ite->key << ">>" 
+			<< "<<" << miniDHT::key_to_string<key_size>(ite->key) << ">>" 
 			<< "\t{" << ite->ep << "}"
 			<< "\t[" << ite->ttl << "]"
 			<< std::endl;

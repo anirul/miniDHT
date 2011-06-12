@@ -100,7 +100,7 @@ void gui_network_status::Notify() {
 		}
 		{
 			std::stringstream ss("");
-			ss << ite->key;
+			ss << miniDHT::key_to_string<key_size>(ite->key);
 			data.push_back(ss.str().c_str());
 		}
 		{

@@ -272,6 +272,7 @@ inline bool is_port_valid(unsigned short port) {
 	return (port > 0);
 }
 
+#ifdef RECV_MAIN_TEST
 int main(int ac, char** av) {
 	unsigned short listen = 4048;
     unsigned short port = 0;
@@ -390,3 +391,5 @@ int main(int ac, char** av) {
 	}
 	return 0;
 }
+#endif // RECV_MAIN_TEST
+

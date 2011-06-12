@@ -29,9 +29,9 @@ server.o: server.cpp $(MINIDHT_HEADER)
 test.o: test.cpp $(MINIDHT_HEADER)
 	$(CXX) -o test.o $(FLAGS) -c test.cpp
 send.o: send.cpp send.h aes_crypt.h $(MINIDHT_HEADER)
-	$(CXX) -o send.o $(FLAGS) -c send.cpp
+	$(CXX) -o send.o $(FLAGS) -c send.cpp -DSEND_MAIN_TEST
 recv.o: recv.cpp recv.h aes_crypt.h $(MINIDHT_HEADER)
-	$(CXX) -o recv.o $(FLAGS) -c recv.cpp
+	$(CXX) -o recv.o $(FLAGS) -c recv.cpp -DRECV_MAIN_TEST
 
 gui_main.o: gui_main.cpp gui_main.h gui_network_status.h gui_connect.h gui_info.h $(MINIDHT_HEADER)
 	$(CXX) -o gui_main.o $(FLAGS) `wx-config --cxxflags` -c gui_main.cpp
@@ -43,6 +43,10 @@ gui_network_status.o: gui_network_status.cpp gui_network_status.h gui_dht.h $(MI
 	$(CXX) -o gui_network_status.o $(FLAGS) `wx-config --cxxflags` -c gui_network_status.cpp
 gui_dht.o: gui_dht.cpp gui_dht.h $(MINIDHT_HEADER)
 	$(CXX) -o gui_dht.o $(FLAGS) `wx-config --cxxflags` -c gui_dht.cpp
+gui_send.o: send.cpp send.h $(MINIDHT_HEADER)
+	$(CXX) -o gui_send.o $(FLAGS) -c send.cpp
+gui_recv.o: recv.cpp recv.h $(MINIDHT_HEADER)
+	$(CXX) -o gui_recv.o $(FLAGS) -c recv.cpp
 
 miniDHT_server: server.o
 	$(CXX) -o miniDHT_server server.o $(LIBS)
@@ -52,8 +56,16 @@ miniDHT_send: send.o
 	$(CXX) -o miniDHT_send send.o $(LIBS)
 miniDHT_recv: recv.o
 	$(CXX) -o miniDHT_recv recv.o $(LIBS)
-BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o
-	$(CXX) -o BitSmear gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o $(LIBS) `wx-config --libs`
+BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui_send.o gui_recv.o
+	$(CXX) -o BitSmear \
+		gui_main.o \
+		gui_connect.o \
+		gui_info.o \
+		gui_network_status.o \
+		gui_dht.o \
+		gui_send.o \
+		gui_recv.o \
+	$(LIBS) `wx-config --libs`
 
 ifeq ($(OSTYPE), darwin)
 BitSmear.app: Info.plist BitSmear
