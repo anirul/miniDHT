@@ -26,7 +26,7 @@
  */
 
 #include <wx/wx.h>
-#include <wx/dataview.h>
+#include <wx/listctrl.h>
 #include <wx/spinctrl.h>
 #include <wx/stdpaths.h>
 #include <wx/filectrl.h>
@@ -51,7 +51,7 @@ DECLARE_EVENT_TYPE(wxID_TOOLBAR_DOWNLOAD, wxHIGHEST + 12)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_UPLOAD, wxHIGHEST + 13)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_INFO, wxID_HIGHEST + 14)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_CANCEL, wxID_HIGHEST + 15)
-DECLARE_EVENT_TYPE(wxID_DATA_LIST_CTRL, wxID_HIGHEST + 20)
+DECLARE_EVENT_TYPE(wxID_LIST_CTRL, wxID_HIGHEST + 20)
 
 DEFINE_EVENT_TYPE(wxID_CONNECT)
 DEFINE_EVENT_TYPE(wxID_UPLOAD)
@@ -63,7 +63,7 @@ DEFINE_EVENT_TYPE(wxID_TOOLBAR_UPLOAD)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_DOWNLOAD)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_INFO)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_CANCEL)
-DEFINE_EVENT_TYPE(wxID_DATA_LIST_CTRL)
+DEFINE_EVENT_TYPE(wxID_LIST_CTRL)
  
 BEGIN_EVENT_TABLE(gui_main, wxApp)
 	EVT_MENU(wxID_ABOUT, gui_main::OnAbout)
@@ -125,21 +125,35 @@ bool gui_main::OnInit() {
 		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _("/");
 		temp_path_ = wxStandardPaths::Get().GetTempDir() + ("/");
 #endif // __WXMAC__
-		wxMessageBox(
-			_("INFO : setting paths to : \n") +
-			_("ressources\t: ") + ressources_path_ + _("\n") +
-			_("temp\t: ") + temp_path_);
+//		wxMessageBox(
+//			_("INFO : setting paths to : \n") +
+//			_("ressources\t: ") + ressources_path_ + _("\n") +
+//			_("temp\t: ") + temp_path_);
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	{	// toolbar
 		wxImage::AddHandler(new wxPNGHandler);		
-		wxBitmap download(ressources_path_ + _("Knob Download.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap upload(ressources_path_ + _("Knob Upload.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap connected(ressources_path_ + _("Knob Record On.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap disconnected(ressources_path_ + _("Knob Record Off.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap info(ressources_path_ + _("Knob Info.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap cancel(ressources_path_ + _("Knob Cancel.png"), wxBITMAP_TYPE_PNG);
-		wxBitmap grey(ressources_path_ + _("Knob Grey.png"), wxBITMAP_TYPE_PNG);
+		wxBitmap download(
+			ressources_path_ + _("Knob Download.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap upload(
+			ressources_path_ + _("Knob Upload.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap connected(
+			ressources_path_ + _("Knob Record On.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap disconnected(
+			ressources_path_ + _("Knob Record Off.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap info(
+			ressources_path_ + _("Knob Info.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap cancel(
+			ressources_path_ + _("Knob Cancel.png"), 
+			wxBITMAP_TYPE_PNG);
+		wxBitmap grey(
+			ressources_path_ + _("Knob Grey.png"), 
+			wxBITMAP_TYPE_PNG);
 
 		toolbar->AddTool(
 			wxID_TOOLBAR_CONNECT, 
@@ -204,11 +218,19 @@ bool gui_main::OnInit() {
 			wxCommandEventHandler(gui_main::OnInfo));
 	}
 	{	// data view list control
-		data_list_ctrl_ = new wxDataViewListCtrl(frame_, wxID_DATA_LIST_CTRL);
-		data_list_ctrl_->AppendTextColumn("File");
-		data_list_ctrl_->AppendTextColumn("Digest");
-		data_list_ctrl_->AppendProgressColumn("Progress");
-		data_list_ctrl_->AppendToggleColumn("Finish");
+		list_ctrl_ = new wxListCtrl(
+			frame_, wxID_LIST_CTRL,
+			wxDefaultPosition,
+			wxDefaultSize,
+			wxLC_REPORT);
+		list_ctrl_->InsertColumn(0, "Progress");
+		list_ctrl_->SetColumnWidth(0, 100);
+		list_ctrl_->InsertColumn(1, "Digest");
+		list_ctrl_->SetColumnWidth(1, 350);
+		list_ctrl_->InsertColumn(2, "Bytes");
+		list_ctrl_->SetColumnWidth(2, 100);
+		list_ctrl_->InsertColumn(3, "File");
+		list_ctrl_->SetColumnWidth(3, 250);
 	}
 
 	frame_->Centre();
@@ -243,11 +265,17 @@ void gui_main::OnUpload(wxCommandEvent& evt) {
 		wxEmptyString,
       wxFileSelectorDefaultWildcardStr, 
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-	if (open_file_dialog.ShowModal() == wxID_CANCEL) return;
-	wxMessageBox(
-		_("TODO : Upload \n[") + 
-		open_file_dialog.GetPath() + 
-		_("]\nto the network."));
+	if (open_file_dialog.ShowModal() == wxID_CANCEL) 
+		return;
+	if (!gui_dht::instance()) {
+		wxMessageBox(
+			_("Could not upload \n[") + 
+			open_file_dialog.GetPath() + 
+			_("]\nto the network, no network."));
+		return;
+	}
+	gui_dht::instance()->start_upload(
+		std::string(open_file_dialog.GetPath().fn_str()));
 }
 
 void gui_main::OnDownload(wxCommandEvent& evt) {
@@ -306,6 +334,65 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 				moving_string[count % 5], 
 				title_));
 		count++;
+	}
+	if (gui_dht::instance()) {
+		std::list<gui_action*> ls = gui_dht::instance()->get_action_list();
+		std::list<gui_action*>::iterator ite = ls.begin();
+		while (list_ctrl_->GetItemCount() > ls.size())
+			list_ctrl_->DeleteItem(0);
+		while (list_ctrl_->GetItemCount() < ls.size())
+			list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
+		for (int i = 0; ite != ls.end(); ++ite, ++i) {
+			gui_action* p = dynamic_cast<gui_action*>(*ite);
+			{	// progress
+				wxString data;
+				if (p->is_end()) {
+					data = _("Finished");
+				} else {
+					double percent = 
+						(double)p->get_packet_loaded() / 
+						(double)p->get_packet_total();
+					data = wxString::Format("%3.02f%%", (percent * 100.0));
+				}
+				if (data != list_ctrl_->GetItemText(i, 0))
+					list_ctrl_->SetItem(i, 0, data);	
+			}
+			{	// digest
+				std::stringstream ss("");
+				ss << p->get_digest();
+				wxString data = _(ss.str().c_str());
+				if (data != list_ctrl_->GetItemText(i, 1))
+					list_ctrl_->SetItem(i, 1, data);	
+			}
+			{ 	// bytes
+				wxString data = wxString::Format("%lluB", p->get_file_size());
+				if (data != list_ctrl_->GetItemText(i, 2))
+					list_ctrl_->SetItem(i, 2, data);	
+			}
+			{	// file
+				wxString data = p->get_filename().c_str();
+				if (data != list_ctrl_->GetItemText(i, 3))
+					list_ctrl_->SetItem(i, 3, data);	
+			}
+			{	// type (colour)
+				const wxColour back_download = wxColour(0x00, 0x1f, 0x00);
+				const wxColour front_download = wxColour(0x00, 0xff, 0x00);
+				if (p->get_action_type() == GUI_ACTION_DOWNLOAD) {
+					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
+						list_ctrl_->SetItemBackgroundColour(i, back_download);
+					if (list_ctrl_->GetItemTextColour(i) != front_download)
+						list_ctrl_->SetItemTextColour(i, front_download);
+				} 
+				const wxColour back_upload = wxColour(0x00, 0x00, 0x1f);
+				const wxColour front_upload = wxColour(0x00, 0x00, 0xff);
+				if (p->get_action_type() == GUI_ACTION_UPLOAD) {
+					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
+						list_ctrl_->SetItemBackgroundColour(i, back_upload);
+					if (list_ctrl_->GetItemTextColour(i) != front_upload)
+						list_ctrl_->SetItemTextColour(i, front_upload);
+				}
+			}
+		}
 	}
 }
 

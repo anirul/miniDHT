@@ -31,7 +31,7 @@
 class gui_main : public wxApp {
 	bool OnInit();
 	wxFrame* frame_;
-	wxDataViewListCtrl* data_list_ctrl_;
+	wxListCtrl* list_ctrl_;
 	wxString title_;
 	wxString temp_path_;
 	wxString ressources_path_;

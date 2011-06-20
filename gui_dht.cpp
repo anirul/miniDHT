@@ -26,6 +26,8 @@
  */
 
 #include "gui_dht.h"
+#include "send.h"
+#include "recv.h"
 
 gui_dht* gui_dht::instance_ = NULL;
 
@@ -58,6 +60,8 @@ void gui_dht::start(short port) {
 }
 
 void gui_dht::stop() {
+	while (list_action_.size())
+		stop_action(dynamic_cast<gui_action*>(*list_action_.begin()));
 	io_service_.stop();
 	thread_->join();
 	delete thread_;
@@ -79,5 +83,42 @@ void gui_dht::ping(const std::string& hostname, short port) {
 
 std::list<miniDHT_t::contact_t> gui_dht::status() {
 	return mini_dht_->nodes_description();
+}
+
+void gui_dht::start_upload(const std::string& file) {
+	dht_send_file* p = new dht_send_file(file, mini_dht_);
+	boost::asio::deadline_timer* t = new boost::asio::deadline_timer(
+		io_service_, 
+		boost::posix_time::seconds(1));
+	t->async_wait(boost::bind(&dht_send_file::run_once, p, t));
+	list_action_.push_back(dynamic_cast<gui_action*>(p));
+}
+
+void gui_dht::start_download(const miniDHT::digest_t& digest) {
+	dht_recv_file* p = new dht_recv_file(digest, mini_dht_);
+	boost::asio::deadline_timer t(
+		io_service_,
+		boost::posix_time::seconds(1));
+	t.async_wait(boost::bind(&dht_recv_file::run_once, p, &t));
+	list_action_.push_back(dynamic_cast<gui_action*>(p));	
+}
+
+bool gui_dht::stop_action(gui_action* p_action) {
+	if (!p_action)
+		return false;
+	std::list<gui_action*>::iterator ite = list_action_.begin();
+	// no find in list
+	for (; ite != list_action_.end(); ++ite)
+		if (p_action == (*ite)) break;
+	if (ite == list_action_.end())
+		return false;
+	p_action->stop();
+	list_action_.remove(p_action);
+	delete p_action;
+	return true;
+}
+
+std::list<gui_action*> gui_dht::get_action_list() {
+	return list_action_;
 }
 

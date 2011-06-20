@@ -60,6 +60,8 @@ dht_send_file::dht_send_file(
 	ifile_ = NULL;
 	pDht_ = pDht;
 	end_ = false;
+	stop_ = false;
+	packet_loaded_ = 0;
 	boost::filesystem::path p(file_name);
 	file_name_ = p.filename().string();
 	std::cout 
@@ -189,6 +191,7 @@ void dht_send_file::found(const std::list<miniDHT::data_item_t>& b) {
 			map_key_string_id_.erase(map_key_string_id_.find(ite->title));
 			map_crypt_.erase(map_crypt_.find(index));
 			map_state_[index] = CHECKED;
+			packet_loaded_++;
 		}
 	}
 }
@@ -221,6 +224,7 @@ void dht_send_file::run_once(boost::asio::deadline_timer* t) {
 		if (ite == map_state_.end()) {
 			if (i == 0) {
 				end_ = true;
+				delete t;
 				return;
 			}
 			break;
@@ -247,8 +251,10 @@ void dht_send_file::run_once(boost::asio::deadline_timer* t) {
 				break;
 		}
 	}
-	t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
-	t->async_wait(boost::bind(&dht_send_file::run_once, this, t));
+	if (!stop_) {
+		t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
+		t->async_wait(boost::bind(&dht_send_file::run_once, this, t));
+	}
 }
 
 inline bool is_port_valid(unsigned short port) {

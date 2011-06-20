@@ -28,33 +28,24 @@
 #ifndef RECV_HEADER_DEFINED
 #define RECV_HEADER_DEFINED
 
-#ifndef key_size
-#define key_size 256
-#endif
-#ifndef token_size
-#define token_size 32
-#endif
-#ifndef wait_settle
-#define wait_settle 5
-#endif
-#ifndef buf_size
-#define buf_size 8192
-#endif
+#include "gui_action.h"
 
-enum download_state_t {
-	WAIT,
-	ASKED,
-	DOWNLOADED,
-	DECRYPTED,
-	WRITTEN
-};
-
-class dht_recv_file {
+class dht_recv_file : public gui_action {
 private :
+	enum download_state_t {
+		WAIT,
+		ASKED,
+		DOWNLOADED,
+		DECRYPTED,
+		WRITTEN
+	};
 	std::string file_name_;
 	FILE* ofile_;
+	size_t total_size_;
 	size_t packet_total_;
+	size_t packet_loaded_;
 	bool end_;
+	bool stop_;
 	miniDHT::miniDHT<key_size, token_size>* pDht_;
 	miniDHT::digest_t digest_;
 	std::map<size_t, download_state_t> map_state_;
@@ -67,15 +58,26 @@ public :
 		const miniDHT::digest_t& digest,
 		miniDHT::miniDHT<key_size, token_size>* pDht);
 	~dht_recv_file();
+protected :
 	void download(size_t index);
 	void received(size_t index);
 	void decrypt(size_t index);
 	void write(size_t index);
 	void check();
 	void found(const std::list<miniDHT::data_item_t>& b);
-	void run_once(boost::asio::deadline_timer* t);
-	bool is_end() const { return end_; }
 	std::string decode(const std::string& key, const std::string& data);
+public : // from gui_action
+	virtual void run_once(boost::asio::deadline_timer* t);
+	virtual bool is_end() const { return end_; }
+	virtual void stop() { stop_ = true; }
+	virtual size_t get_packet_total() const { return packet_total_; }
+	// WARNING this will be an estimate!
+	virtual size_t get_file_size() const { return total_size_; }
+	virtual size_t get_packet_loaded() const { return packet_loaded_; }
+	virtual miniDHT::digest_t get_digest() const { return digest_; }
+	virtual std::string get_filename() const { return file_name_; }
+	virtual gui_action_type get_action_type() const
+		{ return GUI_ACTION_DOWNLOAD; }
 };
 
 #endif // RECV_HEADER_DEFINED

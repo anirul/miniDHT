@@ -28,35 +28,25 @@
 #ifndef SEND_HEADER_DEFINED
 #define SEND_HEADER_DEFINED
 
-#ifndef key_size
-#define key_size 256
-#endif
-#ifndef token_size
-#define token_size 32
-#endif
-#ifndef wait_settle
-#define wait_settle 5
-#endif
-#ifndef buf_size
-#define buf_size 8192
-#endif
+#include "gui_action.h"
 
-enum upload_state_t {
-	WAIT,
-	LOADED,
-	CRYPTED,
-	UPLOADED,
-	CHECKED
-};
-
-class dht_send_file {
+class dht_send_file : public gui_action {
 private :
+	enum upload_state_t {
+		WAIT,
+		LOADED,
+		CRYPTED,
+		UPLOADED,
+		CHECKED
+	};
 	std::string file_name_;
 	FILE* ifile_;
 	size_t total_size_;
 	size_t packet_total_;
+	size_t packet_loaded_;
 	bool end_;
-	miniDHT::miniDHT<key_size, token_size>* pDht_;
+	bool stop_;
+	miniDHT_t* pDht_;
 	miniDHT::digest_t digest_;
 	std::map<size_t, upload_state_t> map_state_;
 	std::map<size_t, std::string> map_load_;
@@ -66,17 +56,27 @@ private :
 public :
 	dht_send_file(
 		const std::string& file_name, 
-		miniDHT::miniDHT<key_size, token_size>* pDht);
+		miniDHT_t* pDht);
 	~dht_send_file();
+protected :
 	void load(size_t index);
 	void crypt(size_t index);
 	void upload(size_t index);
 	void check(size_t index);
 	void received(size_t index);
 	void found(const std::list<miniDHT::data_item_t>& b);
-	void run_once(boost::asio::deadline_timer* t);
-	bool is_end() { return end_; }
 	std::string encode(const std::string& key, const std::string& data);
+public : // from gui_action
+	virtual void run_once(boost::asio::deadline_timer* t);
+	virtual bool is_end() const { return end_; }
+	virtual void stop() { stop_ = true; }
+	virtual size_t get_packet_total() const { return packet_total_; }
+	virtual size_t get_file_size() const { return total_size_; }
+	virtual size_t get_packet_loaded() const { return packet_loaded_; }
+	virtual miniDHT::digest_t get_digest() const { return digest_; }
+	virtual std::string get_filename() const { return file_name_; }
+	virtual gui_action_type get_action_type() const 
+		{ return GUI_ACTION_UPLOAD; }
 };
 
 #endif // SEND_HEADER_DEFINED

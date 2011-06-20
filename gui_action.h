@@ -25,41 +25,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GUI_DHT_HEADER_DEFINED
-#define GUI_DHT_HEADER_DEFINED
+#ifndef GUI_ACTION_HEADER_DEFINED
+#define GUI_ACTION_HEADER_DEFINED
 
-#include <list>
-#include <string>
-#include "miniDHT.h"
-#include "gui_action.h"
+const unsigned int key_size = 256;
+const unsigned int token_size = 32;
+const unsigned int wait_settle = 5;
+const unsigned int buf_size = 8192;
 
-class gui_dht {
-	static gui_dht* instance_;
-	miniDHT_t* mini_dht_;
-	boost::thread* thread_;
-	boost::asio::io_service io_service_;
-	std::string path_;
-	std::list<gui_action*> list_action_;
-	gui_dht(const std::string& path)
-		:	mini_dht_(NULL),
-			thread_(NULL),
-			path_(path) {}
-public : // singleton stuff
-	static gui_dht* instance(const std::string& path);
-	// give an instance back only if already created!
-	static gui_dht* instance();
-	static void release();
-public : // general DHT stuff
-	void start(short port);
-	void stop();
-	void ping(const std::string& host, short port);
-	std::list<miniDHT_t::contact_t> status();
-public : // action related
-	void start_upload(const std::string& file);
-	void start_download(const miniDHT::digest_t& digest);
-	bool stop_action(gui_action* p_action);
-	std::list<gui_action*> get_action_list();	
+typedef miniDHT::miniDHT<key_size, token_size> miniDHT_t;
+
+enum gui_action_type {
+	GUI_ACTION_DOWNLOAD = 0,
+	GUI_ACTION_UPLOAD = 1
 };
 
-#endif // GUI_DHT_HEADER_DEFINED
+class gui_action {
+public :
+	virtual void run_once(boost::asio::deadline_timer* t) = 0;
+	virtual bool is_end() const = 0;
+	virtual void stop() = 0;
+	virtual size_t get_packet_total() const = 0;
+	virtual size_t get_file_size() const = 0;
+	virtual size_t get_packet_loaded() const = 0;
+	virtual miniDHT::digest_t get_digest() const = 0;
+	virtual std::string get_filename() const = 0;
+	virtual gui_action_type get_action_type() const = 0;
+};
+
+#endif // GUI_ACTION_HEADER_DEFINED
 

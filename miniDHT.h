@@ -147,7 +147,6 @@ namespace miniDHT {
 		boost::asio::ip::udp::socket socket_;
 		boost::asio::ip::udp::endpoint sender_endpoint_;
 		char packet_buffer_recv[PACKET_SIZE];
-
 		// mutex lock
 		boost::mutex giant_lock_;
 		// bucket (contact list)
@@ -431,7 +430,7 @@ namespace miniDHT {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			return max_records_; 
 		}
-	
+			
 	protected :
 	
 		void restore_from_backup(
@@ -559,7 +558,7 @@ namespace miniDHT {
 				dt_.async_wait(boost::bind(&miniDHT::periodic, this));
 			}
 		}
-		
+
 		void startNodeLookup(const token_t& t, const key_t& k) {
 			std::list<contact_t> temp_list;
 			{ // get the proximity list from the contact_list

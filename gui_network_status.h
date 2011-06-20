@@ -30,7 +30,7 @@
 
 class gui_network_status : private wxTimer, public wxDialog {
 	wxString title_;
-	wxDataViewListCtrl* data_list_ctrl_;	
+	wxListCtrl* list_ctrl_;	
 	void Notify();
 public :
 	gui_network_status(const wxString& title = _("Network Status"));

@@ -60,7 +60,10 @@ dht_recv_file::dht_recv_file(
 	ofile_ = NULL;
 	pDht_ = pDht;
 	end_ = false;
+	stop_ = false;
 	packet_total_ = 0;
+	packet_loaded_ = 0;
+	total_size_ = 0;	
 	digest_ = digest;
 	// try to get the 5 first part (don't know yet how many there is)
 	for (unsigned int i = 0; i < 5; ++i)
@@ -143,7 +146,8 @@ void dht_recv_file::write(size_t index) {
 	fwrite(&buffer[0], 1, buffer.size(), ofile_);
 	map_crypt_.erase(index);
 	map_load_.erase(index);
-	map_state_[index] = WRITTEN; 
+	map_state_[index] = WRITTEN;
+	packet_loaded_++; 
 }
 
 void dht_recv_file::check() {
@@ -204,6 +208,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 		// update packet total
 		if (!packet_total_) {
 			packet_total_ = packet_total;
+			total_size_ = packet_total_ * buf_size;
 			for (int i = 0; i < packet_total; ++i) {
 				if (map_state_.find(i) == map_state_.end()) {
 					map_state_.insert(
@@ -264,8 +269,10 @@ void dht_recv_file::run_once(boost::asio::deadline_timer* t) {
 				break;
 		}
 	}
-	t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
-	t->async_wait(boost::bind(&dht_recv_file::run_once, this, t));
+	if (!stop_) {
+		t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
+		t->async_wait(boost::bind(&dht_recv_file::run_once, this, t));
+	}
 }
 
 inline bool is_port_valid(unsigned short port) {

@@ -58,8 +58,8 @@ void watch(boost::asio::deadline_timer* t) {
 	for (ite = ls.begin(); ite != ls.end(); ++ite)
 		std::cout 
 			<< "<<" << miniDHT::key_to_string<key_size>(ite->key) << ">>" 
-			<< "\t{" << ite->ep << "}"
-			<< "\t[" << ite->ttl << "]"
+			<< " - [" << ite->ttl << "]"
+			<< " - {" << ite->ep << "}"
 			<< std::endl;
 	t->expires_at(t->expires_at() + boost::posix_time::seconds(1));
 	t->async_wait(boost::bind(watch, t));

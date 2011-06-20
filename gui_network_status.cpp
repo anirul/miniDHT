@@ -26,7 +26,7 @@
  */
 
 #include <wx/wx.h>
-#include <wx/dataview.h>
+#include <wx/listctrl.h>
 #include "gui_network_status.h"
 #include "gui_dht.h"
 
@@ -36,24 +36,29 @@ gui_network_status::gui_network_status(const wxString& title)
 			wxID_ANY,
 			title,
 			wxDefaultPosition,
-			wxSize(300, 300),
+			wxSize(600, 400),
 			wxSTAY_ON_TOP | wxSYSTEM_MENU),
 		title_(title),
-		data_list_ctrl_(NULL)
+		list_ctrl_(NULL)
 {
 	wxPanel *panel = new wxPanel(this, -1);
 
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
 	
-	data_list_ctrl_ = new wxDataViewListCtrl(
+	list_ctrl_ = new wxListCtrl(
 		panel, 
 		wxID_ANY,
 		wxDefaultPosition,
-		wxSize(300, 300));
-	data_list_ctrl_->AppendTextColumn("Host");
-	data_list_ctrl_->AppendTextColumn("Id");
-	data_list_ctrl_->AppendTextColumn("TTL");
+		wxSize(600, 400),
+		wxLC_REPORT);
+
+	list_ctrl_->InsertColumn(0, _("Id"));
+	list_ctrl_->SetColumnWidth(0, 200);
+	list_ctrl_->InsertColumn(1, _("TTL"));
+	list_ctrl_->SetColumnWidth(1, 200);
+	list_ctrl_->InsertColumn(2, _("Host"));
+	list_ctrl_->SetColumnWidth(2, 200);
 
 	wxButton *okButton = new wxButton(
 		this, 
@@ -88,27 +93,34 @@ void gui_network_status::Notify() {
 				title_));
 		count++;
 	}
-	data_list_ctrl_->DeleteAllItems();		
 	std::list<miniDHT_t::contact_t> ls = gui_dht::instance()->status();
 	std::list<miniDHT_t::contact_t>::iterator ite = ls.begin();
-	for (; ite != ls.end(); ++ite) {
-		wxVector<wxVariant> data;
-		{
-			std::stringstream ss("");
-			ss << ite->ep;
-			data.push_back(ss.str().c_str());
-		}
+	while (list_ctrl_->GetItemCount() > ls.size())
+		list_ctrl_->DeleteItem(0);
+	while (list_ctrl_->GetItemCount() < ls.size())
+		list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
+	for (int i = 0; ite != ls.end(); ++ite, ++i) {
 		{
 			std::stringstream ss("");
 			ss << miniDHT::key_to_string<key_size>(ite->key);
-			data.push_back(ss.str().c_str());
+			wxString data = _(ss.str().c_str());
+			if (data != list_ctrl_->GetItemText(i, 0))
+				list_ctrl_->SetItem(i, 0, data);
 		}
 		{
 			std::stringstream ss("");
 			ss << ite->ttl;
-			data.push_back(ss.str().c_str());
+			wxString data = _(ss.str().c_str());
+			if (data != list_ctrl_->GetItemText(i, 1))
+				list_ctrl_->SetItem(i, 1, data);
 		}
-		data_list_ctrl_->AppendItem(data);
+		{
+			std::stringstream ss("");
+			ss << ite->ep;
+			wxString data = _(ss.str().c_str());
+			if (data != list_ctrl_->GetItemText(i, 2))
+				list_ctrl_->SetItem(i, 2, data);
+		}
 	}
 }
 
