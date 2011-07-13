@@ -30,6 +30,7 @@
 #include <wx/spinctrl.h>
 #include <wx/stdpaths.h>
 #include <wx/filectrl.h>
+#include <wx/sysopt.h>
 #ifdef __WXMAC__
 #include <ApplicationServices/ApplicationServices.h>
 #endif // __WXMAC__
@@ -91,6 +92,7 @@ bool gui_main::OnInit() {
 		NULL,
 		this);
 	timer_.Start(250);	
+	wxSystemOptions::SetOption(_("mac.listctrl.always_use_generic"), 1);
 
 #ifdef __WXMAC__
 	wxApp::SetExitOnFrameDelete(false);
@@ -222,7 +224,7 @@ bool gui_main::OnInit() {
 			frame_, wxID_LIST_CTRL,
 			wxDefaultPosition,
 			wxDefaultSize,
-			wxLC_REPORT);
+			wxLC_REPORT | wxLC_SINGLE_SEL);
 		list_ctrl_->InsertColumn(0, "Progress");
 		list_ctrl_->SetColumnWidth(0, 100);
 		list_ctrl_->InsertColumn(1, "Digest");
@@ -250,16 +252,22 @@ bool gui_main::OnInit() {
 
 void gui_main::OnConnect(wxCommandEvent& evt) {
 	gui_connect dialog;
-	if (dialog.ShowModal() == wxID_OK)
-		gui_dht::instance(std::string(temp_path_))->ping(
+	if (dialog.ShowModal() == wxID_OK) {
+		gui_dht* pgdht = gui_dht::instance();
+		if (!pgdht) {
+			wxMessageBox(_("Impossible to connect to the DHT!"));
+			return;
+		}
+		pgdht->ping(
 			std::string(dialog.get_hostname().mb_str()),
 			dialog.get_port());
+	}
 }
 
 void gui_main::OnUpload(wxCommandEvent& evt) {
 	// open file for upload
 	 wxFileDialog open_file_dialog(
-		frame_, 
+		NULL, 
 		_("Open file to be uploaded!"), 
 		wxEmptyString, 
 		wxEmptyString,
@@ -294,7 +302,33 @@ void gui_main::OnPrefs(wxCommandEvent& evt) {
 
 void gui_main::OnCancel(wxCommandEvent& evt) {
 	// cancel some action
-	wxMessageBox(_("TODO : Cancel action (Download or Upload)."));
+	long item = list_ctrl_->GetNextItem(
+		-1,
+		wxLIST_NEXT_ALL,
+		wxLIST_STATE_SELECTED);
+	if (item == -1) {
+		wxMessageBox(_("ERROR : No item selected!"));
+		return;
+	}
+	{
+		std::stringstream ss("");
+		ss << "Selected item (";
+		ss << item;
+		ss << ").";
+		wxMessageBox(_(ss.str().c_str()));
+	}
+	if (gui_dht::instance() == NULL) {
+		wxMessageBox(_("ERROR : No DHT instance!"));
+		return;
+	}
+/*
+	std::list<gui_action*> ls = gui_dht::instance()->get_action_list();
+	std::list<gui_action*>::iterator ite = ls.begin();
+	for (int i = 0; ite != ls.end(); ++ite, ++i)
+		if (i == item)
+			gui_dht::instance()->stop_action(
+				dynamic_cast<gui_action*>(*ite));
+*/
 }
 
 void gui_main::OnInfo(wxCommandEvent& evt) {
@@ -342,6 +376,7 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 			list_ctrl_->DeleteItem(0);
 		while (list_ctrl_->GetItemCount() < ls.size())
 			list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
+//		selected_item_ = -1;
 		for (int i = 0; ite != ls.end(); ++ite, ++i) {
 			gui_action* p = dynamic_cast<gui_action*>(*ite);
 			{	// progress
@@ -370,24 +405,24 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 					list_ctrl_->SetItem(i, 2, data);	
 			}
 			{	// file
-				wxString data = p->get_filename().c_str();
+				wxString data = _(p->get_filename().c_str());
 				if (data != list_ctrl_->GetItemText(i, 3))
 					list_ctrl_->SetItem(i, 3, data);	
 			}
 			{	// type (colour)
-				const wxColour back_download = wxColour(0x00, 0x1f, 0x00);
+//				const wxColour back_download = wxColour(0x00, 0x1f, 0x00);
 				const wxColour front_download = wxColour(0x00, 0xff, 0x00);
 				if (p->get_action_type() == GUI_ACTION_DOWNLOAD) {
-					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
-						list_ctrl_->SetItemBackgroundColour(i, back_download);
+//					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
+//						list_ctrl_->SetItemBackgroundColour(i, back_download);
 					if (list_ctrl_->GetItemTextColour(i) != front_download)
 						list_ctrl_->SetItemTextColour(i, front_download);
 				} 
-				const wxColour back_upload = wxColour(0x00, 0x00, 0x1f);
+//				const wxColour back_upload = wxColour(0x00, 0x00, 0x1f);
 				const wxColour front_upload = wxColour(0x00, 0x00, 0xff);
 				if (p->get_action_type() == GUI_ACTION_UPLOAD) {
-					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
-						list_ctrl_->SetItemBackgroundColour(i, back_upload);
+//					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
+//						list_ctrl_->SetItemBackgroundColour(i, back_upload);
 					if (list_ctrl_->GetItemTextColour(i) != front_upload)
 						list_ctrl_->SetItemTextColour(i, front_upload);
 				}

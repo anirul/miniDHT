@@ -30,6 +30,7 @@
 
 class gui_main : public wxApp {
 	bool OnInit();
+//	long selected_item_;
 	wxFrame* frame_;
 	wxListCtrl* list_ctrl_;
 	wxString title_;

@@ -554,7 +554,8 @@ namespace miniDHT {
 				// call back later
 				boost::posix_time::time_duration wait_time = 
 					periodic_ + boost::posix_time::seconds(random() % 60);
-				dt_.expires_at(dt_.expires_at() + wait_time);
+				boost::posix_time::ptime now = update_time();
+				dt_.expires_at(now + wait_time);
 				dt_.async_wait(boost::bind(&miniDHT::periodic, this));
 			}
 		}
