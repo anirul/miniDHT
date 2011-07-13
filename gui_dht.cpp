@@ -114,7 +114,7 @@ bool gui_dht::stop_action(gui_action* p_action) {
 		return false;
 	p_action->stop();
 	list_action_.remove(p_action);
-	delete p_action;
+//	delete p_action;
 	return true;
 }
 

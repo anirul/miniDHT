@@ -38,6 +38,7 @@
 #include "gui_connect.h"
 #include "gui_info.h"
 #include "gui_network_status.h"
+#include "gui_list_ctrl.h"
 #include "gui_dht.h"
  
 IMPLEMENT_APP(gui_main)
@@ -52,7 +53,6 @@ DECLARE_EVENT_TYPE(wxID_TOOLBAR_DOWNLOAD, wxHIGHEST + 12)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_UPLOAD, wxHIGHEST + 13)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_INFO, wxID_HIGHEST + 14)
 DECLARE_EVENT_TYPE(wxID_TOOLBAR_CANCEL, wxID_HIGHEST + 15)
-DECLARE_EVENT_TYPE(wxID_LIST_CTRL, wxID_HIGHEST + 20)
 
 DEFINE_EVENT_TYPE(wxID_CONNECT)
 DEFINE_EVENT_TYPE(wxID_UPLOAD)
@@ -64,7 +64,6 @@ DEFINE_EVENT_TYPE(wxID_TOOLBAR_UPLOAD)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_DOWNLOAD)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_INFO)
 DEFINE_EVENT_TYPE(wxID_TOOLBAR_CANCEL)
-DEFINE_EVENT_TYPE(wxID_LIST_CTRL)
  
 BEGIN_EVENT_TABLE(gui_main, wxApp)
 	EVT_MENU(wxID_ABOUT, gui_main::OnAbout)
@@ -91,7 +90,7 @@ bool gui_main::OnInit() {
 		wxTimerEventHandler(gui_main::OnTimer),
 		NULL,
 		this);
-	timer_.Start(250);	
+	timer_.Start(250);
 	wxSystemOptions::SetOption(_("mac.listctrl.always_use_generic"), 1);
 
 #ifdef __WXMAC__
@@ -127,10 +126,6 @@ bool gui_main::OnInit() {
 		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _("/");
 		temp_path_ = wxStandardPaths::Get().GetTempDir() + ("/");
 #endif // __WXMAC__
-//		wxMessageBox(
-//			_("INFO : setting paths to : \n") +
-//			_("ressources\t: ") + ressources_path_ + _("\n") +
-//			_("temp\t: ") + temp_path_);
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	{	// toolbar
@@ -198,29 +193,29 @@ bool gui_main::OnInit() {
 			_("Info about an action"));
 		toolbar->Realize();
 
-		frame_->Connect(
+		this->Connect(
 			wxID_TOOLBAR_CONNECT, 
 			wxEVT_COMMAND_TOOL_CLICKED, 
 			wxCommandEventHandler(gui_main::OnConnect));
-		frame_->Connect(
+		this->Connect(
 			wxID_TOOLBAR_DOWNLOAD, 
 			wxEVT_COMMAND_TOOL_CLICKED, 
 			wxCommandEventHandler(gui_main::OnDownload));
-		frame_->Connect(
+		this->Connect(
 			wxID_TOOLBAR_UPLOAD, 
 			wxEVT_COMMAND_TOOL_CLICKED, 
 			wxCommandEventHandler(gui_main::OnUpload));
-		frame_->Connect(
+		this->Connect(
 			wxID_TOOLBAR_CANCEL, 
 			wxEVT_COMMAND_TOOL_CLICKED, 
 			wxCommandEventHandler(gui_main::OnCancel));
-		frame_->Connect(
+		this->Connect(
 			wxID_TOOLBAR_INFO, 
 			wxEVT_COMMAND_TOOL_CLICKED, 
 			wxCommandEventHandler(gui_main::OnInfo));
 	}
 	{	// data view list control
-		list_ctrl_ = new wxListCtrl(
+		list_ctrl_ = new gui_list_ctrl(
 			frame_, wxID_LIST_CTRL,
 			wxDefaultPosition,
 			wxDefaultSize,
@@ -302,17 +297,14 @@ void gui_main::OnPrefs(wxCommandEvent& evt) {
 
 void gui_main::OnCancel(wxCommandEvent& evt) {
 	// cancel some action
-	long item = list_ctrl_->GetNextItem(
-		-1,
-		wxLIST_NEXT_ALL,
-		wxLIST_STATE_SELECTED);
+	long item = list_ctrl_->get_selected();
 	if (item == -1) {
 		wxMessageBox(_("ERROR : No item selected!"));
 		return;
 	}
 	{
 		std::stringstream ss("");
-		ss << "Selected item (";
+		ss << "TODO : Delete item (";
 		ss << item;
 		ss << ").";
 		wxMessageBox(_(ss.str().c_str()));
@@ -321,14 +313,12 @@ void gui_main::OnCancel(wxCommandEvent& evt) {
 		wxMessageBox(_("ERROR : No DHT instance!"));
 		return;
 	}
-/*
 	std::list<gui_action*> ls = gui_dht::instance()->get_action_list();
 	std::list<gui_action*>::iterator ite = ls.begin();
 	for (int i = 0; ite != ls.end(); ++ite, ++i)
 		if (i == item)
 			gui_dht::instance()->stop_action(
 				dynamic_cast<gui_action*>(*ite));
-*/
 }
 
 void gui_main::OnInfo(wxCommandEvent& evt) {
@@ -376,7 +366,6 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 			list_ctrl_->DeleteItem(0);
 		while (list_ctrl_->GetItemCount() < ls.size())
 			list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
-//		selected_item_ = -1;
 		for (int i = 0; ite != ls.end(); ++ite, ++i) {
 			gui_action* p = dynamic_cast<gui_action*>(*ite);
 			{	// progress

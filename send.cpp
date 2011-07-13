@@ -216,7 +216,6 @@ void dht_send_file::received(size_t index) {
 }
 
 void dht_send_file::run_once(boost::asio::deadline_timer* t) {
-	if (stop_) return;
 	std::map<size_t, upload_state_t>::iterator ite;
 	ite = map_state_.begin();
 	for (int i = 0; i < 5; ++i) {
@@ -252,8 +251,12 @@ void dht_send_file::run_once(boost::asio::deadline_timer* t) {
 				break;
 		}
 	}
-	t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
-	t->async_wait(boost::bind(&dht_send_file::run_once, this, t));
+	if (!stop_) {
+		boost::posix_time::ptime now(
+			boost::posix_time::microsec_clock::universal_time());
+		t->expires_at(now + boost::posix_time::millisec(10));
+		t->async_wait(boost::bind(&dht_send_file::run_once, this, t));
+	}
 }
 
 inline bool is_port_valid(unsigned short port) {

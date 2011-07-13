@@ -25,34 +25,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MINIDHT_GUI_MAIN_HEADER_DEFINED
-#define MINIDHT_GUI_MAIN_HEADER_DEFINED
+#include <wx/wx.h>
+#include <wx/listctrl.h>
+#include "gui_list_ctrl.h"
 
-class gui_list_ctrl;
+DEFINE_EVENT_TYPE(wxID_LIST_CTRL)
 
-class gui_main : public wxApp {
-	bool OnInit();
-	wxFrame* frame_;
-	gui_list_ctrl* list_ctrl_;
-	wxString title_;
-	wxString temp_path_;
-	wxString ressources_path_;
-	wxTimer timer_;
-public:
-	DECLARE_EVENT_TABLE()
-	void OnAbout(wxCommandEvent& evt);
-	void OnPrefs(wxCommandEvent& evt);
-	void OnQuit(wxCommandEvent& evt);
-	void OnConnect(wxCommandEvent& evt);
-	void OnUpload(wxCommandEvent& evt);
-	void OnDownload(wxCommandEvent& evt);
-	void OnCancel(wxCommandEvent& evt);
-	void OnInfo(wxCommandEvent& evt);
-	void OnNetworkStatus(wxCommandEvent& evt);
-	void OnTimer(wxTimerEvent& evt);
-#ifdef __WXMAC__
-	void MacOpenFile(const wxString& fileName);
-#endif // __WXMAC__
-};
+BEGIN_EVENT_TABLE(gui_list_ctrl, wxListCtrl)
+	EVT_LIST_ITEM_SELECTED(wxID_LIST_CTRL, gui_list_ctrl::OnSelected)
+	EVT_LIST_ITEM_DESELECTED(wxID_LIST_CTRL, gui_list_ctrl::OnDeselected)
+END_EVENT_TABLE()
 
-#endif // MINIDHT_GUI_MAIN_HEADER_DEFINED
+void gui_list_ctrl::OnSelected(wxListEvent& event) {
+	if (GetWindowStyle() & wxLC_REPORT) {
+		wxListItem info;
+		info.m_itemId = event.m_itemIndex;
+		info.m_col = 1;
+		info.m_mask = wxLIST_MASK_TEXT;
+		if (GetItem(info)) {
+			selected_ = event.m_itemIndex;
+		} else {
+			wxMessageBox(_("Error in item selection."));
+		}
+	}
+}
+
+void gui_list_ctrl::OnDeselected(wxListEvent& event) {
+	selected_ = -1;
+}
+

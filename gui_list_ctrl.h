@@ -25,34 +25,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MINIDHT_GUI_MAIN_HEADER_DEFINED
-#define MINIDHT_GUI_MAIN_HEADER_DEFINED
+#ifndef MINIDHT_GUI_LIST_CTRL_HEADER_DEFINED
+#define MINIDHT_GUI_LIST_CTRL_HEADER_DEFINED
 
-class gui_list_ctrl;
+DECLARE_EVENT_TYPE(wxID_LIST_CTRL, wxID_HIGHEST + 20)
 
-class gui_main : public wxApp {
-	bool OnInit();
-	wxFrame* frame_;
-	gui_list_ctrl* list_ctrl_;
-	wxString title_;
-	wxString temp_path_;
-	wxString ressources_path_;
-	wxTimer timer_;
-public:
+class gui_list_ctrl : public wxListCtrl {
+protected :
+	long updated_;
+	long selected_;
+	wxListItemAttr attr_;
+public :
+	gui_list_ctrl(
+		wxWindow* parent,
+		const wxWindowID id,
+		const wxPoint& pos,
+		const wxSize& size,
+		long style)
+		: 	wxListCtrl(parent, id, pos, size, style),
+			updated_(-1),
+			selected_(-1),
+			attr_(*wxBLUE, *wxLIGHT_GREY, wxNullFont)
+		{}
+	void OnSelected(wxListEvent& event);
+	void OnDeselected(wxListEvent& event);
+	long get_selected() const { return selected_; }
+private :
+	wxDECLARE_NO_COPY_CLASS(gui_list_ctrl);
 	DECLARE_EVENT_TABLE()
-	void OnAbout(wxCommandEvent& evt);
-	void OnPrefs(wxCommandEvent& evt);
-	void OnQuit(wxCommandEvent& evt);
-	void OnConnect(wxCommandEvent& evt);
-	void OnUpload(wxCommandEvent& evt);
-	void OnDownload(wxCommandEvent& evt);
-	void OnCancel(wxCommandEvent& evt);
-	void OnInfo(wxCommandEvent& evt);
-	void OnNetworkStatus(wxCommandEvent& evt);
-	void OnTimer(wxTimerEvent& evt);
-#ifdef __WXMAC__
-	void MacOpenFile(const wxString& fileName);
-#endif // __WXMAC__
 };
 
-#endif // MINIDHT_GUI_MAIN_HEADER_DEFINED
+#endif // MINIDHT_GUI_LIST_CTRL_HEADER_DEFINED
+

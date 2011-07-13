@@ -270,7 +270,9 @@ void dht_recv_file::run_once(boost::asio::deadline_timer* t) {
 		}
 	}
 	if (!stop_) {
-		t->expires_at(t->expires_at() + boost::posix_time::millisec(10));
+		boost::posix_time::ptime now(
+			boost::posix_time::microsec_clock::universal_time());
+		t->expires_at(now + boost::posix_time::millisec(10));
 		t->async_wait(boost::bind(&dht_recv_file::run_once, this, t));
 	}
 }

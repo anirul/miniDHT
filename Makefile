@@ -47,6 +47,8 @@ gui_send.o: send.cpp send.h $(MINIDHT_HEADER)
 	$(CXX) -o gui_send.o $(FLAGS) -c send.cpp
 gui_recv.o: recv.cpp recv.h $(MINIDHT_HEADER)
 	$(CXX) -o gui_recv.o $(FLAGS) -c recv.cpp
+gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h
+	$(CXX) -o gui_list_ctrl.o $(FLAGS) `wx-config --cxxflags` -c gui_list_ctrl.cpp
 
 miniDHT_server: server.o
 	$(CXX) -o miniDHT_server server.o $(LIBS)
@@ -56,7 +58,7 @@ miniDHT_send: send.o
 	$(CXX) -o miniDHT_send send.o $(LIBS)
 miniDHT_recv: recv.o
 	$(CXX) -o miniDHT_recv recv.o $(LIBS)
-BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui_send.o gui_recv.o
+BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui_send.o gui_recv.o gui_list_ctrl.o
 	$(CXX) -o BitSmear \
 		gui_main.o \
 		gui_connect.o \
@@ -65,6 +67,7 @@ BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui
 		gui_dht.o \
 		gui_send.o \
 		gui_recv.o \
+		gui_list_ctrl.o \
 	$(LIBS) `wx-config --libs`
 
 ifeq ($(OSTYPE), darwin)
