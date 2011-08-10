@@ -87,6 +87,9 @@ BitSmear.app: Info.plist BitSmear
 	cp Knob\ Grey.png BitSmear.app/Contents/Resources
 	echo -n 'APPL????' > BitSmear.app/Contents/PkgInfo
 	cp BitSmear BitSmear.app/Contents/MacOS/BitSmear
+	cp miniDHT_server BitSmear.app/Contents/MacOS/
+	cp miniDHT_send BitSmear.app/Contents/MacOS/
+	cp miniDHT_recv BitSmear.app/Contents/MacOS/
 endif
 
 clean:

@@ -302,13 +302,6 @@ void gui_main::OnCancel(wxCommandEvent& evt) {
 		wxMessageBox(_("ERROR : No item selected!"));
 		return;
 	}
-	{
-		std::stringstream ss("");
-		ss << "TODO : Delete item (";
-		ss << item;
-		ss << ").";
-		wxMessageBox(_(ss.str().c_str()));
-	}
 	if (gui_dht::instance() == NULL) {
 		wxMessageBox(_("ERROR : No DHT instance!"));
 		return;
@@ -322,7 +315,12 @@ void gui_main::OnCancel(wxCommandEvent& evt) {
 }
 
 void gui_main::OnInfo(wxCommandEvent& evt) {
-	gui_info dialog;
+	long item = list_ctrl_->get_selected();
+	if (item == -1) {
+		wxMessageBox(_("ERROR : No item selected!"));
+		return;
+	}
+	gui_info dialog(item);
 	if (dialog.ShowModal() == wxID_OK)
 		wxMessageBox(_("TODO : Info on some action."));
 }

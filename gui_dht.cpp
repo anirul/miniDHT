@@ -50,7 +50,7 @@ void gui_dht::release() {
 	}
 }
 
-void gui_dht::start(short port) {
+void gui_dht::start(unsigned short port) {
 	if (mini_dht_) stop();
 	mini_dht_ = new miniDHT_t(io_service_, port, path_);
 	thread_ = new boost::thread(
@@ -68,7 +68,7 @@ void gui_dht::stop() {
 	delete mini_dht_;
 }
 
-void gui_dht::ping(const std::string& hostname, short port) {
+void gui_dht::ping(const std::string& hostname, unsigned short port) {
 	std::stringstream ss_port("");
 	ss_port << port;
 	boost::asio::ip::udp::resolver resolver(io_service_);
@@ -114,6 +114,7 @@ bool gui_dht::stop_action(gui_action* p_action) {
 		return false;
 	p_action->stop();
 	list_action_.remove(p_action);
+// FIXME this is here because if delete -> crash...
 //	delete p_action;
 	return true;
 }

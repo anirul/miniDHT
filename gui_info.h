@@ -29,10 +29,15 @@
 #define GUI_INFO_HEADER_DEFINED
 
 class gui_info : private wxTimer, public wxDialog {
+protected :
 	wxString title_;
+	wxTextCtrl* info_id_;
+	wxTextCtrl* info_name_;
+	wxTextCtrl* info_text_;
+	long item_index_;
 	void Notify();
 public :
-	gui_info(const wxString& title = _("Action Info"));
+	gui_info(long item, const wxString& title = _("Action Info"));
 };
 
 #endif // GUI_INFO_HEADER_DEFINED

@@ -50,9 +50,9 @@ public : // singleton stuff
 	static gui_dht* instance();
 	static void release();
 public : // general DHT stuff
-	void start(short port);
+	void start(unsigned short port);
 	void stop();
-	void ping(const std::string& host, short port);
+	void ping(const std::string& host, unsigned short port);
 	std::list<miniDHT_t::contact_t> status();
 public : // action related
 	void start_upload(const std::string& file);

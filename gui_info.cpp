@@ -26,22 +26,63 @@
  */
 
 #include <wx/wx.h>
+#include <string>
+#include <sstream>
 #include "gui_info.h"
+#include "gui_dht.h"
 
-gui_info::gui_info(const wxString& title)
+gui_info::gui_info(long item, const wxString& title)
 	: 	wxDialog(
 			NULL,
 			wxID_ANY,
 			title,
 			wxDefaultPosition,
-			wxSize(250, 250),
+			wxSize(300, 300),
 			wxSTAY_ON_TOP | wxSYSTEM_MENU),
-		title_(title)
+		title_(title),
+		info_id_(NULL),
+		info_name_(NULL),
+		info_text_(NULL),
+		item_index_(item)
 {
 	wxPanel *panel = new wxPanel(this, -1);
 
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
+
+	wxStaticText* st1 = new wxStaticText(
+		panel,
+		wxID_ANY,
+		_("ID"),
+		wxPoint(15, 20));
+	info_id_ = new wxTextCtrl(
+		panel,
+		wxID_ANY,
+		_(".oOo."),
+		wxPoint(65, 20),
+		wxSize(200, 20),
+		wxTE_READONLY);
+
+	wxStaticText* st2 = new wxStaticText(
+		panel,
+		wxID_ANY,
+		_("Name"),
+		wxPoint(15, 50));
+	info_name_ = new wxTextCtrl(
+		panel,
+		wxID_ANY,
+		_(".oOo."),
+		wxPoint(65, 50),
+		wxSize(200, 20),
+		wxTE_READONLY);
+
+	info_text_ = new wxTextCtrl(
+		panel,
+		wxID_ANY,
+		_(".oOo."),
+		wxPoint(15, 80),
+		wxSize(250, 90),
+		wxTE_READONLY | wxTE_MULTILINE);
 
 	wxButton *okButton = new wxButton(
 		this, 
@@ -76,5 +117,26 @@ void gui_info::Notify() {
 				title_));
 		count++;
 	}
+	if (gui_dht::instance()) {
+		std::list<gui_action*> ls = gui_dht::instance()->get_action_list();
+		std::list<gui_action*>::iterator ite = ls.begin();
+		for (int i = 0; ite != ls.end(); ++ite, ++i) {
+			if (i == item_index_) {
+				gui_action* p = dynamic_cast<gui_action*>(*ite);
+				{
+					std::stringstream ss("");
+					ss << p->get_digest();
+					wxString id = _(ss.str().c_str());
+					if (id != info_id_->GetValue())
+						info_id_->SetValue(id);
+				}
+				{
+					wxString name = _(p->get_filename().c_str());
+					if (name != info_name_->GetValue())
+						info_name_->SetValue(name);
+				}
+			}
+		}
+	}	
 }
 
