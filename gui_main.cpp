@@ -128,6 +128,10 @@ bool gui_main::OnInit() {
 #endif // __WXMAC__
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
+	if (!wxFileExists(ressources_path_)) {
+		ressources_path_ = _("./");
+		std::cout << "WARNING : Changed ressource path to \"./\"." << std::endl;
+	}
 	{	// toolbar
 		wxImage::AddHandler(new wxPNGHandler);		
 		wxBitmap download(

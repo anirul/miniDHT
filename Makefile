@@ -18,6 +18,8 @@ LIBS = \
 	-lboost_date_time-mt \
 	-lboost_filesystem-mt \
 	-lcrypto \
+	-lpthread \
+	-lm \
 	-ldb
 MINIDHT_HEADERS = miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h
 BDB_HEADERS = bdb_basic_db.h bdb_btree.h bdb_hash.h bdb_iterator.h bdb_multibtree.h bdb_serialize.h
