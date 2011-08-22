@@ -50,7 +50,7 @@ public : // singleton stuff
 	static gui_dht* instance();
 	static void release();
 public : // general DHT stuff
-	void start(unsigned short port);
+	void start(unsigned short port = 54242);
 	void stop();
 	void ping(const std::string& host, unsigned short port);
 	std::list<miniDHT_t::contact_t> status();

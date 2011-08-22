@@ -35,7 +35,7 @@ gui_connect::gui_connect(const wxString& title)
 			wxID_ANY, 
 			title, 
 			wxDefaultPosition, 
-			wxSize(250, 150), 
+			wxSize(250, 170), 
 			wxSTAY_ON_TOP | wxCAPTION),
 		hostname_ctrl_(NULL),
 		port_ctrl_(NULL),

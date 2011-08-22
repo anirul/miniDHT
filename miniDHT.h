@@ -164,7 +164,7 @@ namespace miniDHT {
 	
 		miniDHT(
 			boost::asio::io_service& io_service, 
-			short port,
+			unsigned short port,
 			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
@@ -200,7 +200,7 @@ namespace miniDHT {
 		
 		miniDHT(
 			boost::asio::io_service& io_service, 
-			short port,
+			unsigned short port,
 			const std::string& target_name,
 			const std::string& target_port,
 			const std::string& path = std::string("./"),

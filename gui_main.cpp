@@ -238,7 +238,7 @@ bool gui_main::OnInit() {
 	frame_->SetMenuBar(menubar);
 	frame_->Show();
 
-	gui_dht::instance(std::string(temp_path_.mb_str()))->start(11235);
+	gui_dht::instance(std::string(temp_path_.mb_str()))->start();
 
 #ifdef __WXMAC__
 	ProcessSerialNumber PSN;
