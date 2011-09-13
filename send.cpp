@@ -354,19 +354,11 @@ int main(int ac, char** av) {
 			boost::asio::io_service ios;
 //			boost::asio::io_service ios_send;
 			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
-			if (is_port && is_address) {
-				std::stringstream ss("");
-				ss << port;
-				pDht = new miniDHT::miniDHT<key_size, token_size>(
-					ios,
-					listen,
-					address,
-					ss.str());
-			} else {
-				pDht = new miniDHT::miniDHT<key_size, token_size>(
-					ios, 
-					listen);
-			}
+			pDht = new miniDHT::miniDHT<key_size, token_size>(
+				ios, 
+				listen);
+			if (is_port && is_address) 
+				pDht->send_PING(address, port);
 			std::cout 
 				<< "Waiting to the DHT to settle ("
 				<< std::dec 

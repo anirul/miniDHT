@@ -34,7 +34,7 @@
 	#ifdef SERIALIZE_XML
 		#undef SERIALIZE_XML
 	#endif // SERIALIZE_XML
-#else // !SERIZLIZE_BINARY
+#else // !SERIALIZE_BINARY
 	#ifndef SERIALIZE_XML
 		#define SERIALIZE_BINARY
 	#endif // !SERIALIZE_XML
@@ -67,6 +67,7 @@
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/split_member.hpp>
 // local
+#include "miniDHT_session.h"
 #include "miniDHT_db.h"
 #include "miniDHT_message.h"
 #include "miniDHT_const.h"
@@ -85,16 +86,17 @@ namespace miniDHT {
 		// sent back in a FIND_NODE message.
 		unsigned int ALPHA = 5,
 		// node (contact) per bucket
-		unsigned int BUCKET_SIZE = 20,
+		unsigned int BUCKET_SIZE = 5,
 		// call back for clean up (minutes) this is also used as a timeout
 		// for the contact list (node list).
 		size_t PERIODIC = 5,
-		// maximum size of an UDP packet
-		size_t PACKET_SIZE = 256 * 256>		
+		// maximum size of a packet
+		size_t PACKET_SIZE = 1024 * 1024>
+		
 	class miniDHT {
 	
 	public :
-	
+
 		typedef std::bitset<TOKEN_SIZE> token_t;
 		typedef std::bitset<KEY_SIZE> key_t;
 		typedef contact<KEY_SIZE> contact_t;
@@ -104,6 +106,9 @@ namespace miniDHT {
 		typedef std::map<key_t, key_t, less_key> map_key_key_t;
 		typedef search<KEY_SIZE, BUCKET_SIZE> search_t;
 		typedef bucket<BUCKET_SIZE, KEY_SIZE> bucket_t;
+		typedef 
+			std::map<boost::asio::ip::tcp::endpoint, session<PACKET_SIZE>*> 
+			map_endpoint_session_t;
 		typedef 
 			db_multi_wrapper<key_t, data_item_t, less_key> 
 			db_key_data_t;
@@ -159,7 +164,9 @@ namespace miniDHT {
 		// token related storage
 		std::map<token_t, boost::posix_time::ptime, less_token> map_ping_ttl;
 		std::map<token_t, digest_t, less_token> map_store_digest;
-						
+		// session pointers
+		map_endpoint_session_t map_endpoint_session;
+			
 	public :
 	
 		miniDHT(
@@ -197,103 +204,7 @@ namespace miniDHT {
 			contact_list.add_contact(id_, socket_.local_endpoint());
 			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
 		}
-		
-		miniDHT(
-			boost::asio::io_service& io_service, 
-			unsigned short port,
-			const std::string& target_name,
-			const std::string& target_port,
-			const std::string& path = std::string("./"),
-			size_t max_records = DEFAULT_MAX_RECORDS)
-			:	periodic_(boost::posix_time::minutes(PERIODIC)),
-				id_(local_key<KEY_SIZE>(port)),
-				max_records_(max_records),
-				io_service_(io_service),
-				dt_(
-					io_service, 
-					boost::posix_time::seconds(random() % 120)),
-				socket_(
-					io_service, 
-					boost::asio::ip::udp::endpoint(
-						boost::asio::ip::udp::v4(), 
-						port)),
-				contact_list(id_)
-		{
-			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::stringstream ss("");
-			ss << path << "localhost.store." << port << ".db";
-			db_storage.open(ss.str().c_str());
-			restore_from_backup(path, port);
-			boost::asio::ip::udp::resolver resolver(io_service);
-			boost::asio::ip::udp::resolver::query query(
-				boost::asio::ip::udp::v4(), 
-				target_name, 
-				target_port);
-			boost::asio::ip::udp::resolver::iterator iterator = 
-				resolver.resolve(query);		
-			send_PING_nolock(*iterator);
-			socket_.async_receive_from(
-				boost::asio::buffer(packet_buffer_recv, PACKET_SIZE), 
-				sender_endpoint_,
-				boost::bind(
-					&miniDHT::handle_receive_header_from, 
-					this,
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
-			contact_list.add_contact(id_, socket_.local_endpoint());
-			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
-		}
-		
-		miniDHT(
-			boost::asio::io_service& io_service, 
-			short port,
-			std::list<std::string>& list_name,
-			std::list<std::string>& list_port,
-			const std::string& path = std::string("./"),
-			size_t max_records = DEFAULT_MAX_RECORDS)
-			:	periodic_(boost::posix_time::minutes(PERIODIC)),
-				io_service_(io_service),
-				dt_(
-					io_service, 
-					boost::posix_time::seconds(random() % 120)),
-				socket_(
-					io_service, 
-					boost::asio::ip::udp::endpoint(
-						boost::asio::ip::udp::v4(), 
-						port)),
-				id_(local_key<KEY_SIZE>(port)),
-				max_records_(max_records),
-				contact_list(id_)
-		{
-			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::stringstream ss("");
-			ss << path << "localhost.store." << port << ".db";
-			db_storage.open(ss.str().c_str());
-			restore_from_backup(port);
-			std::list<std::string>::iterator it_name = list_name.begin();
-			std::list<std::string>::iterator it_port = list_port.begin();
-			for (; it_name != list_name.end(); ++it_name, ++it_port) {
-				boost::asio::ip::udp::resolver resolver(io_service);
-				boost::asio::ip::udp::resolver::query query(
-					boost::asio::ip::udp::v4(), 
-					(std::string)(*it_name), 
-					(std::string)(*it_port));
-				boost::asio::ip::udp::resolver::iterator iterator = 
-					resolver.resolve(query);		
-				send_PING_nolock(*iterator);
-			}
-			socket_.async_receive_from(
-				boost::asio::buffer(packet_buffer_recv, PACKET_SIZE), 
-				sender_endpoint_,
-				boost::bind(
-					&miniDHT::handle_receive_header_from, 
-					this,
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
-			contact_list.add_contact(id_, socket_.local_endpoint());
-			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
-		}
-		
+
 		virtual ~miniDHT() {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			db_storage.flush();
@@ -416,7 +327,7 @@ namespace miniDHT {
 			return socket_.local_endpoint(); 
 		}
 
-		size_t sorage_wait_queue() const { 
+		size_t storage_wait_queue() const { 
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			return map_store_digest.size(); 
 		}
@@ -650,7 +561,9 @@ namespace miniDHT {
 		{
 			map_search[t].update_list(lc);
 			// iterativeFindValue
-			for (unsigned int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
+			for (	unsigned int i = 0; 
+					i < ALPHA && !map_search[t].is_node_full(); 
+					++i)
 				send_FIND_VALUE(map_search[t].get_node_endpoint(), k, t);
 		}
 		
@@ -670,7 +583,9 @@ namespace miniDHT {
 				// free some local space
 				map_search.erase(t);
 			} else {
-				for (unsigned int i = 0; i < ALPHA && !map_search[t].is_node_full(); ++i)
+				for (	unsigned int i = 0; 
+						i < ALPHA && !map_search[t].is_node_full(); 
+						++i)
 					send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
 			}
 		}
@@ -902,6 +817,30 @@ namespace miniDHT {
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			send_PING_nolock(ep, token);
+		}
+		
+		// helper function now that there is no more ping & constructor
+		void send_PING(
+			const std::string& address,
+			const unsigned short port)
+		{
+			std::stringstream ss("");
+			ss << port;
+			send_PING(address, ss.str());
+		}
+
+		void send_PING(
+			const std::string& address,
+			const std::string& port)
+		{
+			boost::asio::ip::udp::resolver resolver(io_service_);
+			boost::asio::ip::udp::resolver::query query(
+				boost::asio::ip::udp::v4(), 
+				address, 
+				port);
+			boost::asio::ip::udp::resolver::iterator iterator = 
+				resolver.resolve(query);		
+			send_PING(*iterator);			
 		}
 
 	protected :

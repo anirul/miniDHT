@@ -226,7 +226,8 @@ int main(int ac, char** av) {
 			list_port.push_back(previous_port);
 			ptd = new miniDHT::miniDHT<key_size, token_size>(
 				io_service, 
-				atoi(next_port.c_str()),
+				atoi(next_port.c_str()));
+			ptd->send_PING(
 				string("localhost"), // list_name, 
 				previous_port); // list_port);
 			previous_port = next_port;

@@ -366,22 +366,14 @@ int main(int ac, char** av) {
 			return -1;
 		}
       {
-            boost::asio::io_service ios;
-				miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
-            boost::asio::deadline_timer t(
-                ios, 
-                boost::posix_time::seconds(wait_settle));
-            if (is_port && is_address) {
-                std::stringstream ss("");
-                ss << port;
-                pDht = new miniDHT::miniDHT<key_size, token_size>(
-                    ios,
-                    listen,
-                    address,
-                    ss.str());
-            } else {
-                pDht = new miniDHT::miniDHT<key_size, token_size>(ios, listen);
-            }
+         boost::asio::io_service ios;
+			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+         boost::asio::deadline_timer t(
+				ios, 
+				boost::posix_time::seconds(wait_settle));
+			pDht = new miniDHT::miniDHT<key_size, token_size>(ios, listen);
+			if (is_port && is_address)
+         	pDht->send_PING(address, port);
 			std::cout 
 				<< "Waiting to the DHT to settle ("
 				<< std::dec 
