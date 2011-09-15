@@ -62,11 +62,11 @@ namespace boost {
 			boost::serialization::split_free(ar, b, version);
 		}
 		
-		// serialize boost::asio::ip::udp::endpoint
+		// serialize boost::asio::ip::tcp::endpoint
 		template <class Archive>
 		void save(
 			Archive& ar, 
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const unsigned int version)
 		{
 			unsigned short port = ep.port();
@@ -77,21 +77,21 @@ namespace boost {
 		template <class Archive>
 		void load(
 			Archive& ar,
-			boost::asio::ip::udp::endpoint& ep,
+			boost::asio::ip::tcp::endpoint& ep,
 			const unsigned int version)
 		{
 			unsigned short port;
 			std::string address;
 			ar >> BOOST_SERIALIZATION_NVP(address);
 			ar >> BOOST_SERIALIZATION_NVP(port);
-			ep = boost::asio::ip::udp::endpoint(
+			ep = boost::asio::ip::tcp::endpoint(
 				boost::asio::ip::address::from_string(address), 
 				port);
 		}
 		template <class Archive>
 		void serialize(
 			Archive& ar,
-			boost::asio::ip::udp::endpoint& ep,
+			boost::asio::ip::tcp::endpoint& ep,
 			const unsigned int version)
 		{
 			boost::serialization::split_free(ar, ep, version);

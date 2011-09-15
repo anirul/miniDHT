@@ -354,9 +354,12 @@ int main(int ac, char** av) {
 			boost::asio::io_service ios;
 //			boost::asio::io_service ios_send;
 			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+			boost::asio::ip::tcp::endpoint ep(
+				boost::asio::ip::address::from_string("localhost"),
+				listen);
 			pDht = new miniDHT::miniDHT<key_size, token_size>(
 				ios, 
-				listen);
+				ep);
 			if (is_port && is_address) 
 				pDht->send_PING(address, port);
 			std::cout 

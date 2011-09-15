@@ -52,7 +52,10 @@ void gui_dht::release() {
 
 void gui_dht::start(unsigned short port) {
 	if (mini_dht_) stop();
-	mini_dht_ = new miniDHT_t(io_service_, port, path_);
+	boost::asio::ip::tcp::endpoint ep(
+		boost::asio::ip::address::from_string("localhost"),
+		port);
+	mini_dht_ = new miniDHT_t(io_service_, ep, path_);
 	thread_ = new boost::thread(
 		boost::bind(
 			&boost::asio::io_service::run, 
@@ -71,12 +74,12 @@ void gui_dht::stop() {
 void gui_dht::ping(const std::string& hostname, unsigned short port) {
 	std::stringstream ss_port("");
 	ss_port << port;
-	boost::asio::ip::udp::resolver resolver(io_service_);
-	boost::asio::ip::udp::resolver::query query(
-		boost::asio::ip::udp::v4(), 
+	boost::asio::ip::tcp::resolver resolver(io_service_);
+	boost::asio::ip::tcp::resolver::query query(
+		boost::asio::ip::tcp::v4(), 
 		hostname, 
 		ss_port.str());
-	boost::asio::ip::udp::resolver::iterator ite = 
+	boost::asio::ip::tcp::resolver::iterator ite = 
 		resolver.resolve(query);
 	mini_dht_->send_PING(*ite);
 }

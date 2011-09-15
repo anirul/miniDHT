@@ -49,18 +49,18 @@ namespace miniDHT {
 		contact() {}
 		contact(
 			const std::bitset<KEY_SIZE>& b, 
-			const boost::asio::ip::udp::endpoint& e)
+			const boost::asio::ip::tcp::endpoint& e)
 			:	key(b), ep(e) {}
 		contact(
 			const std::bitset<KEY_SIZE>& k, 
-			const boost::asio::ip::udp::endpoint& e, 
+			const boost::asio::ip::tcp::endpoint& e, 
 			const boost::posix_time::ptime& t) :
 				key(k), ep(e), ttl(t) {}
 	
 	public :
 		
 		std::bitset<KEY_SIZE> key;
-		boost::asio::ip::udp::endpoint ep;
+		boost::asio::ip::tcp::endpoint ep;
 		boost::posix_time::ptime ttl;
 	};
 	

@@ -113,8 +113,13 @@ namespace miniDHT {
 			db_multi_wrapper<key_t, data_item_t, less_key> 
 			db_key_data_t;
 		typedef 
-			db_wrapper<key_t, boost::asio::ip::udp::endpoint, less_key> 
+			db_wrapper<key_t, boost::asio::ip::tcp::endpoint, less_key> 
 			db_key_endpoint_t;
+		typedef typename
+			std::map<
+				boost::asio::ip::tcp::endpoint, 
+				session<PACKET_SIZE>*>::iterator
+			map_endpoint_session_iterator;
 		typedef typename 
 			bucket<BUCKET_SIZE, KEY_SIZE>::iterator 
 			bucket_iterator;
@@ -138,7 +143,7 @@ namespace miniDHT {
 		typedef typename
 			db_wrapper<
 				key_t, 
-				boost::asio::ip::udp::endpoint, 
+				boost::asio::ip::tcp::endpoint, 
 				less_key>::iterator
 			db_key_endpoint_iterator;
 			
@@ -148,9 +153,10 @@ namespace miniDHT {
 		const key_t id_;
 		size_t max_records_;
 		boost::asio::io_service& io_service_;
+		boost::asio::ip::tcp::acceptor acceptor_;
 		boost::asio::deadline_timer dt_;
-		boost::asio::ip::udp::socket socket_;
-		boost::asio::ip::udp::endpoint sender_endpoint_;
+		boost::asio::ip::tcp::socket socket_;
+		boost::asio::ip::tcp::endpoint sender_endpoint_;
 		char packet_buffer_recv[PACKET_SIZE];
 		// mutex lock
 		boost::mutex giant_lock_;
@@ -171,38 +177,27 @@ namespace miniDHT {
 	
 		miniDHT(
 			boost::asio::io_service& io_service, 
-			unsigned short port,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
-				id_(local_key<KEY_SIZE>(port)),
+				id_(local_key<KEY_SIZE>(ep.port())),
 				max_records_(max_records),
 				io_service_(io_service),
+				acceptor_(io_service, ep),
 				dt_(
 					io_service, 
 					boost::posix_time::seconds(random() % 120)),
-				socket_(
-					io_service, 
-					boost::asio::ip::udp::endpoint(
-						boost::asio::ip::udp::v4(), 
-						port)),
+				socket_(io_service, ep),
 				contact_list(id_)
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			std::stringstream ss("");
-			ss << path << "localhost.store." << port << ".db";
+			ss << path << "localhost.store." << ep.port() << ".db";
 			db_storage.open(ss.str().c_str());
-			restore_from_backup(path, port);
-			socket_.async_receive_from(
-				boost::asio::buffer(packet_buffer_recv, PACKET_SIZE), 
-				sender_endpoint_,
-				boost::bind(
-					&miniDHT::handle_receive_header_from, 
-					this,
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
-			contact_list.add_contact(id_, socket_.local_endpoint());
+			restore_from_backup(path, ep.port());
 			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
+			start_accept();
 		}
 
 		virtual ~miniDHT() {
@@ -322,7 +317,7 @@ namespace miniDHT {
 			return id_; 
 		}
 
-		const boost::asio::ip::udp::endpoint get_local_endpoint() { 
+		const boost::asio::ip::tcp::endpoint get_local_endpoint() { 
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			return socket_.local_endpoint(); 
 		}
@@ -353,7 +348,7 @@ namespace miniDHT {
 			db_backup.open(sb.str().c_str());
 			db_key_endpoint_iterator dbit;
 			for (dbit = db_backup.begin(); dbit != db_backup.end(); ++dbit) {
-				boost::asio::ip::udp::endpoint ep = dbit->second;
+				boost::asio::ip::tcp::endpoint ep = dbit->second;
 				send_PING_nolock(ep, random_bitset<TOKEN_SIZE>());
 			}
 		}
@@ -591,87 +586,114 @@ namespace miniDHT {
 		}
 
 	protected :
-		
-		void handle_receive_header_from(
-			const boost::system::error_code& error,
-			size_t bytes_recvd)
+
+		void start_accept() {
+			session<PACKET_SIZE>* new_session = new session<PACKET_SIZE>(
+				io_service_,
+				boost::bind(
+					&miniDHT::handle_receive,
+					this,
+					_1, 
+					_2),
+				boost::bind(
+					&miniDHT::handle_delete,
+					this,
+					_1));
+			acceptor_.async_accept(
+				new_session->socket(),
+				boost::bind(
+					&miniDHT::handle_accept,
+					this,
+					new_session,
+					boost::asio::placeholders::error));
+		}
+
+		void handle_delete(session<PACKET_SIZE>* ps) {
+			boost::mutex::scoped_lock lock_it(giant_lock_);
+			boost::asio::ip::tcp::endpoint ep = 
+				ps->socket().remote_endpoint();
+			map_endpoint_session_iterator ite =
+				map_endpoint_session.find(ep);
+			if (ite != map_endpoint_session.end())
+				map_endpoint_session.erase(ite);			
+		}
+
+		void handle_accept(
+			session<PACKET_SIZE>* ps,
+			const boost::system::error_code& error) 
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			if (!error) {
-				message_t m;
-				std::stringstream ss(
-					std::string(packet_buffer_recv, bytes_recvd));
-				try {
+				ps->start();
+				boost::asio::ip::tcp::endpoint ep = 
+					ps->socket().remote_endpoint();
+				if (	map_endpoint_session.find(ep) !=
+						map_endpoint_session.end())
+					map_endpoint_session.insert(
+						std::make_pair(ep, ps));
+			}
+			start_accept();
+		}
+		
+		void handle_receive(
+			session<PACKET_SIZE>* ps,
+			const std::string& s)	
+		{
+			boost::mutex::scoped_lock lock_it(giant_lock_);
+			boost::asio::ip::tcp::endpoint ep = ps->socket().remote_endpoint();
+			message_t m;
+			std::stringstream ss(s);
+			try {
 #ifdef SERIALIZE_XML
-					boost::archive::xml_iarchive xia(ss);
-					xia >> BOOST_SERIALIZATION_NVP(m);
+				boost::archive::xml_iarchive xia(ss);
+				xia >> BOOST_SERIALIZATION_NVP(m);
 #endif // SERIALIZE_XML
 #ifdef SERIALIZE_BINARY
-					boost::archive::binary_iarchive xia(ss);
-					xia >> m;
+				boost::archive::binary_iarchive xia(ss);
+				xia >> m;
 #endif // SERIALIZE_BINARY
-					switch (m.type) {
-						case message_t::SEND_PING :
-							handle_SEND_PING(m);
-							contact_list.add_contact(
-								m.from_id, 
-								sender_endpoint_);
-							break;
-						case message_t::REPLY_PING :
-							handle_REPLY_PING(m);
-							break;
-						case message_t::SEND_STORE :
-							handle_SEND_STORE(m);
-							contact_list.add_contact(
-								m.from_id, 
-								sender_endpoint_);
-							break;
-						case message_t::REPLY_STORE :
-							handle_REPLY_STORE(m);
-							break;
-						case message_t::SEND_FIND_NODE :
-							handle_SEND_FIND_NODE(m);
-							contact_list.add_contact(
-								m.from_id, 
-								sender_endpoint_);
-							break;
-						case message_t::REPLY_FIND_NODE :
-							handle_REPLY_FIND_NODE(m);
-							break;
-						case message_t::SEND_FIND_VALUE :
-							handle_SEND_FIND_VALUE(m);
-							contact_list.add_contact(
-								m.from_id, 
-								sender_endpoint_);
-							break;
-						case message_t::REPLY_FIND_VALUE :
-							handle_REPLY_FIND_VALUE(m);
-							break;
-						case message_t::NONE :
-						default :
-							break;
-					}
-				} catch (std::exception& e) {
-					std::cerr 
-						<< "[" << socket_.local_endpoint()
-						<< "] error in deserializing message (dump)." 
-						<< std::endl
-						<< "\texception : " << e.what() << std::endl;
-					std::cerr
-						<< ss.str() << std::endl;
+				switch (m.type) {
+					case message_t::SEND_PING :
+						handle_SEND_PING(m);
+						contact_list.add_contact(m.from_id, ep);
+						break;
+					case message_t::REPLY_PING :
+						handle_REPLY_PING(m);
+						break;
+					case message_t::SEND_STORE :
+						handle_SEND_STORE(m);
+						contact_list.add_contact(m.from_id, ep);
+						break;
+					case message_t::REPLY_STORE :
+						handle_REPLY_STORE(m);
+						break;
+					case message_t::SEND_FIND_NODE :
+						handle_SEND_FIND_NODE(m);
+						contact_list.add_contact(m.from_id, ep);
+						break;
+					case message_t::REPLY_FIND_NODE :
+						handle_REPLY_FIND_NODE(m);
+						break;
+					case message_t::SEND_FIND_VALUE :
+						handle_SEND_FIND_VALUE(m);
+						contact_list.add_contact(m.from_id, ep);
+						break;
+					case message_t::REPLY_FIND_VALUE :
+						handle_REPLY_FIND_VALUE(m);
+						break;
+					case message_t::NONE :
+					default :
+						break;
 				}
-			} else {
-				std::cerr << "[" << socket_.local_endpoint() 
-					<< "] error in message_header." << std::endl;
+			} catch (std::exception& e) {
+				std::cerr 
+					<< "[" << socket_.local_endpoint()
+					<< "] error in deserializing message (dump)." 
+					<< std::endl
+					<< "\texception : " << e.what() << std::endl;
+				std::cerr
+					<< ss.str() << std::endl;
 			}
-			socket_.async_receive_from(
-				boost::asio::buffer(packet_buffer_recv, PACKET_SIZE),
-				sender_endpoint_,
-				boost::bind(
-					&miniDHT::handle_receive_header_from,
-					this,
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
 		}
 		
 		void handle_SEND_PING(const message_t& m) {
@@ -743,7 +765,7 @@ namespace miniDHT {
 					(address == std::string("localhost"))) {
 					address = sender_endpoint_.address().to_string();
 					unsigned short port = c.ep.port();
-					boost::asio::ip::udp::endpoint uep(
+					boost::asio::ip::tcp::endpoint uep(
 						boost::asio::ip::address::from_string(address),
 						port);
 					contact_list.add_contact(c.key, uep, false);
@@ -776,7 +798,7 @@ namespace miniDHT {
 
 		void send_MESSAGE(
 			const message_t& m,
-			const boost::asio::ip::udp::endpoint& ep) 
+			const boost::asio::ip::tcp::endpoint& ep) 
 		{
 			std::string address = ep.address().to_string();
 			unsigned short port = ep.port();
@@ -792,10 +814,27 @@ namespace miniDHT {
 #endif // SERIALIZE_XML
 				if (address == std::string("0.0.0.0"))
 					address = std::string("127.0.0.1");
-				boost::asio::ip::udp::endpoint uep(
+				boost::asio::ip::tcp::endpoint uep(
 					boost::asio::ip::address::from_string(address), 
 					port);
-				socket_.send_to(boost::asio::buffer(ss.str()), uep);
+				map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
+				if (ite == map_endpoint_session.end())	{
+					session<PACKET_SIZE>* new_session = new session<PACKET_SIZE>(
+						io_service_,
+						boost::bind(
+							&miniDHT::handle_receive,
+							this,
+							_1, 
+							_2),
+						boost::bind(
+							&miniDHT::handle_delete,
+							this,
+							_1));
+					map_endpoint_session.insert(std::make_pair(uep, new_session));
+					ite = map_endpoint_session.find(uep);
+					ite->second->connect(uep);
+				}
+				ite->second->deliver(ss.str());
 			} catch (std::exception& e) {
 				std::cerr 
 					<< "Exception in send_MESSAGE(" << ep << " - " 
@@ -812,7 +851,7 @@ namespace miniDHT {
 		// ping is now public so that you can bootstrap to a network after
 		// class initialization.
 		void send_PING(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
@@ -833,12 +872,12 @@ namespace miniDHT {
 			const std::string& address,
 			const std::string& port)
 		{
-			boost::asio::ip::udp::resolver resolver(io_service_);
-			boost::asio::ip::udp::resolver::query query(
-				boost::asio::ip::udp::v4(), 
+			boost::asio::ip::tcp::resolver resolver(io_service_);
+			boost::asio::ip::tcp::resolver::query query(
+				boost::asio::ip::tcp::v4(), 
 				address, 
 				port);
-			boost::asio::ip::udp::resolver::iterator iterator = 
+			boost::asio::ip::tcp::resolver::iterator iterator = 
 				resolver.resolve(query);		
 			send_PING(*iterator);			
 		}
@@ -847,7 +886,7 @@ namespace miniDHT {
 
 		// ping with no lock to call from an already locked function
 		void send_PING_nolock(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			try {
@@ -867,7 +906,7 @@ namespace miniDHT {
 	protected :
 
 		void send_STORE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const key_t& to_id,
 			const data_item_t& cbf,
 			token_t token = random_bitset<TOKEN_SIZE>())
@@ -892,7 +931,7 @@ namespace miniDHT {
 		}
 
 		void send_FIND_NODE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const key_t& to_id,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
@@ -909,7 +948,7 @@ namespace miniDHT {
 		}
 
 		void send_FIND_VALUE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const key_t& to_id,
 			token_t token = random_bitset<TOKEN_SIZE>(),
 			const std::string& hint = std::string(""))
@@ -930,7 +969,7 @@ namespace miniDHT {
 	protected :
 	
 		void reply_PING(
-			const boost::asio::ip::udp::endpoint& ep, 
+			const boost::asio::ip::tcp::endpoint& ep, 
 			const token_t& tok)
 		{
 			try {
@@ -945,7 +984,7 @@ namespace miniDHT {
 		}
 
 		void reply_STORE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const token_t& tok,
 			const data_item_t& cbf)
 		{
@@ -966,7 +1005,7 @@ namespace miniDHT {
 		}
 
 		void reply_FIND_NODE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const token_t& tok,
 			const key_t& to_id)
 		{
@@ -994,7 +1033,7 @@ namespace miniDHT {
 		}
 
 		void reply_FIND_VALUE(
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const token_t& tok,
 			const key_t& to_id,
 			const std::string& hint = std::string(""))

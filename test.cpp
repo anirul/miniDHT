@@ -205,8 +205,11 @@ int main(int ac, char** av) {
 			return -3;
 		}
 		boost::asio::io_service io_service;
+		boost::asio::ip::tcp::endpoint ep(
+			boost::asio::ip::address::from_string("localhost"),
+			port);
 		miniDHT::miniDHT<key_size, token_size>* root = 
-			new miniDHT::miniDHT<key_size, token_size>(io_service, port);
+			new miniDHT::miniDHT<key_size, token_size>(io_service, ep);
 		list_ptd.push_back(root);
 		string previous_port = "";
 		{
@@ -224,9 +227,12 @@ int main(int ac, char** av) {
 			miniDHT::miniDHT<key_size, token_size>* ptd = NULL;
 			list_name.push_back(std::string("localhost"));
 			list_port.push_back(previous_port);
+			boost::asio::ip::tcp::endpoint ep(
+				boost::asio::ip::address::from_string("localhost"),
+				atoi(next_port.c_str()));
 			ptd = new miniDHT::miniDHT<key_size, token_size>(
 				io_service, 
-				atoi(next_port.c_str()));
+				ep);
 			ptd->send_PING(
 				string("localhost"), // list_name, 
 				previous_port); // list_port);

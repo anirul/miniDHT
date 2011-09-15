@@ -371,7 +371,10 @@ int main(int ac, char** av) {
          boost::asio::deadline_timer t(
 				ios, 
 				boost::posix_time::seconds(wait_settle));
-			pDht = new miniDHT::miniDHT<key_size, token_size>(ios, listen);
+			boost::asio::ip::tcp::endpoint ep(
+				boost::asio::ip::address::from_string("localhost"),
+				listen);
+			pDht = new miniDHT::miniDHT<key_size, token_size>(ios, ep);
 			if (is_port && is_address)
          	pDht->send_PING(address, port);
 			std::cout 

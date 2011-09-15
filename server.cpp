@@ -155,9 +155,12 @@ int main(int ac, char** av) {
 		{
 			boost::asio::io_service ios_dht;
 			boost::asio::io_service ios_watch;
+			boost::asio::ip::tcp::endpoint ep(
+				boost::asio::ip::address::from_string("localhost"),
+				port);
 			pDht = new miniDHT::miniDHT<key_size, token_size>(
 				ios_dht,
-				listen);
+				ep);
 			if (is_port && is_address)
 				pDht->send_PING(address, port);					
 			if (is_max_record) pDht->set_max_record(max_record);

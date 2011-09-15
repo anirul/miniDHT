@@ -60,7 +60,7 @@ namespace miniDHT {
 		bucket(const std::bitset<KEY_SIZE>& k) : 
 			local_key_(k), changed_(true) {}
 		
-		boost::asio::ip::udp::endpoint operator[](
+		boost::asio::ip::tcp::endpoint operator[](
 			const std::bitset<KEY_SIZE>& k) 
 		{
 			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
@@ -75,7 +75,7 @@ namespace miniDHT {
 		
 		void add_contact(
 			const std::bitset<KEY_SIZE>& k, 
-			const boost::asio::ip::udp::endpoint& ep,
+			const boost::asio::ip::tcp::endpoint& ep,
 			bool update_ttl = true) 
 		{
 			now_ = update_time();

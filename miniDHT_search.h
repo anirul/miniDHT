@@ -132,7 +132,7 @@ namespace miniDHT {
 			return nb;
 		}
 		
-		boost::asio::ip::udp::endpoint get_node_endpoint() {
+		boost::asio::ip::tcp::endpoint get_node_endpoint() {
 			list_contact_t_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
 				if (map_node_busy.find(ite->key) == map_node_busy.end()) {
@@ -143,7 +143,7 @@ namespace miniDHT {
 			throw std::string("no endpoint found!");
 		}
 		
-		boost::asio::ip::udp::endpoint get_value_endpoint() {
+		boost::asio::ip::tcp::endpoint get_value_endpoint() {
 			list_contact_t_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
 				if (map_value_busy.find(ite->key) == map_value_busy.end()) {
