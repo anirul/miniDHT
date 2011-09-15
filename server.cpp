@@ -156,8 +156,8 @@ int main(int ac, char** av) {
 			boost::asio::io_service ios_dht;
 			boost::asio::io_service ios_watch;
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::address::from_string("localhost"),
-				port);
+				boost::asio::ip::tcp::v4(),
+				listen);
 			pDht = new miniDHT::miniDHT<key_size, token_size>(
 				ios_dht,
 				ep);

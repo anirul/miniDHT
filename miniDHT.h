@@ -188,7 +188,7 @@ namespace miniDHT {
 				dt_(
 					io_service, 
 					boost::posix_time::seconds(random() % 120)),
-				socket_(io_service, ep),
+				socket_(io_service),
 				contact_list(id_)
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
@@ -595,10 +595,7 @@ namespace miniDHT {
 					this,
 					_1, 
 					_2),
-				boost::bind(
-					&miniDHT::handle_delete,
-					this,
-					_1));
+				map_endpoint_session);
 			acceptor_.async_accept(
 				new_session->socket(),
 				boost::bind(
@@ -608,16 +605,6 @@ namespace miniDHT {
 					boost::asio::placeholders::error));
 		}
 
-		void handle_delete(session<PACKET_SIZE>* ps) {
-			boost::mutex::scoped_lock lock_it(giant_lock_);
-			boost::asio::ip::tcp::endpoint ep = 
-				ps->socket().remote_endpoint();
-			map_endpoint_session_iterator ite =
-				map_endpoint_session.find(ep);
-			if (ite != map_endpoint_session.end())
-				map_endpoint_session.erase(ite);			
-		}
-
 		void handle_accept(
 			session<PACKET_SIZE>* ps,
 			const boost::system::error_code& error) 
@@ -625,22 +612,16 @@ namespace miniDHT {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			if (!error) {
 				ps->start();
-				boost::asio::ip::tcp::endpoint ep = 
-					ps->socket().remote_endpoint();
-				if (	map_endpoint_session.find(ep) !=
-						map_endpoint_session.end())
-					map_endpoint_session.insert(
-						std::make_pair(ep, ps));
 			}
 			start_accept();
 		}
 		
 		void handle_receive(
-			session<PACKET_SIZE>* ps,
+			const boost::asio::ip::tcp::endpoint& ep,
 			const std::string& s)	
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			boost::asio::ip::tcp::endpoint ep = ps->socket().remote_endpoint();
+			sender_endpoint_ = ep;
 			message_t m;
 			std::stringstream ss(s);
 			try {
@@ -826,15 +807,22 @@ namespace miniDHT {
 							this,
 							_1, 
 							_2),
-						boost::bind(
-							&miniDHT::handle_delete,
-							this,
-							_1));
-					map_endpoint_session.insert(std::make_pair(uep, new_session));
-					ite = map_endpoint_session.find(uep);
-					ite->second->connect(uep);
+						map_endpoint_session);
+					new_session->connect(uep);
+					new_session->deliver(ss.str());
+					/*
+					// call back later
+					boost::posix_time::time_duration wait_time = 
+						boost::posix_time::seconds(5);
+					boost::posix_time::ptime now = update_time();
+					dt_.expires_at(now + wait_time);
+					dt_.async_wait(
+						boost::bind(&miniDHT::send_MESSAGE,	this,	m,	ep));
+					std::cout << "miniDHT::send_MESSAGE > delayed" << std::endl;
+					*/
+				} else {
+					ite->second->deliver(ss.str());
 				}
-				ite->second->deliver(ss.str());
 			} catch (std::exception& e) {
 				std::cerr 
 					<< "Exception in send_MESSAGE(" << ep << " - " 
