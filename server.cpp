@@ -53,8 +53,8 @@ void watch(boost::asio::deadline_timer* t) {
 	std::list<miniDHT::contact<key_size> > ls;
 	std::list<miniDHT::contact<key_size> >::iterator ite;
 	ls = pDht->nodes_description();
-	std::cout << std::endl;
-	std::cout << miniDHT::update_time() << std::endl;
+//	std::cout << std::endl;
+//	std::cout << miniDHT::update_time() << std::endl;
 	for (ite = ls.begin(); ite != ls.end(); ++ite)
 		std::cout 
 			<< "<<" << miniDHT::key_to_string<key_size>(ite->key) << ">>" 

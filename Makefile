@@ -21,35 +21,35 @@ LIBS = \
 	-lpthread \
 	-lm \
 	-ldb
-MINIDHT_HEADERS = miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h
+MINIDHT_HEADERS = miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 BDB_HEADERS = bdb_basic_db.h bdb_btree.h bdb_hash.h bdb_iterator.h bdb_multibtree.h bdb_serialize.h
 
 all: $(ALL)
 
-server.o: server.cpp $(MINIDHT_HEADER)
+server.o: server.cpp miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h miniDHT_session.h
 	$(CXX) -o server.o $(FLAGS) -c server.cpp
-test.o: test.cpp $(MINIDHT_HEADER)
+test.o: test.cpp  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o test.o $(FLAGS) -c test.cpp
-send.o: send.cpp send.h aes_crypt.h $(MINIDHT_HEADER)
+send.o: send.cpp send.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o send.o $(FLAGS) -c send.cpp -DSEND_MAIN_TEST
-recv.o: recv.cpp recv.h aes_crypt.h $(MINIDHT_HEADER)
+recv.o: recv.cpp recv.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o recv.o $(FLAGS) -c recv.cpp -DRECV_MAIN_TEST
 
-gui_main.o: gui_main.cpp gui_main.h gui_network_status.h gui_connect.h gui_info.h $(MINIDHT_HEADER)
+gui_main.o: gui_main.cpp gui_main.h gui_network_status.h gui_connect.h gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_main.o $(FLAGS) `wx-config --cxxflags` -c gui_main.cpp
-gui_connect.o: gui_connect.cpp gui_connect.h $(MINIDHT_HEADER)
+gui_connect.o: gui_connect.cpp gui_connect.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_connect.o $(FLAGS) `wx-config --cxxflags` -c gui_connect.cpp
-gui_info.o: gui_info.cpp gui_info.h $(MINIDHT_HEADER)
+gui_info.o: gui_info.cpp gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_info.o $(FLAGS) `wx-config --cxxflags` -c gui_info.cpp
-gui_network_status.o: gui_network_status.cpp gui_network_status.h gui_dht.h $(MINIDHT_HEADER)
+gui_network_status.o: gui_network_status.cpp gui_network_status.h gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_network_status.o $(FLAGS) `wx-config --cxxflags` -c gui_network_status.cpp
-gui_dht.o: gui_dht.cpp gui_dht.h $(MINIDHT_HEADER)
+gui_dht.o: gui_dht.cpp gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_dht.o $(FLAGS) `wx-config --cxxflags` -c gui_dht.cpp
-gui_send.o: send.cpp send.h $(MINIDHT_HEADER)
+gui_send.o: send.cpp send.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_send.o $(FLAGS) -c send.cpp
-gui_recv.o: recv.cpp recv.h $(MINIDHT_HEADER)
+gui_recv.o: recv.cpp recv.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_recv.o $(FLAGS) -c recv.cpp
-gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h
+gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h 
 	$(CXX) -o gui_list_ctrl.o $(FLAGS) `wx-config --cxxflags` -c gui_list_ctrl.cpp
 
 miniDHT_server: server.o

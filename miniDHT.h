@@ -30,6 +30,8 @@
 
 #define DEFAULT_MAX_RECORDS (1024 * 1024)
 
+#define SERIALIZE_XML
+
 #ifdef SERIALIZE_BINARY
 	#ifdef SERIALIZE_XML
 		#undef SERIALIZE_XML
@@ -157,7 +159,7 @@ namespace miniDHT {
 		boost::asio::deadline_timer dt_;
 		boost::asio::ip::tcp::socket socket_;
 		boost::asio::ip::tcp::endpoint sender_endpoint_;
-		char packet_buffer_recv[PACKET_SIZE];
+		unsigned short listen_port_;
 		// mutex lock
 		boost::mutex giant_lock_;
 		// bucket (contact list)
@@ -189,13 +191,14 @@ namespace miniDHT {
 					io_service, 
 					boost::posix_time::seconds(random() % 120)),
 				socket_(io_service),
+				listen_port_(ep.port()),
 				contact_list(id_)
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			std::stringstream ss("");
-			ss << path << "localhost.store." << ep.port() << ".db";
+			ss << path << "localhost.store." << listen_port_ << ".db";
 			db_storage.open(ss.str().c_str());
-			restore_from_backup(path, ep.port());
+			restore_from_backup(path, listen_port_);
 			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
 			start_accept();
 		}
@@ -618,12 +621,12 @@ namespace miniDHT {
 		
 		void handle_receive(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const std::string& s)	
+			const basic_message<PACKET_SIZE>& msg)	
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			sender_endpoint_ = ep;
 			message_t m;
-			std::stringstream ss(s);
+			std::stringstream ss(std::string(msg.body(), msg.body_length()));
 			try {
 #ifdef SERIALIZE_XML
 				boost::archive::xml_iarchive xia(ss);
@@ -799,6 +802,11 @@ namespace miniDHT {
 					boost::asio::ip::address::from_string(address), 
 					port);
 				map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
+				basic_message<PACKET_SIZE> msg;
+				std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
+				msg.body_length(ss.str().size());
+				msg.listen_port(listen_port_);
+				msg.encode_header();
 				if (ite == map_endpoint_session.end())	{
 					session<PACKET_SIZE>* new_session = new session<PACKET_SIZE>(
 						io_service_,
@@ -809,19 +817,9 @@ namespace miniDHT {
 							_2),
 						map_endpoint_session);
 					new_session->connect(uep);
-					new_session->deliver(ss.str());
-					/*
-					// call back later
-					boost::posix_time::time_duration wait_time = 
-						boost::posix_time::seconds(5);
-					boost::posix_time::ptime now = update_time();
-					dt_.expires_at(now + wait_time);
-					dt_.async_wait(
-						boost::bind(&miniDHT::send_MESSAGE,	this,	m,	ep));
-					std::cout << "miniDHT::send_MESSAGE > delayed" << std::endl;
-					*/
+					new_session->deliver(msg);
 				} else {
-					ite->second->deliver(ss.str());
+					ite->second->deliver(msg);
 				}
 			} catch (std::exception& e) {
 				std::cerr 

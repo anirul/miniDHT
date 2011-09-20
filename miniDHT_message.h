@@ -109,6 +109,7 @@ namespace miniDHT {
 		std::bitset<KEY_SIZE> from_id;
 		std::bitset<KEY_SIZE> to_id;
 		std::bitset<TOKEN_SIZE> token;
+		unsigned short listen_port;
 		// specific to message
 		digest_t digest;
 		data_item_t data;
