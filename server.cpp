@@ -46,7 +46,7 @@
 miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
 
 bool is_port_valid(unsigned short port) {
-	return (port > 0);
+	return ((port > 0) && (port < 0xc000));
 }
 
 void watch(boost::asio::deadline_timer* t) {
@@ -104,7 +104,7 @@ int main(int ac, char** av) {
 				<< "." << std::endl;
 			listen = vm["listen"].as<unsigned short>();
 			if (!is_port_valid(listen)) {
-				std::cerr << "error: Invalid port [1-65535]." << std::endl;
+				std::cerr << "error: Invalid port [1-49151]." << std::endl;
 				return 1;
 			}
 		} else {
@@ -119,7 +119,7 @@ int main(int ac, char** av) {
 				<< "." << std::endl;
 			port = vm["port"].as<unsigned short>();
 			if (!is_port_valid(port)) {
-				std::cerr << "error: Invalid port [1-65535]." << std::endl;
+				std::cerr << "error: Invalid port [1-49151]." << std::endl;
 				return 1;
 			}
 			is_port = true;

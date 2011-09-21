@@ -1,6 +1,6 @@
 # hand made Makefile sorry I m lazy...
 
-ALL = miniDHT_server miniDHT_test \
+ALL = miniDHT_server miniDHT_session miniDHT_test \
 	miniDHT_send miniDHT_recv BitSmear 
 
 ifeq ($(OSTYPE), darwin)
@@ -26,6 +26,8 @@ BDB_HEADERS = bdb_basic_db.h bdb_btree.h bdb_hash.h bdb_iterator.h bdb_multibtre
 
 all: $(ALL)
 
+session.o: session.cpp miniDHT_session.h
+	$(CXX) -o session.o $(FLAGS) -c session.cpp
 server.o: server.cpp miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h miniDHT_session.h
 	$(CXX) -o server.o $(FLAGS) -c server.cpp
 test.o: test.cpp  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
@@ -52,6 +54,8 @@ gui_recv.o: recv.cpp recv.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_
 gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h 
 	$(CXX) -o gui_list_ctrl.o $(FLAGS) `wx-config --cxxflags` -c gui_list_ctrl.cpp
 
+miniDHT_session: session.o
+	$(CXX) -o miniDHT_session session.o $(LIBS)
 miniDHT_server: server.o
 	$(CXX) -o miniDHT_server server.o $(LIBS)
 miniDHT_test: test.o
