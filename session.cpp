@@ -31,23 +31,23 @@
 
 boost::asio::io_service ios;
 boost::asio::ip::tcp::acceptor* acceptor;
-miniDHT::session<PACKET_SIZE>::map_endpoint_session_t map_endpoint_session;
+miniDHT::session::map_endpoint_session_t map_endpoint_session;
 unsigned short listen_port;
 
 void start_accept();
 void handle_accept(
-	miniDHT::session<PACKET_SIZE>* ps,
+	miniDHT::session_ptr ps, 
 	const boost::system::error_code& error);
 void handle_receive(
 	const boost::asio::ip::tcp::endpoint& ep,
-	const miniDHT::basic_message<PACKET_SIZE>& s);
+	const miniDHT::basic_message& s);
 
 void start_accept() {
-	miniDHT::session<PACKET_SIZE>* accept_session = 
-		new miniDHT::session<PACKET_SIZE>(
-		ios,
-		handle_receive,
-		map_endpoint_session);
+	miniDHT::session_ptr accept_session( 
+		new miniDHT::tcp_session(
+			ios,
+			handle_receive,
+			map_endpoint_session));
 	acceptor->async_accept(
 		accept_session->socket(),
 		boost::bind(
@@ -56,7 +56,7 @@ void start_accept() {
 }
 
 void handle_accept(
-	miniDHT::session<PACKET_SIZE>* ps,
+	miniDHT::session_ptr ps,
 	const boost::system::error_code& error)
 {
 	if (!error)
@@ -66,11 +66,11 @@ void handle_accept(
 
 void handle_receive(
 	const boost::asio::ip::tcp::endpoint& ep,
-	const miniDHT::basic_message<PACKET_SIZE>& s)
+	const miniDHT::basic_message& s)
 {
 	std::cout << "receive packet from : " << ep << std::endl;
 	std::cout << std::string(s.body(), s.body_length()) << std::endl;
-	miniDHT::session<PACKET_SIZE>::map_endpoint_session_iterator ite = 
+	miniDHT::session::map_endpoint_session_iterator ite = 
 		map_endpoint_session.find(ep);
 	if (ite == map_endpoint_session.end()) {
 		std::cout 
@@ -78,7 +78,7 @@ void handle_receive(
 			<< " in the session list..." << std::endl;
 		return;
 	}
-	miniDHT::basic_message<PACKET_SIZE> msg;
+	miniDHT::basic_message msg;
 	msg.body_length(s.body_length() - 1);
 	memcpy(msg.body(), &s.body()[1], msg.body_length());
 	msg.listen_port(listen_port);
@@ -185,27 +185,29 @@ int main(int ac, char** av) {
 						resolver.resolve(query);
 					uep = *iterator;
 				}
-				miniDHT::session<PACKET_SIZE>::map_endpoint_session_iterator ite = 
+				miniDHT::session::map_endpoint_session_iterator ite = 
 					map_endpoint_session.find(uep);
 				std::string hello = "hello world!";
-				miniDHT::basic_message<PACKET_SIZE> msg;
+				miniDHT::basic_message msg;
 				msg.body_length(hello.size());
 				memcpy(msg.body(), hello.c_str(), hello.size());
 				msg.listen_port(listen);
 				msg.encode_header();
 				if (ite == map_endpoint_session.end()) {
-					miniDHT::session<PACKET_SIZE>* new_session = 
-						new miniDHT::session<PACKET_SIZE>(
-						ios,
-						handle_receive,
-						map_endpoint_session);
+					miniDHT::session_ptr new_session( 
+						new miniDHT::tcp_session(
+							ios,
+							handle_receive,
+							map_endpoint_session));
 					new_session->connect(uep);
 					new_session->deliver(msg);
 				} else {
 					ite->second->deliver(msg);
 				}
+				ios.run();
+			} else {
+				ios.run();
 			}
-			ios.run();
 		}
 	} catch (std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;

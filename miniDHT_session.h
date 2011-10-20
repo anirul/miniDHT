@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, Frederic DUBOUCHET
+ * Copyright (c) 2011, Frederic DUBOUCHET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,283 +62,101 @@
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/split_member.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 
 namespace miniDHT {
 
-	template <size_t PACKET_SIZE = 1024 * 1024>		
 	class basic_message {
-
 	public :
-
 		enum { header_length = 16 };
-		enum { max_body_length = PACKET_SIZE - header_length };
-	
-		basic_message()
-			: body_length_(0), listen_port_(0) {}
-
-		const char* data() const {
-			return data_;
-		}
-
-		char* data() {
-			return data_;
-		}
-
-		size_t length() const {
-			return header_length + body_length_;
-		}
-
-		const char* body() const {
-			return data_ + header_length;
-		}
-		
-		char* body() {
-			return data_ + header_length;
-		}
-
-		size_t body_length() const {
-			return body_length_;
-		}
-
-		void body_length(size_t new_length) {
-			body_length_ = new_length;
-			if (body_length_ > max_body_length)
-				body_length_ = max_body_length;
-		}
-
-		unsigned short listen_port() const {
-			return listen_port_;
-		}
-
-		void listen_port(unsigned short port) {
-			listen_port_ = port;
-		}
-
-		bool decode_header() {
-			char part1[(header_length / 2) + 1] = "";
-			char part2[(header_length / 2) + 1] = "";
-			std::strncat(part1, data_, header_length / 2);
-			std::strncat(part2, &data_[header_length / 2], header_length / 2);
-			body_length_ = std::atoi(part1);
-			listen_port_ = std::atoi(part2);
-			if (body_length_ > max_body_length) {
-				body_length_ = 0;
-				return false;
-			}
-			return true;
-		}
-		
-		void encode_header() {
-			char part1[(header_length / 2) + 1] = "";
-			char part2[(header_length / 2) + 1] = "";
-			std::sprintf(part1, "%8d", (int)body_length_);
-			std::memcpy(data_, part1, header_length / 2);
-			std::sprintf(part2, "%8d", (int)listen_port_);
-			std::memcpy(&data_[header_length / 2], part2, header_length / 2);
-		}
-
-	private:
-
-		char data_[header_length + max_body_length];
+		enum { max_body_length = (1024 * 1024) - header_length };
+	public :
+		basic_message() :	data_(NULL), body_length_(0), listen_port_(0) {}
+		~basic_message();
+		basic_message(const basic_message& msg);
+		basic_message& operator=(const basic_message& other);
+		const char* data() const;
+		char* data();
+		size_t length() const;
+		const char* body() const;
+		char* body();
+		size_t body_length() const;
+		void body_length(size_t new_length);
+		unsigned short listen_port() const;
+		void listen_port(unsigned short port);
+		bool decode_header();
+		void encode_header();
+	private :
+		char* data_;
 		size_t body_length_;
 		unsigned short listen_port_;
 	};
-
-	template <size_t PACKET_SIZE = 1024 * 1024>		
+	
 	class session {
-
-	public:
-
+	public :
 		typedef 
 			boost::function<void (
 				const boost::asio::ip::tcp::endpoint& ep, 
-				const basic_message<PACKET_SIZE>& s)>
+				const basic_message& s)>
 			got_message_callback_t;
 		typedef 
-			std::map<boost::asio::ip::tcp::endpoint, session<PACKET_SIZE>*> 
-			map_endpoint_session_t;
-		typedef std::deque<basic_message<PACKET_SIZE> > deque_basic_message_t;
-		typedef typename
 			std::map<
 				boost::asio::ip::tcp::endpoint, 
-				session<PACKET_SIZE>*>::iterator
+				boost::shared_ptr<session> > 
+			map_endpoint_session_t;
+		typedef std::deque<basic_message> deque_basic_message_t;
+		typedef
+			std::map<
+				boost::asio::ip::tcp::endpoint, 
+				boost::shared_ptr<session> >::iterator
 			map_endpoint_session_iterator;
+	public :
+		virtual void start() = 0;
+		virtual void connect(const boost::asio::ip::tcp::endpoint& ep) = 0;
+		virtual void deliver(const basic_message& msg) = 0;
+		virtual boost::asio::ip::tcp::socket& socket() = 0;
+	};
 
+	typedef boost::shared_ptr<session> session_ptr;
+
+	class tcp_session : 
+		public session,
+		public boost::enable_shared_from_this<tcp_session> {
 	protected:
-
 		boost::asio::ip::tcp::socket socket_;
 		boost::asio::ip::tcp::endpoint ep_;
-		basic_message<PACKET_SIZE> read_msg_;
+		basic_message read_msg_;
 		deque_basic_message_t write_msgs_;
 		bool connect_;
+		bool connected_;
 		got_message_callback_t got_message_callback_;
 		map_endpoint_session_t& map_endpoint_session_;
-
+//		boost::mutex local_lock_;
 	public:
-
-		session(
+		tcp_session(
 			boost::asio::io_service& io_service,
 			const got_message_callback_t& c,
 			map_endpoint_session_t& map)
 			:	socket_(io_service),
 				connect_(false),
+				connected_(false),
 				got_message_callback_(c),
 				map_endpoint_session_(map) {}
-
-		boost::asio::ip::tcp::socket& socket() {
-			return socket_;
-		}
-
-		void start() {
-			if (!connect_) ep_ = socket_.remote_endpoint();
-			std::cout << "session::start():[" << ep_ << "]" << std::endl;
-			boost::asio::async_read(
-				socket_,
-				boost::asio::buffer(
-					read_msg_.data(), 
-					read_msg_.header_length),
-				boost::bind(
-					&session::handle_read_header,
-					this,
-					boost::asio::placeholders::error,
-					boost::asio::placeholders::bytes_transferred));
-		}
-
-		void connect(boost::asio::ip::tcp::endpoint& ep) {
-			connect_ = true;
-			ep_ = ep;
-			std::cout << "session::connect(" << ep << ")" << std::endl;
-			socket_.async_connect(
-				ep,
-				boost::bind(
-					&session::handle_connect, 
-					this,
-					boost::asio::placeholders::error));
-		}
-
-		void deliver(const basic_message<PACKET_SIZE>& msg) {
-			std::cout << "session::deliver(" << msg.body_length() << ")" << std::endl;
-			bool write_in_progress = !write_msgs_.empty();
-			write_msgs_.push_back(msg);
-			if (!write_in_progress) {
-				boost::asio::async_write(
-					socket_,
-					boost::asio::buffer(
-						write_msgs_.front().data(), 
-						write_msgs_.front().length()),
-					boost::bind(
-						&session::handle_write, 
-						this,
-						boost::asio::placeholders::error));
-			}
-		}
-
-	protected:
-
-		void cleanup() {
-			std::cout << "session::cleanup()[" << ep_ << "]" << std::endl;
-			map_endpoint_session_iterator ite = 
-				map_endpoint_session_.find(ep_);
-			if (ite != map_endpoint_session_.end())
-				map_endpoint_session_.erase(ite);
-			delete this;
-		}
-
-		void handle_connect(const boost::system::error_code& error) {
-			std::cout << "session::handle_connect(" << error << ")" << std::endl;
-			if (!error)
-				start();
-			else
-				cleanup();
-		}
-
+		boost::asio::ip::tcp::socket& socket();
+		void start();
+		void connect(const boost::asio::ip::tcp::endpoint& ep);
+		void deliver(const basic_message& msg);
+	protected :
+		void cleanup();
+		void handle_connect(const boost::system::error_code& error);
 		void handle_read_header(
 			const boost::system::error_code& error,
-			size_t bytes_recvd)
-		{
-			std::cout
-				<< "session::handle_read_header("
-				<< error << ", " << bytes_recvd << ")"
-				<< std::endl;
-			if (!error && read_msg_.decode_header()) {
-				if (!connect_) { 
-					ep_ = boost::asio::ip::tcp::endpoint(
-						socket_.remote_endpoint().address(), 
-						read_msg_.listen_port());
-				}
-				map_endpoint_session_iterator ite = 
-					map_endpoint_session_.find(ep_);
-				if (ite == map_endpoint_session_.end()) {
-					map_endpoint_session_.insert(std::make_pair(ep_, this));
-				} else {
-					if (ite->second != this) {
-						map_endpoint_session_.erase(ite);
-						map_endpoint_session_.insert(std::make_pair(ep_, this));
-					}
-				}
-				std::cout 
-					<< "session::map_endpoint_session_.size(" << map_endpoint_session_.size()
-					<< ")" << std::endl;
-				boost::asio::async_read(
-					socket_,
-					boost::asio::buffer(
-						read_msg_.body(), 
-						read_msg_.body_length()),
-					boost::bind(
-						&session::handle_read_body,
-						this,
-						boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred));
-			} else {
-				cleanup();
-			}
-		}
-		
+			size_t bytes_recvd);
 		void handle_read_body(
 			const boost::system::error_code& error,
-			size_t bytes_recvd)
-		{
-			std::cout 
-				<< "session::handle_read_body(" 
-				<< error << ", " << bytes_recvd << ")" << std::endl;
-			if (!error) {
-				got_message_callback_(ep_, read_msg_);
-				boost::asio::async_read(
-					socket_,
-					boost::asio::buffer(
-						read_msg_.data(), 
-						read_msg_.header_length),
-					boost::bind(
-						&session::handle_read_header, 
-						this,
-							boost::asio::placeholders::error,
-						boost::asio::placeholders::bytes_transferred));
-			} else {
-				cleanup();
-			}
-		}
-
-		void handle_write(const boost::system::error_code& error) {
-			std::cout 
-				<< "session::handle_write(" << error 
-				<< ")" << std::endl;
-			if (!error) {
-				write_msgs_.pop_front();
-				if (!write_msgs_.empty()) {
-					boost::asio::async_write(
-						socket_,
-						boost::asio::buffer(
-							write_msgs_.front().data(), 
-							write_msgs_.front().length()),
-						boost::bind(
-							&session::handle_write, 
-							this,
-							boost::asio::placeholders::error));
-				}
-			} else {
-				cleanup();
-			}
-		}	
+			size_t bytes_recvd);
+		void handle_write(const boost::system::error_code& error);
 	};
 
 } // end namespace
