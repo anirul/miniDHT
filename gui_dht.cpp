@@ -53,7 +53,7 @@ void gui_dht::release() {
 void gui_dht::start(unsigned short port) {
 	if (mini_dht_) stop();
 	boost::asio::ip::tcp::endpoint ep(
-		boost::asio::ip::tcp::v4(),
+		boost::asio::ip::address::from_string("localhost"),
 		port);
 	mini_dht_ = new miniDHT_t(io_service_, ep, path_);
 	thread_ = new boost::thread(

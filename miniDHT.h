@@ -30,7 +30,8 @@
 
 #define DEFAULT_MAX_RECORDS (1024 * 1024)
 
-// please don't use XML if you are using binary data!
+#define SERIALIZE_XML
+
 #ifdef SERIALIZE_BINARY
 	#ifdef SERIALIZE_XML
 		#undef SERIALIZE_XML
@@ -670,7 +671,7 @@ namespace miniDHT {
 				}
 			} catch (std::exception& e) {
 				std::cerr 
-					<< "[" << sender_endpoint_
+					<< "[" << socket_.local_endpoint()
 					<< "] error in deserializing message (dump)." 
 					<< std::endl
 					<< "\texception : " << e.what() << std::endl;
@@ -802,8 +803,8 @@ namespace miniDHT {
 					port);
 				map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
 				basic_message<PACKET_SIZE> msg;
+				std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
 				msg.body_length(ss.str().size());
-				std::memcpy(msg.body(), ss.str().c_str(), ss.str().size());
 				msg.listen_port(listen_port_);
 				msg.encode_header();
 				if (ite == map_endpoint_session.end())	{

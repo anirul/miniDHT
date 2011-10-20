@@ -372,7 +372,7 @@ int main(int ac, char** av) {
 				ios, 
 				boost::posix_time::seconds(wait_settle));
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::tcp::v4(),
+				boost::asio::ip::address::from_string("localhost"),
 				listen);
 			pDht = new miniDHT::miniDHT<key_size, token_size>(ios, ep);
 			if (is_port && is_address)

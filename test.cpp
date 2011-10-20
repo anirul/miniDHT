@@ -228,7 +228,7 @@ int main(int ac, char** av) {
 			list_name.push_back(std::string("localhost"));
 			list_port.push_back(previous_port);
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::tcp::v4(),
+				boost::asio::ip::address::from_string("localhost"),
 				atoi(next_port.c_str()));
 			ptd = new miniDHT::miniDHT<key_size, token_size>(
 				io_service, 

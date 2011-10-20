@@ -64,8 +64,7 @@ namespace miniDHT {
 	}
 
 	char* basic_message::data() {
-		if (!data_)
-			body_length(max_body_length);
+		if (!data_)	data_ = new char[(1024 * 1024)];
 		return data_;
 	}
 
@@ -137,9 +136,7 @@ namespace miniDHT {
 
 	void tcp_session::start() {
 //		boost::mutex::scoped_lock lock_it(local_lock_);
-		connected_ = true;
 		if (!connect_) ep_ = socket_.remote_endpoint();
-		std::cout << "start : " << ep_ << std::endl;
 		boost::asio::async_read(
 			socket_,
 			boost::asio::buffer(
@@ -152,7 +149,7 @@ namespace miniDHT {
 				boost::asio::placeholders::bytes_transferred));
 	}
 
-	void tcp_session::connect(const boost::asio::ip::tcp::endpoint& ep) {
+	void tcp_session::connect(boost::asio::ip::tcp::endpoint& ep) {
 //		boost::mutex::scoped_lock lock_it(local_lock_);
 		connect_ = true;
 		ep_ = ep;
@@ -168,7 +165,7 @@ namespace miniDHT {
 //		boost::mutex::scoped_lock lock_it(local_lock_);
 		bool write_in_progress = !write_msgs_.empty();
 		write_msgs_.push_back(msg);
-		if (!write_in_progress && connected_) {
+		if (!write_in_progress) {
 			boost::asio::async_write(
 				socket_,
 				boost::asio::buffer(
@@ -192,14 +189,10 @@ namespace miniDHT {
 	}
 
 	void tcp_session::handle_connect(const boost::system::error_code& error) {
-		if (!error) {
+		if (!error)
 			start();
-			// TODO send the defer delivers
-		} else {
-			std::cerr << error << std::endl;
-			std::cerr << error.message() << std::endl;
+		else
 			cleanup();
-		}
 	}
 
 	void tcp_session::handle_read_header(
