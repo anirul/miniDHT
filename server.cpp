@@ -32,8 +32,6 @@
 #include <sstream>
 #include <string>
 
-#define WITH_BDB 1
-
 #include "miniDHT.h"
 
 #ifndef key_size
