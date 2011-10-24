@@ -1,0 +1,7 @@
+TODO list
+
+ - Switch from BDB to SQLite
+ - Check replication parameters
+ - Finish the GUI (add download etc...)
+ - Refactoring of miniDHT (remove template)
+
