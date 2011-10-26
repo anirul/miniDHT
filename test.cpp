@@ -206,7 +206,7 @@ int main(int ac, char** av) {
 		}
 		boost::asio::io_service io_service;
 		boost::asio::ip::tcp::endpoint ep(
-			boost::asio::ip::address::from_string("localhost"),
+			boost::asio::ip::tcp::v4(),
 			port);
 		miniDHT::miniDHT<key_size, token_size>* root = 
 			new miniDHT::miniDHT<key_size, token_size>(io_service, ep);

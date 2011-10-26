@@ -803,8 +803,8 @@ namespace miniDHT {
 					port);
 				map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
 				basic_message<PACKET_SIZE> msg;
-				std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
 				msg.body_length(ss.str().size());
+				std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
 				msg.listen_port(listen_port_);
 				msg.encode_header();
 				if (ite == map_endpoint_session.end())	{

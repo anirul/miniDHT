@@ -1,14 +1,18 @@
 # hand made Makefile sorry I m lazy...
 
-ALL = miniDHT_server miniDHT_session miniDHT_test \
-	miniDHT_send miniDHT_recv BitSmear 
+ALL = \
+	miniDHT_session \
+	miniDHT_server \
+	miniDHT_test \
+	miniDHT_send miniDHT_recv \
+	BitSmear 
 
 ifeq ($(OSTYPE), darwin)
 ALL += BitSmear.app
 endif
 
 CXX = clang++
-FLAGS = -g -I/usr/local/include -I.. -DWITH_BDB
+FLAGS = -g -I/usr/local/include -I/usr/include -I..
 LIBS = \
 	-L/usr/local/lib \
 	-lboost_thread-mt \
@@ -19,8 +23,8 @@ LIBS = \
 	-lboost_filesystem-mt \
 	-lcrypto \
 	-lpthread \
-	-lm \
-	-ldb
+	-lm
+
 MINIDHT_HEADERS = miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_contact.h miniDHT_message.h miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
 BDB_HEADERS = bdb_basic_db.h bdb_btree.h bdb_hash.h bdb_iterator.h bdb_multibtree.h bdb_serialize.h
 

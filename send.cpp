@@ -224,7 +224,6 @@ void dht_send_file::run_once(boost::asio::deadline_timer* t) {
 		if (ite == map_state_.end()) {
 			if (i == 0) {
 				end_ = true;
-				delete t;
 				return;
 			}
 			break;
@@ -355,7 +354,7 @@ int main(int ac, char** av) {
 //			boost::asio::io_service ios_send;
 			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::address::from_string("localhost"),
+				boost::asio::ip::tcp::v4(),
 				listen);
 			pDht = new miniDHT::miniDHT<key_size, token_size>(
 				ios, 

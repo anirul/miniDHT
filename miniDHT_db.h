@@ -76,6 +76,7 @@ namespace miniDHT {
 		virtual ~db_wrapper() {}
 #ifndef WITH_BDB
 		void open(const char* file_name) {
+/*
 			file_name_ = std::string(file_name)
 #ifdef SERIALIZE_XML
 				+ std::string(".xml");
@@ -94,8 +95,10 @@ namespace miniDHT {
 			arch >> (*this);
 #endif // SERIALIZE_BINARY
 			ifs.close();
+*/
 		}
 		void flush() {
+/*
 			std::ofstream ofs(file_name_.c_str());
 #ifdef SERIALIZE_XML
 			boost::archive::xml_oarchive arch(ofs);
@@ -106,9 +109,11 @@ namespace miniDHT {
 			arch << (*this);
 #endif // SERIALIZE_BINARY
 			ofs.close();
+*/
 		}
 		void close() {}
 #endif // !WITH_BDB
+
 	};
 	
 	template <
@@ -142,6 +147,7 @@ namespace miniDHT {
 		virtual ~db_multi_wrapper() {}
 #ifndef WITH_BDB
 		void open(const char* file_name) {
+/*
 			file_name_ = std::string(file_name) 
 #ifdef SERIALIZE_XML
 				+ std::string(".xml");
@@ -160,8 +166,10 @@ namespace miniDHT {
 			arch >> (*this);
 #endif // SERIALIZE_BINARY
 			ifs.close();
+*/
 		}
 		void flush() {
+/*
 			std::ofstream ofs(file_name_.c_str());
 #ifdef SERIALIZE_XML
 			boost::archive::xml_oarchive arch(ofs);
@@ -172,6 +180,7 @@ namespace miniDHT {
 			arch << (*this);
 #endif // SERIALIZE_BINARY
 			ofs.close();
+*/
 		}
 		void close() {}
 #endif // !WITH_BDB

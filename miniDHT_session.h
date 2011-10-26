@@ -46,6 +46,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
@@ -74,13 +76,45 @@ namespace miniDHT {
 		enum { max_body_length = PACKET_SIZE - header_length };
 	
 		basic_message()
-			: body_length_(0), listen_port_(0) {}
+			: data_(NULL), body_length_(0), listen_port_(0) 
+		{
+			data_ = new char[PACKET_SIZE];
+		}
+
+		basic_message(size_t size) 
+			: data_(NULL), body_length_(0), listen_port_(0)
+		{
+			body_length(size);
+		}
+
+		basic_message(const basic_message<PACKET_SIZE>& m) 
+			: data_(NULL), body_length_(0), listen_port_(0)
+		{
+			body_length(m.body_length());
+			listen_port_ = m.listen_port_;
+			memcpy(data_, m.data_, length());
+		}
+
+		basic_message<PACKET_SIZE>& operator=(const basic_message<PACKET_SIZE>& m) {
+			body_length(m.body_length());
+			listen_port_ = m.listen_port_;
+			memcpy(data_, m.data_, length());
+			return *this;	
+		}
+
+		virtual ~basic_message() {
+			if (data_)
+				delete [] data_;
+			data_ = NULL;
+		}
 
 		const char* data() const {
+			if (!data_) throw std::runtime_error("empty data");
 			return data_;
 		}
 
 		char* data() {
+			if (!data_) throw std::runtime_error("empty data");
 			return data_;
 		}
 
@@ -104,6 +138,10 @@ namespace miniDHT {
 			body_length_ = new_length;
 			if (body_length_ > max_body_length)
 				body_length_ = max_body_length;
+			if (data_) {
+				delete [] data_;
+			}
+			data_ = new char[length()];
 		}
 
 		unsigned short listen_port() const {
@@ -139,7 +177,7 @@ namespace miniDHT {
 
 	private:
 
-		char data_[header_length + max_body_length];
+		char* data_;
 		size_t body_length_;
 		unsigned short listen_port_;
 	};
@@ -171,8 +209,10 @@ namespace miniDHT {
 		basic_message<PACKET_SIZE> read_msg_;
 		deque_basic_message_t write_msgs_;
 		bool connect_;
+		int ref_count_;
 		got_message_callback_t got_message_callback_;
 		map_endpoint_session_t& map_endpoint_session_;
+		boost::mutex local_lock_;
 
 	public:
 
@@ -182,16 +222,21 @@ namespace miniDHT {
 			map_endpoint_session_t& map)
 			:	socket_(io_service),
 				connect_(false),
+				ref_count_(1),
 				got_message_callback_(c),
 				map_endpoint_session_(map) {}
 
 		boost::asio::ip::tcp::socket& socket() {
+			boost::mutex::scoped_lock lock_it(local_lock_);
 			return socket_;
 		}
 
 		void start() {
+			boost::mutex::scoped_lock lock_it(local_lock_);
 			if (!connect_) ep_ = socket_.remote_endpoint();
-			std::cout << "session::start():[" << ep_ << "]" << std::endl;
+			std::cout << "session{" << ep_ << "}::start():[" << ep_ << "]" << std::endl;
+			ref_count_ += 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 			boost::asio::async_read(
 				socket_,
 				boost::asio::buffer(
@@ -205,9 +250,12 @@ namespace miniDHT {
 		}
 
 		void connect(boost::asio::ip::tcp::endpoint& ep) {
+			boost::mutex::scoped_lock lock_it(local_lock_);
 			connect_ = true;
 			ep_ = ep;
-			std::cout << "session::connect(" << ep << ")" << std::endl;
+			std::cout << "session{" << ep_ << "}::connect(" << ep << ")" << std::endl;
+			ref_count_ += 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 			socket_.async_connect(
 				ep,
 				boost::bind(
@@ -217,10 +265,13 @@ namespace miniDHT {
 		}
 
 		void deliver(const basic_message<PACKET_SIZE>& msg) {
-			std::cout << "session::deliver(" << msg.body_length() << ")" << std::endl;
+			boost::mutex::scoped_lock lock_it(local_lock_);
+			std::cout << "session{" << ep_ << "}::deliver(" << msg.body_length() << ")" << std::endl;
 			bool write_in_progress = !write_msgs_.empty();
 			write_msgs_.push_back(msg);
 			if (!write_in_progress) {
+				ref_count_ += 1;
+				std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 				boost::asio::async_write(
 					socket_,
 					boost::asio::buffer(
@@ -235,21 +286,36 @@ namespace miniDHT {
 
 	protected:
 
-		void cleanup() {
-			std::cout << "session::cleanup()[" << ep_ << "]" << std::endl;
-			map_endpoint_session_iterator ite = 
-				map_endpoint_session_.find(ep_);
-			if (ite != map_endpoint_session_.end())
-				map_endpoint_session_.erase(ite);
-			delete this;
+		void release() {
+			local_lock_.lock();
+			ref_count_ -= 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
+			if (ref_count_ <= 0) {
+				std::cout << "session{" << ep_ << "}::release()" << std::endl;
+				map_endpoint_session_iterator ite = 
+					map_endpoint_session_.find(ep_);
+				if (ite != map_endpoint_session_.end())
+					map_endpoint_session_.erase(ite);
+				local_lock_.unlock();
+				delete this;
+				return;
+			}
+			local_lock_.unlock();
 		}
 
 		void handle_connect(const boost::system::error_code& error) {
-			std::cout << "session::handle_connect(" << error << ")" << std::endl;
-			if (!error)
+			std::cout << "session{" << ep_ << "}::handle_connect(" << error << ")" << std::endl;
+			local_lock_.lock();
+			ref_count_ -= 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
+			if (!error) {
+				local_lock_.unlock();
 				start();
-			else
-				cleanup();
+			} else {
+				std::cout << "session{" << ep_ << "}::error[" << error.message() << "]." << std::endl;
+				local_lock_.unlock();
+				release();
+			}
 		}
 
 		void handle_read_header(
@@ -257,9 +323,12 @@ namespace miniDHT {
 			size_t bytes_recvd)
 		{
 			std::cout
-				<< "session::handle_read_header("
+				<< "session{" << ep_ << "}::handle_read_header("
 				<< error << ", " << bytes_recvd << ")"
-				<< std::endl;
+				<< std::endl;	
+			local_lock_.lock();
+			ref_count_ -= 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 			if (!error && read_msg_.decode_header()) {
 				if (!connect_) { 
 					ep_ = boost::asio::ip::tcp::endpoint(
@@ -277,8 +346,10 @@ namespace miniDHT {
 					}
 				}
 				std::cout 
-					<< "session::map_endpoint_session_.size(" << map_endpoint_session_.size()
+					<< "session{" << ep_ << "}::map_endpoint_session_.size(" << map_endpoint_session_.size()
 					<< ")" << std::endl;
+				ref_count_ += 1;
+				std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 				boost::asio::async_read(
 					socket_,
 					boost::asio::buffer(
@@ -289,8 +360,11 @@ namespace miniDHT {
 						this,
 						boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
+				local_lock_.unlock();
 			} else {
-				cleanup();
+				std::cout << "session{" << ep_ << "}::error[" << error.message() << "]." << std::endl;
+				local_lock_.unlock();
+				release();
 			}
 		}
 		
@@ -299,10 +373,17 @@ namespace miniDHT {
 			size_t bytes_recvd)
 		{
 			std::cout 
-				<< "session::handle_read_body(" 
+				<< "session{" << ep_ << "}::handle_read_body(" 
 				<< error << ", " << bytes_recvd << ")" << std::endl;
+			local_lock_.lock();
+			ref_count_ -= 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 			if (!error) {
+				local_lock_.unlock();
 				got_message_callback_(ep_, read_msg_);
+				local_lock_.lock();
+				ref_count_ += 1;
+				std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 				boost::asio::async_read(
 					socket_,
 					boost::asio::buffer(
@@ -313,18 +394,26 @@ namespace miniDHT {
 						this,
 							boost::asio::placeholders::error,
 						boost::asio::placeholders::bytes_transferred));
+				local_lock_.unlock();
 			} else {
-				cleanup();
+				std::cout << "session{" << ep_ << "}::error[" << error.message() << "]." << std::endl;
+				local_lock_.unlock();
+				release();
 			}
 		}
 
 		void handle_write(const boost::system::error_code& error) {
+			local_lock_.lock();
 			std::cout 
-				<< "session::handle_write(" << error 
+				<< "session{" << ep_ << "}::handle_write(" << error 
 				<< ")" << std::endl;
+			ref_count_ -= 1;
+			std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 			if (!error) {
 				write_msgs_.pop_front();
 				if (!write_msgs_.empty()) {
+					ref_count_ += 1;
+					std::cout << "session{" << ep_ << "}::ref_count_(" << ref_count_ << ")" << std::endl;
 					boost::asio::async_write(
 						socket_,
 						boost::asio::buffer(
@@ -335,8 +424,11 @@ namespace miniDHT {
 							this,
 							boost::asio::placeholders::error));
 				}
+				local_lock_.unlock();
 			} else {
-				cleanup();
+				std::cout << "session{" << ep_ << "}::error[" << error.message() << "]." << std::endl;
+				local_lock_.unlock();
+				release();
 			}
 		}	
 	};
