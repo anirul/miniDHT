@@ -31,7 +31,7 @@
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
 const unsigned int wait_settle = 5;
-const unsigned int buf_size = 8192;
+const unsigned int buf_size = 512 * 1024; // 512k
 
 typedef miniDHT::miniDHT<key_size, token_size> miniDHT_t;
 

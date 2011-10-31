@@ -30,7 +30,7 @@
 
 #define DEFAULT_MAX_RECORDS (1024 * 1024)
 
-#define SERIALIZE_XML
+// #define SERIALIZE_XML
 
 #ifdef SERIALIZE_BINARY
 	#ifdef SERIALIZE_XML
@@ -802,8 +802,7 @@ namespace miniDHT {
 					boost::asio::ip::address::from_string(address), 
 					port);
 				map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
-				basic_message<PACKET_SIZE> msg;
-				msg.body_length(ss.str().size());
+				basic_message<PACKET_SIZE> msg(ss.str().size());
 				std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
 				msg.listen_port(listen_port_);
 				msg.encode_header();
