@@ -102,7 +102,7 @@ namespace miniDHT {
 		typedef std::bitset<TOKEN_SIZE> token_t;
 		typedef std::bitset<KEY_SIZE> key_t;
 		typedef contact<KEY_SIZE> contact_t;
-		typedef	message<KEY_SIZE, TOKEN_SIZE> message_t;
+		typedef message<KEY_SIZE, TOKEN_SIZE> message_t;
 		typedef less_bitset<KEY_SIZE> less_key;
 		typedef less_bitset<TOKEN_SIZE> less_token;
 		typedef std::map<key_t, key_t, less_key> map_key_key_t;
@@ -111,12 +111,6 @@ namespace miniDHT {
 		typedef 
 			std::map<boost::asio::ip::tcp::endpoint, session<PACKET_SIZE>*> 
 			map_endpoint_session_t;
-		typedef 
-			db_multi_wrapper<key_t, data_item_t, less_key> 
-			db_key_data_t;
-		typedef 
-			db_wrapper<key_t, boost::asio::ip::tcp::endpoint, less_key> 
-			db_key_endpoint_t;
 		typedef typename
 			std::map<
 				boost::asio::ip::tcp::endpoint, 
@@ -139,15 +133,6 @@ namespace miniDHT {
 		typedef typename 
 			std::map<token_t, std::list<contact_t>, less_token>::iterator
 			map_token_list_contact_iterator;
-		typedef typename
-			db_multi_wrapper<key_t, data_item_t, less_key>::iterator
-			db_key_data_item_iterator;
-		typedef typename
-			db_wrapper<
-				key_t, 
-				boost::asio::ip::tcp::endpoint, 
-				less_key>::iterator
-			db_key_endpoint_iterator;
 			
 	private :
 	
@@ -167,8 +152,8 @@ namespace miniDHT {
 		// search list
 		std::map<token_t, search_t, less_token> map_search;
 		// key related storage
-		db_key_data_t db_storage;
-		db_key_endpoint_t db_backup;
+		db_multi_key_data db_storage;
+		db_key_value db_backup;
 		// token related storage
 		std::map<token_t, boost::posix_time::ptime, less_token> map_ping_ttl;
 		std::map<token_t, digest_t, less_token> map_store_digest;
@@ -203,13 +188,7 @@ namespace miniDHT {
 			start_accept();
 		}
 
-		virtual ~miniDHT() {
-			boost::mutex::scoped_lock lock_it(giant_lock_);
-			db_storage.flush();
-			db_storage.close();
-			db_backup.flush();
-			db_backup.close();
-		}
+		virtual ~miniDHT() {}
 
 	public :
 				
@@ -347,57 +326,54 @@ namespace miniDHT {
 			unsigned short port) 
 		{
 			std::stringstream sb("");
-			sb << path << "localhost.buckets." << port << ".db";
+			sb << path << "localhost.buckets." << port;
 			db_backup.open(sb.str().c_str());
-			db_key_endpoint_iterator dbit;
-			for (dbit = db_backup.begin(); dbit != db_backup.end(); ++dbit) {
-				boost::asio::ip::tcp::endpoint ep = dbit->second;
-				send_PING_nolock(ep, random_bitset<TOKEN_SIZE>());
+			std::list<std::string> l;
+			db_backup.list_value(l);
+			std::list<std::string>::iterator ite;
+			std::pair<std::string, std::string> endpoint_pair;
+			for (ite = l.begin(); ite != l.end(); ++ite) {
+				endpoint_pair = string_to_endpoint_pair((*ite));
+				try {
+					send_PING_nolock(endpoint_pair.first, endpoint_pair.second);
+				} catch (std::exception& e) {
+					std::cerr 
+						<< "Contacting Host -> " << endpoint_pair.first 
+						<< ":" << endpoint_pair.second 
+						<< " -> exception : " << e.what() << std::endl;
+				}
 			}
 		}
 		
 		void insert_db(const key_t& k, const data_item_t& d) {
-			// flush (force database update)
-			db_storage.flush();
 			// check is the element already exist
-			db_key_data_item_iterator ite = db_storage.find(k);
-			if (ite == db_storage.end()) {
+			if (db_storage.count(key_to_string(k)) == 0) {
 				// check if size limit is reached
 				while (db_storage.size() >= max_records_) {
 					// drop the oldest record
-					db_key_data_item_iterator ite = db_storage.begin();
-					db_key_data_item_iterator oldest_ite = db_storage.begin();
-					for (; ite != db_storage.end(); ++ite) {
-						if ((ite->second.time + ite->second.ttl) < 
-							(oldest_ite->second.time + oldest_ite->second.ttl)) 
-							oldest_ite = ite;
-					}
-					// clean the oldest record & flush
-					db_storage.erase(oldest_ite);
-					db_storage.flush();
+					db_storage.remove_oldest();
 				}
-				db_storage.insert(make_pair(k, d));
+				db_storage.insert(key_to_string(k), d);
 				return;
 			}
-			// already in
-			while ((ite != db_storage.end()) && (ite->first == k)) {
-				// check title
-				if (ite->second.title == d.title) {
+			// key already in
+			std::list<data_item_t> ld;
+			db_storage.find(key_to_string(k), ld);
+			std::list<data_item_t>::iterator ite;
+			for (ite = ld.begin(); ite != ld.end(); ++ite) {
+				if (ite->title == d.title) {
 					boost::posix_time::ptime now = update_time();
-					boost::posix_time::time_duration temp_time = 
-						now - ite->second.time;
+					boost::posix_time::time_duration temp_time =
+						now - ite->time;
 					boost::posix_time::time_duration d_time = now - d.time;
-					// more recent -> update
 					if (d_time < temp_time) {
-						db_storage.erase(ite);
-						db_storage.insert(make_pair(k, d));
-					} 
+						db_storage.remove(key_to_string(k), ite->title);
+						db_storage.insert(key_to_string(k), d);
+					}
 					return;
-				} else {
-					++ite;
 				}
 			}
-			db_storage.insert(make_pair(k, d));
+			db_storage.insert(key_to_string(k),	d);
 		}
 	
 		// called periodicly
@@ -417,9 +393,11 @@ namespace miniDHT {
 						send_PING_nolock(itc->second.ep);
 						contact_list.erase(itc);
 						itc = contact_list.begin();
+						db_backup.remove(key_to_string(itc->second.key));
 					} else {
 						db_backup.insert(
-							make_pair(itc->second.key, itc->second.ep));
+							key_to_string(itc->second.key), 
+							endpoint_to_string(itc->second.ep));
 					}
 				}
 			}
@@ -431,32 +409,34 @@ namespace miniDHT {
 					iterativeFindNode_nolock(skey); 
 				}
 			}
-			{ // flush databases
-				boost::mutex::scoped_lock lock_it(giant_lock_);
-				db_storage.flush();
-				db_backup.flush();
+			{ 
 				// search if storage DB need any cleaning
-				db_key_data_item_iterator db_storage_ite = db_storage.begin();
-				boost::posix_time::ptime now = update_time();
-				bool changed = false;
-				while (db_storage_ite != db_storage.end()) {
-					data_item_t pt = db_storage_ite->second;
-					boost::posix_time::time_duration time_elapsed = now - pt.time;
-					// data is no more valid
-					if (time_elapsed > pt.ttl) {
-						db_key_data_item_iterator elem_to_delete = db_storage_ite;
-						db_storage_ite++;
-						db_storage.erase(elem_to_delete);
-						changed = true;
-					// republish
+				std::list<data_item_header_t> ldh;
+				std::list<data_item_header_t>::iterator ite;
+				{
+					boost::mutex::scoped_lock lock_it(giant_lock_);
+					db_storage.list_headers(ldh);
+				}
+				boost::posix_time::ptime check_time = update_time();
+				for (ite = ldh.begin(); ite != ldh.end(); ++ite) {
+					boost::posix_time::time_duration time_elapsed = 
+						check_time - boost::posix_time::from_time_t(ite->time);
+					if (time_elapsed > boost::posix_time::seconds(ite->ttl)) {
+						// data is no more valid
+						boost::mutex::scoped_lock lock_it(giant_lock_);
+						db_storage.remove(ite->key, ite->title);
 					} else {
-						pt.ttl -= time_elapsed;
-						iterativeStore_nolock(db_storage_ite->first, pt);
-						db_storage_ite++;
+						// republish
+						boost::mutex::scoped_lock lock_it(giant_lock_);
+						data_item_t item;
+						db_storage.find(ite->key, ite->title, item);
+						item.ttl -= time_elapsed;
+						key_t location;
+						std::stringstream ss(ite->key);
+						ss >> location;
+						iterativeStore_nolock(location, item);
 					}
 				}
-				// save the changes (in case of changes)
-				if (changed) db_storage.flush();
 			}
 			{
 				boost::mutex::scoped_lock lock_it(giant_lock_);
@@ -763,9 +743,7 @@ namespace miniDHT {
 		
 		void handle_SEND_FIND_VALUE(const message_t& m) {
 			bool is_present = false;
-			{ // lock database befor check
-				is_present = db_storage.find(m.to_id) != db_storage.end();
-			}
+			is_present = (db_storage.count(key_to_string(m.to_id)) != 0);
 			if (is_present) {
 				reply_FIND_VALUE(sender_endpoint_, m.token, m.to_id, m.hint);
 			} else {
@@ -870,6 +848,20 @@ namespace miniDHT {
 	protected :
 
 		// ping with no lock to call from an already locked function
+		void send_PING_nolock(
+			const std::string& address,
+			const std::string& port)
+		{
+			boost::asio::ip::tcp::resolver resolver(io_service_);
+			boost::asio::ip::tcp::resolver::query query(
+				boost::asio::ip::tcp::v4(), 
+				address, 
+				port);
+			boost::asio::ip::tcp::resolver::iterator iterator = 
+				resolver.resolve(query);		
+			send_PING_nolock(*iterator);
+		}
+
 		void send_PING_nolock(
 			const boost::asio::ip::tcp::endpoint& ep,
 			token_t token = random_bitset<TOKEN_SIZE>())
@@ -1027,12 +1019,12 @@ namespace miniDHT {
 				message_t m(message_t::REPLY_FIND_VALUE, id_, tok);
 				m.to_id = to_id;
 				{
-					size_t count = db_storage.count(to_id);
-					db_key_data_item_iterator site = db_storage.find(to_id);
-					for (unsigned int i = 0; i < count; ++i, ++site) {
-						std::string value = site->second.title;
-						if (value.find(hint) != std::string::npos)
-							m.data_item_list.push_back(site->second);
+					std::list<data_item_t> ld;
+					std::list<data_item_t>::iterator ite;
+					db_storage.find(key_to_string(to_id), ld);
+					for (ite = ld.begin(); ite != ld.end(); ++ite) {
+						if (ite->title.find(hint) != std::string::npos)
+							m.data_item_list.push_back((*ite));
 					}
 				}
 				if (m.data_item_list.size() > 0) {

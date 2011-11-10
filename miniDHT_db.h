@@ -31,159 +31,83 @@
 // STL
 #include <fstream>
 #include <map>
+#include <bitset>
+#include <sstream>
 // BOOST
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/serialization/version.hpp>
 #include <boost/serialization/split_member.hpp>
-// BDB
-#ifdef WITH_BDB
-	#include "bdb_multibtree.h"
-	#include "bdb_hash.h"
-#endif // WITH_BDB
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+// SQLite3
+#include <sqlite3.h>
+// local
+#include "miniDHT_const.h"
 
 namespace miniDHT {
 	
-	template <
-		class KEY_T,
-		class VALUE_T,
-		class COMPARE_T = std::less<KEY_T> >
-	class db_wrapper : public
-#ifdef WITH_BDB
-		bdb::hash<KEY_T, VALUE_T, COMPARE_T>
-#else
-		std::map<KEY_T, VALUE_T, COMPARE_T>
-#endif // WITH_BDB
-	{
-#ifndef WITH_BDB
+	class db_key_value {
+	protected :
+		sqlite3* db_;
 		std::string file_name_;
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			std::map<KEY_T, VALUE_T, COMPARE_T>& map_data = (*this);
-			ar & BOOST_SERIALIZATION_NVP(map_data);
-		}
-#endif // !WITH_BDB
-	public :
-		db_wrapper() :
-#ifdef WITH_BDB
-			bdb::hash<KEY_T, VALUE_T, COMPARE_T>()
-#else
-			std::map<KEY_T, VALUE_T, COMPARE_T>()
-#endif // WITH_BDB
-			{}
-		virtual ~db_wrapper() {}
-#ifndef WITH_BDB
-		void open(const char* file_name) {
-/*
-			file_name_ = std::string(file_name)
-#ifdef SERIALIZE_XML
-				+ std::string(".xml");
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-				+ std::string(".bin");
-#endif // SERIALIZE_BINARY
-			std::ifstream ifs(file_name_.c_str());
-			if (!ifs.is_open()) return;
-#ifdef SERIALIZE_XML
-			boost::archive::xml_iarchive arch(ifs);
-			arch >> boost::serialization::make_nvp("db_wrapper", (*this));
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-			boost::archive::binary_iarchive arch(ifs);
-			arch >> (*this);
-#endif // SERIALIZE_BINARY
-			ifs.close();
-*/
-		}
-		void flush() {
-/*
-			std::ofstream ofs(file_name_.c_str());
-#ifdef SERIALIZE_XML
-			boost::archive::xml_oarchive arch(ofs);
-			arch << boost::serialization::make_nvp("db_wrapper", (*this));
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-			boost::archive::binary_oarchive arch(ofs);
-			arch << (*this);
-#endif // SERIALIZE_BINARY
-			ofs.close();
-*/
-		}
-		void close() {}
-#endif // !WITH_BDB
 
+	public :
+		db_key_value()
+			:	db_(NULL), file_name_("") {}
+		db_key_value(const std::string& file_name);
+		virtual ~db_key_value();
+
+	public :
+		void open(const std::string& file_name);
+		void create_table();
+		void clear();
+		std::string find(const std::string& key);
+		void remove(const std::string& key);
+		void insert(const std::string& key, const std::string& value);
+		size_t size();
+		// debug
+		void list(std::map<std::string, std::string>& mm);
+		void list_value(std::list<std::string>& l);
+	};
+
+	struct data_item_header_t {
+		std::string key;
+		std::string title;
+		long long time;
+		long long ttl;
 	};
 	
-	template <
-		class KEY_T,
-		class VALUE_T,
-		class COMPARE_T = std::less<KEY_T> >
-	class db_multi_wrapper : public 
-#ifdef WITH_BDB
-		bdb::multibtree<KEY_T, VALUE_T, COMPARE_T>
-#else
-		std::multimap<KEY_T, VALUE_T, COMPARE_T>
-#endif // WITH_BDB
-	{
-#ifndef WITH_BDB
+	class db_multi_key_data	{
+	protected :
+		sqlite3* db_;
 		std::string file_name_;
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			std::multimap<KEY_T, VALUE_T, COMPARE_T>& multimap_data = (*this);
-			ar & BOOST_SERIALIZATION_NVP(multimap_data);
-		}
-#endif // !WITH_BDB
+
 	public :
-		db_multi_wrapper() :
-#ifdef WITH_BDB
-			bdb::multibtree<KEY_T, VALUE_T, COMPARE_T>()
-#else
-			std::multimap<KEY_T, VALUE_T, COMPARE_T>()
-#endif // WITH_BDB
-			{}
-		virtual ~db_multi_wrapper() {}
-#ifndef WITH_BDB
-		void open(const char* file_name) {
-/*
-			file_name_ = std::string(file_name) 
-#ifdef SERIALIZE_XML
-				+ std::string(".xml");
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-				+ std::string(".bin");
-#endif // SERIALIZE_BINARY
-			std::ifstream ifs(file_name_.c_str());
-			if (!ifs.is_open()) return;
-#ifdef SERIALIZE_XML
-			boost::archive::xml_iarchive arch(ifs);
-			arch >> boost::serialization::make_nvp("db_multi_wrapper", (*this));
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-			boost::archive::binary_iarchive arch(ifs);
-			arch >> (*this);
-#endif // SERIALIZE_BINARY
-			ifs.close();
-*/
-		}
-		void flush() {
-/*
-			std::ofstream ofs(file_name_.c_str());
-#ifdef SERIALIZE_XML
-			boost::archive::xml_oarchive arch(ofs);
-			arch << boost::serialization::make_nvp("db_multi_wrapper", (*this));
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-			boost::archive::binary_oarchive arch(ofs);
-			arch << (*this);
-#endif // SERIALIZE_BINARY
-			ofs.close();
-*/
-		}
-		void close() {}
-#endif // !WITH_BDB
+		db_multi_key_data() 
+			:	db_(NULL), file_name_("") {}
+		db_multi_key_data(const std::string& file_name);
+		virtual ~db_multi_key_data();
+
+	public :
+		void open(const std::string& file_name);
+		void create_table();
+		void clear();
+		void find(const std::string& key, std::list<data_item_t>& out);
+		void find(
+			const std::string& key, 
+			const std::string& title, 
+			data_item_t& out);
+		void remove(const std::string& key, const std::string& title);
+		void remove(const std::string& key);
+		void remove_oldest();
+		void insert(const std::string& key, const data_item_t& item);
+		size_t count(const std::string& key);
+		size_t size();
+		// debug
+		void list(std::multimap<std::string, data_item_t>& out);
+		void list_headers(std::list<data_item_header_t>& ldh);
 	};
 }
 

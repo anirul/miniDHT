@@ -34,14 +34,12 @@
 #define random rand
 #endif
 #include <ctime>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace miniDHT {
 
 	const unsigned int DIGEST_LENGTH = 32;
 	
-	template <size_t KEY_SIZE>
-	void fake_callback(std::list<std::bitset<KEY_SIZE> > k) {}
-
 	class data_item_t {
 	protected :
 		friend class boost::serialization::access;
@@ -283,6 +281,41 @@ namespace miniDHT {
 		for (unsigned int i = 0; i < SIZE; ++i)
 			bs[i] = (random() % 2) != 0;
 		return bs;
+	}
+
+	inline std::pair<std::string, std::string> string_to_endpoint_pair(
+		const std::string& str) 
+	{
+		std::pair<std::string, std::string> out;
+		size_t sep = str.find_last_of(':');
+		if (sep == std::string::npos)
+			throw std::runtime_error("malformed IP!");
+		if (str[0] == '[') { // IPv6
+			size_t pos = str.find(']');
+			if (pos == std::string::npos) 
+				throw std::runtime_error("malformed IP!");
+			out.first = str.substr(1, pos);
+		} else { // IPv4
+			out.first = str.substr(0, sep);
+		}
+		out.second = str.substr(sep + 1, str.size() - 1);
+		return out;
+	}
+
+	inline std::string endpoint_to_string(
+		const boost::asio::ip::tcp::endpoint& ep) 
+	{
+		std::stringstream ss("");
+		ss << ep.address().to_string();
+		ss << ":" << ep.port();
+		return ss.str();
+	}
+	
+	inline time_t to_time_t(const boost::posix_time::ptime& t) {
+		using namespace boost::posix_time;
+		ptime epoch(boost::gregorian::date(1970,1,1));
+		time_duration::sec_type x = (t - epoch).total_seconds();
+		return time_t(x);
 	}
 
 } // end of namespace miniDHT
