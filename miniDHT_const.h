@@ -182,13 +182,21 @@ namespace miniDHT {
 		}
 		return ret.str();
 	}
-	
+
 	template <size_t SIZE>
 	std::bitset<SIZE> digest_to_bitset(const digest_t& digest) {
 		std::bitset<SIZE> ret;
 		for (unsigned int i = 0; i < SIZE; ++i)
 			ret[i] = ((digest.c[(i / 8) % DIGEST_LENGTH]) & (0x01 << (i % 8))) != 0;
 		return ret;
+	}
+	
+	template <size_t SIZE>
+	std::bitset<SIZE> string_to_key(const std::string& in) {
+		digest_t d;
+		std::stringstream ss(in);
+		ss >> d;
+		return digest_to_bitset<SIZE>(d);
 	}
 	
 	template <size_t SIZE, typename T>

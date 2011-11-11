@@ -45,6 +45,20 @@
 #include "miniDHT.h"
 #include "recv.h"
 
+std::string hex_to_string(const std::string& in) {
+	std::string out;
+	out.resize(in.size() / 2);
+	for (int i = 0; i < in.size(); i += 2) {
+		char temp[3];
+		memset(temp, 0, 3);
+		temp[0] = in[i];
+		temp[1] = in[i + 1];
+		int val = strtol(temp, NULL, 16);
+		out[i / 2] = (char)val;
+	}
+	return out;
+}
+
 std::string dht_recv_file::decode(
 	const std::string& key, 
 	const std::string& data)
@@ -183,7 +197,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 		std::string title_string_id;
 		size_t packet_number;
 		size_t packet_total;
-		std::string decrypted_title = decode(key, title);
+		std::string decrypted_title = decode(key, hex_to_string(title));
 		if (!decrypted_title.size()) throw "unable to decode title";
 		{
 			std::stringstream ss(decrypted_title);

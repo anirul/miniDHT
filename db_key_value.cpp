@@ -29,19 +29,26 @@
 #include <boost/filesystem.hpp>
 #include "miniDHT_db.h"
 
-void add(const std::string& key, const std::string& value) {
-	miniDHT::db_key_value db("test");
+void add(
+	const std::string& file, 
+	const std::string& key, 
+	const std::string& value) 
+{
+	miniDHT::db_key_value db(file);
 	db.insert(key, value);
 }
 
-void find(const std::string& key) {
-	miniDHT::db_key_value db("test");
+void find(
+	const std::string& file, 
+	const std::string& key) 
+{
+	miniDHT::db_key_value db(file);
 	std::cout << "\tkey   : " << key << std::endl;
 	std::cout << "\tvalue : " << db.find(key) << std::endl;
 }
 
-void list() {
-	miniDHT::db_key_value db("test");
+void list(const std::string& file) {
+	miniDHT::db_key_value db(file);
 	std::map<std::string, std::string> mm;
 	db.list(mm);
 	std::map<std::string, std::string>::iterator ite;
@@ -51,14 +58,18 @@ void list() {
 	}
 }
 
-void remove(const std::string& key) {
-	miniDHT::db_key_value db("test");
+void remove(
+	const std::string& file, 
+	const std::string& key) 
+{
+	miniDHT::db_key_value db(file);
 	db.remove(key);
 }
 
 int main(int ac, char** av) {
 	std::string key = "";
 	std::string value = "";
+	std::string file = "";
 	try {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
@@ -67,6 +78,8 @@ int main(int ac, char** av) {
 				"key that you want to find or add a value.")
 			("value,v", boost::program_options::value<std::string>(),
 				"value you want to add the the DB at key value.")
+			("db,d", boost::program_options::value<std::string>(),
+				"DB file you want to connect to.")
 			("add,a", "add a value to the DB (key and value must be valid).")
 			("remove,r", "remove a value associated to a key in the DB.")
 			("find,f", "find a value in the BD (key must be valid).")
@@ -89,29 +102,34 @@ int main(int ac, char** av) {
 		if (vm.count("value")) {
 			value = vm["value"].as<std::string>();
 		}
+		if (vm.count("db")) {
+			file = vm["db"].as<std::string>();
+		} else {
+			file = "test";
+		}
 		if (vm.count("add")) {
 			if (key == std::string("")) 
 				throw std::runtime_error("Need a key to add a value!");
 			if (value == std::string(""))
 				throw std::runtime_error("Need a valut to add a value at a key!");
 			std::cout << "add a value to the DB" << std::endl;
-			add(key, value);
+			add(file, key, value);
  		}
 		if (vm.count("remove")) {
 			if (key == std::string(""))
 				throw std::runtime_error("Need a key to remove a value!");
 			std::cout << "remove a value associated to a key in the DB" << std::endl;
-			remove(key);
+			remove(file, key);
 		}
 		if (vm.count("find")) {
 			if (key == std::string(""))
 				throw std::runtime_error("Need a key to find assiciated values!");
 			std::cout << "find a value for a key in DB" << std::endl;
-			find(key);
+			find(file, key);
 		}
 		if (vm.count("list")) {
 			std::cout << "List the whole DB" << std::endl;
-			list();
+			list(file);
 		}
 	} catch (std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;

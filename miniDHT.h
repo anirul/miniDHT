@@ -91,7 +91,7 @@ namespace miniDHT {
 		unsigned int BUCKET_SIZE = 5,
 		// call back for clean up (minutes) this is also used as a timeout
 		// for the contact list (node list).
-		size_t PERIODIC = 5,
+		size_t PERIODIC = 15,
 		// maximum size of a packet
 		size_t PACKET_SIZE = 1024 * 1024>
 		
@@ -326,7 +326,7 @@ namespace miniDHT {
 			unsigned short port) 
 		{
 			std::stringstream sb("");
-			sb << path << "localhost.buckets." << port;
+			sb << path << "localhost.buckets." << port << ".db";
 			db_backup.open(sb.str().c_str());
 			std::list<std::string> l;
 			db_backup.list_value(l);
@@ -379,6 +379,7 @@ namespace miniDHT {
 		// called periodicly
 		void periodic() {
 			{ // check timeout on key
+				std::cout << "!!! PERIODIC !!! part 1" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
 				bucket_iterator itc;
 				db_backup.clear();
@@ -402,6 +403,7 @@ namespace miniDHT {
 				}
 			}
 			{ // try to diversify the bucket list
+				std::cout << "!!! PERIODIC !!! part 2" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
 				for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 					if (contact_list.count(i)) continue;
@@ -410,6 +412,7 @@ namespace miniDHT {
 				}
 			}
 			{ 
+				std::cout << "!!! PERIODIC !!! part 3" << std::endl;
 				// search if storage DB need any cleaning
 				std::list<data_item_header_t> ldh;
 				std::list<data_item_header_t>::iterator ite;
@@ -431,14 +434,13 @@ namespace miniDHT {
 						data_item_t item;
 						db_storage.find(ite->key, ite->title, item);
 						item.ttl -= time_elapsed;
-						key_t location;
-						std::stringstream ss(ite->key);
-						ss >> location;
-						iterativeStore_nolock(location, item);
+						iterativeStore_nolock(
+							string_to_key<KEY_SIZE>(ite->key), item);
 					}
 				}
 			}
 			{
+				std::cout << "!!! PERIODIC !!! part 4" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
 				// call back later
 				boost::posix_time::time_duration wait_time = 
@@ -550,6 +552,9 @@ namespace miniDHT {
 			const token_t& t, 
 			const key_t& k)
 		{
+			assert(key_to_string(k) != 
+				std::string("0000000000000000000000000000000"\
+					"000000000000000000000000000000000"));
 			if (map_search[t].update_list(lc)) {
 				// iterativeStore
 				while (!map_search[t].is_value_full())

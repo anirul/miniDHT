@@ -52,7 +52,7 @@ namespace miniDHT {
 	}
 
 	void db_key_value::open(const std::string& file_name) {
-		file_name_ = std::string(file_name) + std::string(".db");
+		file_name_ = std::string(file_name);
 		int rc = 0;
 		rc = sqlite3_open(file_name_.c_str(), &db_);
 		if (rc) {
@@ -67,7 +67,7 @@ namespace miniDHT {
 	}
 
 	void db_multi_key_data::open(const std::string& file_name) {
-		file_name_ = std::string(file_name) + std::string(".db");
+		file_name_ = std::string(file_name);
 		int rc = 0;
 		rc = sqlite3_open(file_name_.c_str(), &db_);
 		if (rc) {
@@ -237,8 +237,8 @@ namespace miniDHT {
 	{
 		std::stringstream ss("");
 		ss << "DELETE FROM data_item WHERE key = '";
-		ss << key << "' AND time = '";
-		ss << time;
+		ss << key << "' AND title = '";
+		ss << title << "'";
 		int rc = 0;
 		char* szMsg;
 		rc = sqlite3_exec(
@@ -300,6 +300,9 @@ namespace miniDHT {
 		const std::string& key, 
 		const data_item_t& item) 
 	{
+		assert(key != 
+			std::string("0000000000000000000000000000000"\
+				"000000000000000000000000000000000"));
 		int rc = 0;
 		const char* szMsg;
 		std::string sql_query_str = 

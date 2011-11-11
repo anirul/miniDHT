@@ -45,6 +45,18 @@
 #include "aes_crypt.h"
 #include "send.h"
 
+std::string string_to_hex(const std::string& in) {
+	std::string out = "";
+	for (int i = 0; i < in.size(); ++i) {
+		char temp[3];
+		memset(temp, 0, 3);
+		unsigned char val = (unsigned int)in[i];
+		sprintf(temp, "%02x", val);
+		out += temp;
+	}
+	return out;
+}
+
 std::string dht_send_file::encode(
 	const std::string& key, 
 	const std::string& data) 
@@ -136,7 +148,6 @@ void dht_send_file::upload(size_t index) {
 	}
 	std::string title_data;
 	{
-		aes_crypt<5, 42> ac(digest_string);
 		std::stringstream ss("");
 		ss << digest_;
 		ss << " " << std::dec << index;
@@ -147,7 +158,7 @@ void dht_send_file::upload(size_t index) {
 	miniDHT::data_item_t data;
 	data.ttl = boost::posix_time::hours(24);
 	data.time = miniDHT::update_time();
-	data.title = encode(digest_string, title_data);
+	data.title = string_to_hex(encode(digest_string, title_data));
 	std::string buffer = map_crypt_[index];
 	data.data.resize(buffer.size());
 	map_key_string_id_.insert(

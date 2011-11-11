@@ -43,6 +43,7 @@ protected :
 	EVP_CIPHER_CTX d_ctx_;
 #pragma clang diagnostic pop
 public :
+
 	aes_crypt(const std::string& digest) {
 		int i;
 		unsigned char key[32];
@@ -66,6 +67,7 @@ public :
 		EVP_DecryptInit_ex(&d_ctx_, EVP_aes_256_cbc(), NULL, key, iv);
 #pragma clang diagnostic pop
 	}
+
 	std::string encrypt(const std::string& cleartext) {
 		std::string out;
 		int len = cleartext.size();
@@ -89,6 +91,7 @@ public :
 		free(ciphertext);
 		return out;
 	}
+
 	std::string decrypt(const std::string& ciphertext) {
 		std::string out;
 		int len = ciphertext.size();

@@ -32,11 +32,12 @@
 #include "miniDHT_db.h"
 
 void add(
+	const std::string& db_file,
 	const std::string& key, 
 	const std::string& title, 
 	const std::string& file) 
 {
-	miniDHT::db_multi_key_data db("test_multi");
+	miniDHT::db_multi_key_data db(db_file);
 	miniDHT::data_item_t item;
 	item.time = boost::posix_time::second_clock::universal_time();
 	item.ttl = boost::posix_time::minutes(15);
@@ -62,8 +63,11 @@ void add(
 	db.insert(key, item);
 }
 
-void find(const std::string& key) {
-	miniDHT::db_multi_key_data db("test_multi");
+void find(
+	const std::string& db_file,
+	const std::string& key) 
+{
+	miniDHT::db_multi_key_data db(db_file);
 	std::cout << "\tkey   : " << key << std::endl;
 	std::list<miniDHT::data_item_t> item;
 	db.find(key, item);
@@ -78,8 +82,8 @@ void find(const std::string& key) {
 	}
 }
 
-void list() {
-	miniDHT::db_multi_key_data db("test_multi");
+void list(const std::string& db_file) {
+	miniDHT::db_multi_key_data db(db_file);
 	std::multimap<std::string, miniDHT::data_item_t> mmkd;
 	db.list(mmkd);
 	std::multimap<std::string, miniDHT::data_item_t>::iterator ite;
@@ -93,8 +97,11 @@ void list() {
 	}
 }
 
-void remove(const std::string& key) {
-	miniDHT::db_multi_key_data db("test_multi");
+void remove(
+	const std::string& db_file,
+	const std::string& key) 
+{
+	miniDHT::db_multi_key_data db(db_file);
 	db.remove(key);
 }
 
@@ -102,6 +109,7 @@ int main(int ac, char** av) {
 	std::string key = "";
 	std::string title = "";
 	std::string file = "";
+	std::string db_file = "";
 	try {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
@@ -112,6 +120,8 @@ int main(int ac, char** av) {
 				"value you want to add the the DB at key value.")
 			("file,f", boost::program_options::value<std::string>(),
 				"file you want associated to key and title.")
+			("db,d", boost::program_options::value<std::string>(),
+				"DB file you want to connect to.")
 			("add,a", "add a value to the DB (key and value must be valid).")
 			("remove,r", "remove a value associated to a key in the DB.")
 			("find,f", "find a value in the BD (key must be valid).")
@@ -137,6 +147,11 @@ int main(int ac, char** av) {
 		if (vm.count("file")) {
 			file = vm["file"].as<std::string>();
 		}
+		if (vm.count("db")) {
+			db_file = vm["db"].as<std::string>();
+		} else {
+			db_file = "mulit_test";
+		}
 		if (vm.count("add")) {
 			if (key == std::string("")) 
 				throw std::runtime_error("Need a key to add data at key!");
@@ -145,23 +160,23 @@ int main(int ac, char** av) {
 			if (file == std::string(""))
 				throw std::runtime_error("Need a file to add data at key!");
 			std::cout << "add a value to the DB" << std::endl;
-			add(key, title, file);
+			add(db_file, key, title, file);
  		}
 		if (vm.count("remove")) {
 			if (key == std::string(""))
 				throw std::runtime_error("Need a key to remove data!");
 			std::cout << "remove a data associated to a key in the DB" << std::endl;
-			remove(key);
+			remove(db_file, key);
 		}
 		if (vm.count("find")) {
 			if (key == std::string(""))
 				throw std::runtime_error("Need a key to data associated values!");
 			std::cout << "find a data for a key in DB" << std::endl;
-			find(key);
+			find(db_file, key);
 		}
 		if (vm.count("list")) {
 			std::cout << "List the whole DB" << std::endl;
-			list();
+			list(db_file);
 		}
 	} catch (std::exception& e) {
 		std::cerr << "error: " << e.what() << std::endl;
