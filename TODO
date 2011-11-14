@@ -1,7 +1,9 @@
 TODO list
 
- - Switch from BDB to SQLite
- - Check replication parameters
  - Finish the GUI (add download etc...)
  - Refactoring of miniDHT (remove template)
+ - Make a library out of miniDHT (libminiDHT.a)
+ - Add a routing algorithm (in receive and send)
+ + Fix bug on multiple Key in key-value
+ + Fix including self in key-endpoint
 

@@ -14,7 +14,7 @@ ALL += BitSmear.app
 endif
 
 CXX = clang++
-FLAGS = -g -I/usr/include
+FLAGS = -O3 -I/usr/include
 LIBS = \
 	-L/usr/lib \
 	-L/usr/local/lib \

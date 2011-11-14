@@ -379,13 +379,15 @@ namespace miniDHT {
 		// called periodicly
 		void periodic() {
 			{ // check timeout on key
-				std::cout << "!!! PERIODIC !!! part 1" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
+				std::cout << "!!! PERIODIC !!! part 1" << std::endl;
 				bucket_iterator itc;
-				db_backup.clear();
 				const boost::posix_time::time_duration tRefresh = 
 					boost::posix_time::minutes(PERIODIC);
-				for (itc = contact_list.begin(); itc != contact_list.end(); ++itc) {
+				for (	itc = contact_list.begin(); 
+						itc != contact_list.end(); 
+						++itc) 
+				{
 					if (itc->first == KEY_SIZE) continue;
 					// contact key
 					boost::posix_time::time_duration td = 
@@ -396,6 +398,14 @@ namespace miniDHT {
 						itc = contact_list.begin();
 						db_backup.remove(key_to_string(itc->second.key));
 					} else {
+						std::string value = db_backup.find(
+							key_to_string(itc->second.key));
+						// already in
+						if (value == endpoint_to_string(itc->second.ep))
+							continue;
+						// not empty (in but not the good one)
+						if (value != std::string(""))
+							db_backup.remove(key_to_string(itc->second.key));
 						db_backup.insert(
 							key_to_string(itc->second.key), 
 							endpoint_to_string(itc->second.ep));
@@ -403,8 +413,8 @@ namespace miniDHT {
 				}
 			}
 			{ // try to diversify the bucket list
-				std::cout << "!!! PERIODIC !!! part 2" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
+				std::cout << "!!! PERIODIC !!! part 2" << std::endl;
 				for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 					if (contact_list.count(i)) continue;
 					key_t skey = contact_list.random_key_in_bucket(i);
@@ -412,12 +422,14 @@ namespace miniDHT {
 				}
 			}
 			{ 
-				std::cout << "!!! PERIODIC !!! part 3" << std::endl;
 				// search if storage DB need any cleaning
 				std::list<data_item_header_t> ldh;
 				std::list<data_item_header_t>::iterator ite;
 				{
 					boost::mutex::scoped_lock lock_it(giant_lock_);
+					std::cout 
+						<< "!!! PERIODIC !!! part 3.1 - fetch header" 
+						<< std::endl;
 					db_storage.list_headers(ldh);
 				}
 				boost::posix_time::ptime check_time = update_time();
@@ -427,10 +439,16 @@ namespace miniDHT {
 					if (time_elapsed > boost::posix_time::seconds(ite->ttl)) {
 						// data is no more valid
 						boost::mutex::scoped_lock lock_it(giant_lock_);
+						std::cout
+							<< "!!! PERIODIC !!! part 3.2 - remove : "
+							<< ite->key << std::endl;
 						db_storage.remove(ite->key, ite->title);
 					} else {
 						// republish
 						boost::mutex::scoped_lock lock_it(giant_lock_);
+						std::cout
+							<< "!!! PERIODIC !!! part 3.3 - republish : "
+							<< ite->key << std::endl;
 						data_item_t item;
 						db_storage.find(ite->key, ite->title, item);
 						item.ttl -= time_elapsed;
