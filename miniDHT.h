@@ -91,7 +91,7 @@ namespace miniDHT {
 		unsigned int BUCKET_SIZE = 5,
 		// call back for clean up (minutes) this is also used as a timeout
 		// for the contact list (node list).
-		size_t PERIODIC = 15,
+		size_t PERIODIC = 5,
 		// maximum size of a packet
 		size_t PACKET_SIZE = 1024 * 1024>
 		
@@ -398,17 +398,15 @@ namespace miniDHT {
 						itc = contact_list.begin();
 						db_backup.remove(key_to_string(itc->second.key));
 					} else {
-						std::string value = db_backup.find(
-							key_to_string(itc->second.key));
+						std::string key = key_to_string(itc->second.key);
+						std::string endpoint = endpoint_to_string(itc->second.ep);
+						std::string value = db_backup.find(key);
 						// already in
-						if (value == endpoint_to_string(itc->second.ep))
-							continue;
-						// not empty (in but not the good one)
+						if (value == endpoint) continue;
+						// remove in case present
 						if (value != std::string(""))
-							db_backup.remove(key_to_string(itc->second.key));
-						db_backup.insert(
-							key_to_string(itc->second.key), 
-							endpoint_to_string(itc->second.ep));
+							db_backup.remove(key);
+						db_backup.insert(key, endpoint);
 					}
 				}
 			}

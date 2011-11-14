@@ -113,7 +113,21 @@ namespace miniDHT {
 			&szErrMsg);
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
-			ss << "SQL error in CREATE table : ";
+			ss << "SQL error in CREATE TABLE : ";
+			ss << szErrMsg;
+			sqlite3_free(szErrMsg);
+			throw std::runtime_error(ss.str());
+		}
+		rc = sqlite3_exec(
+			db_,
+			"CREATE INDEX IF NOT EXISTS "\
+			"data_item_key_title ON data_item(key, title)",
+			NULL,
+			0,
+			&szErrMsg);
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in CREATE INDEX : ";
 			ss << szErrMsg;
 			sqlite3_free(szErrMsg);
 			throw std::runtime_error(ss.str());
@@ -160,8 +174,8 @@ namespace miniDHT {
 
 	std::string db_key_value::find(const std::string& key) {
 		std::stringstream ss("");
-		ss << "SELECT value FROM contacts WHERE key = ";
-		ss << "'" << key << "'";
+		ss << "SELECT value FROM contacts WHERE key = '";
+		ss << key << "'";
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -183,8 +197,7 @@ namespace miniDHT {
 		} 
 		std::string ret = "";
 		if (ncol != 1) return ret; 
-		if (nrow > 1)
-			ret = result[1];
+		if (nrow == 1) ret = result[1];
 		sqlite3_free_table(result);
 		return ret;
 	}
