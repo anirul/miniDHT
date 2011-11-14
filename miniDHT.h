@@ -456,8 +456,8 @@ namespace miniDHT {
 				}
 			}
 			{
-				std::cout << "!!! PERIODIC !!! part 4" << std::endl;
 				boost::mutex::scoped_lock lock_it(giant_lock_);
+				std::cout << "!!! PERIODIC !!! part 4" << std::endl;
 				// call back later
 				boost::posix_time::time_duration wait_time = 
 					periodic_ + boost::posix_time::seconds(random() % 60);
