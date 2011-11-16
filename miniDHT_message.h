@@ -80,7 +80,7 @@ namespace miniDHT {
 					ar & BOOST_SERIALIZATION_NVP(hint);
 					break;
 				case REPLY_STORE:
-					ar & BOOST_SERIALIZATION_NVP(digest);
+					ar & BOOST_SERIALIZATION_NVP(check_val);
 					break;
 				case REPLY_FIND_NODE:
 					ar & BOOST_SERIALIZATION_NVP(contact_list);
@@ -111,7 +111,7 @@ namespace miniDHT {
 		std::bitset<TOKEN_SIZE> token;
 		unsigned short listen_port;
 		// specific to message
-		digest_t digest;
+		unsigned int check_val;
 		data_item_t data;
 		std::string hint;
 		std::list<contact<KEY_SIZE> > contact_list;

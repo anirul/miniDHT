@@ -4,6 +4,5 @@ TODO list
  - Refactoring of miniDHT (remove template)
  - Make a library out of miniDHT (libminiDHT.a)
  - Add a routing algorithm (in receive and send)
- + Fix bug on multiple Key in key-value
  + Fix including self in key-endpoint
-
+ + Find a way to speed it up!

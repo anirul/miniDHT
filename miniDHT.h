@@ -86,12 +86,12 @@ namespace miniDHT {
 		unsigned int TOKEN_SIZE,
 		// parallelism level, this is also the numbere of nodes per packet
 		// sent back in a FIND_NODE message.
-		unsigned int ALPHA = 5,
+		unsigned int ALPHA = 3,
 		// node (contact) per bucket
 		unsigned int BUCKET_SIZE = 5,
 		// call back for clean up (minutes) this is also used as a timeout
 		// for the contact list (node list).
-		size_t PERIODIC = 5,
+		size_t PERIODIC = 15,
 		// maximum size of a packet
 		size_t PACKET_SIZE = 1024 * 1024>
 		
@@ -140,10 +140,12 @@ namespace miniDHT {
 		const key_t id_;
 		size_t max_records_;
 		boost::asio::io_service& io_service_;
+		boost::asio::io_service periodic_io_;
 		boost::asio::ip::tcp::acceptor acceptor_;
 		boost::asio::deadline_timer dt_;
 		boost::asio::ip::tcp::socket socket_;
 		boost::asio::ip::tcp::endpoint sender_endpoint_;
+		boost::thread* periodic_thread_;
 		unsigned short listen_port_;
 		// mutex lock
 		boost::mutex giant_lock_;
@@ -156,7 +158,7 @@ namespace miniDHT {
 		db_key_value db_backup;
 		// token related storage
 		std::map<token_t, boost::posix_time::ptime, less_token> map_ping_ttl;
-		std::map<token_t, digest_t, less_token> map_store_digest;
+		std::map<token_t, unsigned int, less_token> map_store_check_val;
 		// session pointers
 		map_endpoint_session_t map_endpoint_session;
 			
@@ -169,11 +171,12 @@ namespace miniDHT {
 			size_t max_records = DEFAULT_MAX_RECORDS)
 			:	periodic_(boost::posix_time::minutes(PERIODIC)),
 				id_(local_key<KEY_SIZE>(ep.port())),
+				periodic_io_(),
 				max_records_(max_records),
 				io_service_(io_service),
 				acceptor_(io_service, ep),
 				dt_(
-					io_service, 
+					periodic_io_, 
 					boost::posix_time::seconds(random() % 120)),
 				socket_(io_service),
 				listen_port_(ep.port()),
@@ -185,10 +188,17 @@ namespace miniDHT {
 			db_storage.open(ss.str().c_str());
 			restore_from_backup(path, listen_port_);
 			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
+			periodic_thread_ = new boost::thread(
+				boost::bind(&boost::asio::io_service::run,
+				&periodic_io_));
 			start_accept();
 		}
 
-		virtual ~miniDHT() {}
+		virtual ~miniDHT() {
+			periodic_io_.stop();
+//			periodic_thread_->join();
+			delete periodic_thread_;
+		}
 
 	public :
 				
@@ -306,7 +316,7 @@ namespace miniDHT {
 
 		size_t storage_wait_queue() const { 
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			return map_store_digest.size(); 
+			return map_store_check_val.size(); 
 		}
 
 		void set_max_record(size_t val) { 
@@ -366,14 +376,13 @@ namespace miniDHT {
 					boost::posix_time::time_duration temp_time =
 						now - ite->time;
 					boost::posix_time::time_duration d_time = now - d.time;
-					if (d_time < temp_time) {
-						db_storage.remove(key_to_string(k), ite->title);
-						db_storage.insert(key_to_string(k), d);
-					}
+					if (d_time < temp_time)
+						db_storage.update(key_to_string(k), d);
 					return;
 				}
 			}
-			db_storage.insert(key_to_string(k),	d);
+			// a duplicate with different title (should not happen)
+			db_storage.insert(key_to_string(k), d);
 		}
 	
 		// called periodicly
@@ -410,6 +419,7 @@ namespace miniDHT {
 					}
 				}
 			}
+			periodic_thread_->yield();
 			{ // try to diversify the bucket list
 				boost::mutex::scoped_lock lock_it(giant_lock_);
 				std::cout << "!!! PERIODIC !!! part 2" << std::endl;
@@ -419,6 +429,7 @@ namespace miniDHT {
 					iterativeFindNode_nolock(skey); 
 				}
 			}
+			periodic_thread_->yield();
 			{ 
 				// search if storage DB need any cleaning
 				std::list<data_item_header_t> ldh;
@@ -453,6 +464,7 @@ namespace miniDHT {
 						iterativeStore_nolock(
 							string_to_key<KEY_SIZE>(ite->key), item);
 					}
+					periodic_thread_->yield();
 				}
 			}
 			{
@@ -717,17 +729,17 @@ namespace miniDHT {
 		}
 		
 		void handle_REPLY_STORE(const message_t& m) {
-			if (map_store_digest.find(m.token) != map_store_digest.end()) {
-				if (m.digest != map_store_digest[m.token]) {
+			if (map_store_check_val.find(m.token) != map_store_check_val.end()) {
+				if (m.check_val != map_store_check_val[m.token]) {
 					std::cerr 
 						<< "[" << socket_.local_endpoint()
-						<< "] digest missmatch storage problem?" 
+						<< "] check val missmatch storage problem?" 
 						<< std::endl;
 					std::cerr 
-						<< m.digest << " != " 
-						<< map_store_digest[m.token] << std::endl;
+						<< m.check_val << " != " 
+						<< map_store_check_val[m.token] << std::endl;
 				} 
-				map_store_digest.erase(map_store_digest.find(m.token));
+				map_store_check_val.erase(map_store_check_val.find(m.token));
 			} 
 		}
 		
@@ -913,11 +925,8 @@ namespace miniDHT {
 				message_t m(message_t::SEND_STORE, id_, token);
 				m.to_id = to_id;
 				m.data = cbf;
-				std::stringstream ss("");
-				ss << cbf.title << ":" << cbf.data;
-				digest_t digest = digest_from_string(ss.str());
 				{
-					map_store_digest[token] = digest;
+					map_store_check_val[token] = cbf.data.size();
 				}
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
@@ -988,11 +997,8 @@ namespace miniDHT {
 		{
 			try {
 				digest_t digest;
-				std::stringstream wss("");
-				wss << cbf.title << ":" << cbf.data;
-				digest = digest_from_string(wss.str());
 				message_t m(message_t::REPLY_STORE, id_, tok);
-				m.digest = digest;
+				m.check_val = cbf.data.size();
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 

@@ -309,13 +309,39 @@ namespace miniDHT {
 		}			
 	}
 
+	void db_multi_key_data::update(
+		const std::string& key,
+		const data_item_t& item)
+	{
+		int rc = 0;
+		char* szMsg;
+		{
+			std::stringstream ss("");
+			ss << "UPDATE data_item SET time = '";
+			ss << item.time << "', ttl = '";
+			ss << item.ttl << "' WHERE key = '";
+			ss << key << "' AND title = '";
+			ss << item.title << "'";
+			rc = sqlite3_exec(
+				db_,
+				ss.str().c_str(),
+				NULL,
+				0,
+				&szMsg);
+		}
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in UPDATE table : ";
+			ss << szMsg;
+			sqlite3_free(szMsg);
+			throw std::runtime_error(ss.str());
+		}
+	}
+
 	void db_multi_key_data::insert(
 		const std::string& key, 
 		const data_item_t& item) 
 	{
-		assert(key != 
-			std::string("0000000000000000000000000000000"\
-				"000000000000000000000000000000000"));
 		int rc = 0;
 		const char* szMsg;
 		std::string sql_query_str = 

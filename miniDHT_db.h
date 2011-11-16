@@ -103,6 +103,7 @@ namespace miniDHT {
 		void remove(const std::string& key);
 		void remove_oldest();
 		void insert(const std::string& key, const data_item_t& item);
+		void update(const std::string& key, const data_item_t& item);
 		size_t count(const std::string& key);
 		size_t size();
 		// debug
