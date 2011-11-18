@@ -356,19 +356,24 @@ namespace miniDHT {
 		}
 		
 		void insert_db(const key_t& k, const data_item_t& d) {
-			// check is the element already exist
+			// check if the element already exist
 			if (db_storage.count(key_to_string(k)) == 0) {
 				// check if size limit is reached
 				while (db_storage.size() >= max_records_) {
 					// drop the oldest record
 					db_storage.remove_oldest();
 				}
-				db_storage.insert(key_to_string(k), d);
+				db_storage.insert(
+					key_to_string(k), 
+					d.title,
+					to_time_t(d.time),
+					d.ttl.total_seconds(),
+					d.data);
 				return;
 			}
 			// key already in
 			std::list<data_item_t> ld;
-			db_storage.find(key_to_string(k), ld);
+			db_storage.find_no_blob(key_to_string(k), ld);
 			std::list<data_item_t>::iterator ite;
 			for (ite = ld.begin(); ite != ld.end(); ++ite) {
 				if (ite->title == d.title) {
@@ -377,12 +382,21 @@ namespace miniDHT {
 						now - ite->time;
 					boost::posix_time::time_duration d_time = now - d.time;
 					if (d_time < temp_time)
-						db_storage.update(key_to_string(k), d);
+						db_storage.update(
+							key_to_string(k), 
+							d.title,
+							to_time_t(d.time),
+							d.ttl.total_seconds());
 					return;
 				}
 			}
 			// a duplicate with different title (should not happen)
-			db_storage.insert(key_to_string(k), d);
+			db_storage.insert(
+				key_to_string(k), 
+				d.title,
+				to_time_t(d.time),
+				d.ttl.total_seconds(),
+				d.data);
 		}
 	
 		// called periodicly

@@ -94,16 +94,29 @@ namespace miniDHT {
 		void open(const std::string& file_name);
 		void create_table();
 		void clear();
-		void find(const std::string& key, std::list<data_item_t>& out);
+		void find(
+			const std::string& key, 
+			std::list<data_item_t>& out);
 		void find(
 			const std::string& key, 
 			const std::string& title, 
 			data_item_t& out);
+		void find_no_blob(
+			const std::string& key,
+			std::list<data_item_t>& out);
 		void remove(const std::string& key, const std::string& title);
-		void remove(const std::string& key);
 		void remove_oldest();
-		void insert(const std::string& key, const data_item_t& item);
-		void update(const std::string& key, const data_item_t& item);
+		void insert(
+			const std::string& key, 
+			const std::string& title,
+			const long long& time,
+			const long long& ttl,
+			const std::string& data);
+		void update(
+			const std::string& key, 
+			const std::string& title,
+			const long long& time,
+			const long long& ttl);
 		size_t count(const std::string& key);
 		size_t size();
 		// debug

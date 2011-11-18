@@ -103,31 +103,34 @@ namespace miniDHT {
 	void db_multi_key_data::create_table() {		
 		int rc = 0;
 		char* szErrMsg = 0;
+		std::string sql_query = 
+			"PRAGMA foreign_keys = ON;"\
+			"CREATE TABLE IF NOT EXISTS data_header("\
+				"id INTEGER PRIMARY KEY AUTOINCREMENT, "\
+				"key TEXT, "\
+				"title TEXT);"\
+			"CREATE TABLE IF NOT EXISTS data_time("\
+				"time_id INTEGER, "\
+				"time BIGINT, "\
+				"ttl BIGINT, "\
+				"FOREIGN KEY (time_id) REFERENCES data_header(id) "\
+				"ON DELETE CASCADE);"\
+			"CREATE TABLE IF NOT EXISTS data_item("\
+				"item_id INTEGER, "\
+				"data BLOB, "\
+				"FOREIGN KEY (item_id) REFERENCES data_header(id) "\
+				"ON DELETE CASCADE);"\
+			"CREATE INDEX IF NOT EXISTS data_header_key_title "\
+			"ON data_header(key, title);";
 		rc = sqlite3_exec(
 			db_,
-			"CREATE TABLE IF NOT EXISTS "\
-			"data_item(key TEXT, "\
-			"time BIGINT, ttl BIGINT, title TEXT, data BLOB)",
+			sql_query.c_str(),
 			NULL,
 			0,
 			&szErrMsg);
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in CREATE TABLE : ";
-			ss << szErrMsg;
-			sqlite3_free(szErrMsg);
-			throw std::runtime_error(ss.str());
-		}
-		rc = sqlite3_exec(
-			db_,
-			"CREATE INDEX IF NOT EXISTS "\
-			"data_item_key_title ON data_item(key, title)",
-			NULL,
-			0,
-			&szErrMsg);
-		if (rc != SQLITE_OK) {
-			std::stringstream ss("");
-			ss << "SQL error in CREATE INDEX : ";
 			ss << szErrMsg;
 			sqlite3_free(szErrMsg);
 			throw std::runtime_error(ss.str());
@@ -156,6 +159,32 @@ namespace miniDHT {
 	void db_multi_key_data::clear() {
 		int rc = 0;
 		char* szErrMsg = 0;
+		rc = sqlite3_exec(
+			db_,
+			"DROP TABLE IF EXISTS data_header",
+			NULL,
+			0,
+			&szErrMsg);
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in DROP table : ";
+			ss << szErrMsg;
+			sqlite3_free(szErrMsg);
+			throw std::runtime_error(ss.str());
+		}
+		rc = sqlite3_exec(
+			db_,
+			"DROP TABLE IF EXISTS data_time",
+			NULL,
+			0,
+			&szErrMsg);
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in DROP table : ";
+			ss << szErrMsg;
+			sqlite3_free(szErrMsg);
+			throw std::runtime_error(ss.str());
+		}
 		rc = sqlite3_exec(
 			db_,
 			"DROP TABLE IF EXISTS data_item",
@@ -223,43 +252,24 @@ namespace miniDHT {
 		}
 	}
 
-	void db_multi_key_data::remove(const std::string& key) {
-		std::stringstream ss("");
-		ss << "DELETE FROM data_item WHERE key = '";
-		ss << key << "'";
-		int rc = 0;
-		char* szMsg;
-		rc = sqlite3_exec(
-			db_,
-			ss.str().c_str(),
-			NULL,
-			0,
-			&szMsg);
-		if (rc != SQLITE_OK) {
-			std::stringstream ss("");
-			ss << "SQL error in DELETE : ";
-			ss << szMsg;
-			sqlite3_free(szMsg);
-			throw std::runtime_error(ss.str());
-		}
-	}
-
 	void db_multi_key_data::remove(
 		const std::string& key, 
 		const std::string& title) 
 	{
-		std::stringstream ss("");
-		ss << "DELETE FROM data_item WHERE key = '";
-		ss << key << "' AND title = '";
-		ss << title << "'";
 		int rc = 0;
 		char* szMsg;
-		rc = sqlite3_exec(
-			db_,
-			ss.str().c_str(),
-			NULL,
-			0,
-			&szMsg);
+		{ // data header search and clean
+			std::stringstream ss("");
+			ss << "DELETE FROM data_header WHERE key = '";
+			ss << key << "' AND title = '";
+			ss << title << "'";
+			rc = sqlite3_exec(
+				db_,
+				ss.str().c_str(),
+				NULL,
+				0,
+				&szMsg);
+		}
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in DELETE : ";
@@ -274,8 +284,9 @@ namespace miniDHT {
 		char* szMsg;
 		rc = sqlite3_exec(
 			db_,
-			"DELETE FROM data_item WHERE EXISTS time IN"\
-			"(SELECT time FROM data_item ORDER BY time ASC LIMIT 1)",
+			"DELETE FROM data_header WHERE id IN "\
+				"(SELECT data_header.id FROM data_header, data_time "\
+				"ORDER BY data_time.time ASC LIMIT 1)",
 			NULL,
 			0,
 			&szMsg);
@@ -287,7 +298,10 @@ namespace miniDHT {
 		}	
 	}
 
-	void db_key_value::insert(const std::string& key, const std::string& value) {
+	void db_key_value::insert(
+		const std::string& key, 
+		const std::string& value) 
+	{
 		std::stringstream ss("");
 		ss << "INSERT INTO contacts VALUES('";
 		ss << key << "', '";
@@ -311,17 +325,22 @@ namespace miniDHT {
 
 	void db_multi_key_data::update(
 		const std::string& key,
-		const data_item_t& item)
+		const std::string& title,
+		const long long& time,
+		const long long& ttl)
 	{
 		int rc = 0;
 		char* szMsg;
 		{
 			std::stringstream ss("");
-			ss << "UPDATE data_item SET time = '";
-			ss << item.time << "', ttl = '";
-			ss << item.ttl << "' WHERE key = '";
-			ss << key << "' AND title = '";
-			ss << item.title << "'";
+			ss << "UPDATE data_time SET time = '";
+			ss << time << "', ttl = '";
+			ss << ttl << "' WHERE data_time.time_id IN ( ";
+			ss << "SELECT data_time.time_id ";
+			ss << "FROM data_time, data_header ";
+			ss << "WHERE data_header.key = '" << key << "' ";
+			ss << "AND data_header.title = '" << title << "' ";
+			ss << "AND data_time.time_id = data_header.id)";
 			rc = sqlite3_exec(
 				db_,
 				ss.str().c_str(),
@@ -340,48 +359,81 @@ namespace miniDHT {
 
 	void db_multi_key_data::insert(
 		const std::string& key, 
-		const data_item_t& item) 
+		const std::string& title,
+		const long long& time,
+		const long long& ttl,
+		const std::string& data) 
 	{
 		int rc = 0;
-		const char* szMsg;
-		std::string sql_query_str = 
-			"INSERT INTO data_item VALUES(?, ?, ?, ?, ?)";
-		sqlite3_stmt* stmt = NULL;
-		rc = sqlite3_prepare_v2(
-			db_, 
-			sql_query_str.c_str(),
-			sql_query_str.size(),
-			&stmt,
-			&szMsg);
+		char* szMsg;
+		{ // insert the header
+			std::stringstream ss("");
+			ss << "INSERT INTO data_header VALUES(NULL, '";
+			ss << key << "', '";
+			ss << title << "')";
+			rc = sqlite3_exec(
+				db_,
+				ss.str().c_str(),
+				NULL,
+				0,
+				&szMsg);
+		}
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
-			ss << "SQL error in prepare INSERT table : ";
+			ss << "SQL error in INSERT data_header : ";
 			ss << szMsg;
-			sqlite3_free(&szMsg);
+			sqlite3_free(szMsg);
 			throw std::runtime_error(ss.str());
 		}
-		rc = sqlite3_bind_text(stmt, 1, key.c_str(), -1, SQLITE_TRANSIENT);
-		if (rc != SQLITE_OK) 
-			throw std::runtime_error("SQL error binding key in INSERT!");
-		rc = sqlite3_bind_int64(stmt, 2, to_time_t(item.time));
-		if (rc != SQLITE_OK)
-			throw std::runtime_error("SQL error binding time in INSERT!");
-		rc = sqlite3_bind_int64(stmt, 3, item.ttl.total_seconds());
-		if (rc != SQLITE_OK)
-			throw std::runtime_error("SQL error binding ttl in INSERT!");
-		rc = sqlite3_bind_text(
-			stmt, 
-			4, 
-			item.title.c_str(), 
-			-1, 
-			SQLITE_TRANSIENT);
-		if (rc != SQLITE_OK)
-			throw std::runtime_error("SQL error binding title in INSERT!");
+		{ // insert the time
+			std::stringstream ss("");
+			ss << "INSERT INTO data_time ";
+			ss << "SELECT data_header.id, '" << time << "', '";
+			ss << ttl << "' ";
+			ss << "FROM data_header ";
+			ss << "WHERE data_header.key = '" << key << "' ";
+			ss << "AND data_header.title = '" << title << "' ";
+			rc = sqlite3_exec(
+				db_,
+				ss.str().c_str(),
+				NULL,
+				0,
+				&szMsg);
+		}
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in INSERT data_time : ";
+			ss << szMsg;
+			sqlite3_free(szMsg);
+			throw std::runtime_error(ss.str());
+		}
+		sqlite3_stmt* stmt = NULL;
+		{ // insert the BLOB
+			std::stringstream ss("");
+			ss << "INSERT INTO data_item ";
+			ss << "SELECT data_header.id, ? ";
+			ss << "FROM data_header ";
+			ss << "WHERE data_header.key = '" << key << "' ";
+			ss << "AND data_header.title = '" << title << "' ";
+			rc = sqlite3_prepare_v2(
+				db_, 
+				ss.str().c_str(),
+				ss.str().size(),
+				&stmt,
+				NULL);
+		}
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in prepare INSERT data_item : ";
+			ss << sqlite3_errmsg(db_);
+			throw std::runtime_error(ss.str());
+		}
+		// assign the BLOB
 		rc = sqlite3_bind_blob(
 			stmt, 
-			5, 
-			&(item.data[0]), 
-			item.data.size(), 
+			1, 
+			&(data[0]), 
+			data.size(), 
 			SQLITE_STATIC);
 		if (rc != SQLITE_OK)
 			throw std::runtime_error("SQL error binding data in INSERT!");
@@ -428,7 +480,7 @@ namespace miniDHT {
 		int nrow, ncol;
 		char* szMsg;
 		std::stringstream ss("");
-		ss << "SELECT Count(*) FROM data_item WHERE key = '";
+		ss << "SELECT Count(*) FROM data_header WHERE key = '";
 		ss << key << "'";
 		rc = sqlite3_get_table(
 			db_,
@@ -458,7 +510,7 @@ namespace miniDHT {
 		char* szMsg;
 		rc = sqlite3_get_table(
 			db_,
-			"SELECT Count(*) FROM data_item",
+			"SELECT Count(*) FROM data_header",
 			&result,
 			&nrow,
 			&ncol,
@@ -512,31 +564,46 @@ namespace miniDHT {
 		data_item_t& out)
 	{
 		int rc = 0;
-		const char* szMsg = NULL;
 		sqlite3_stmt* stmt = NULL;
 		{ // for ss I m lazy
 			std::stringstream ss("");
-			ss << "SELECT time, ttl, title, data ";
-			ss << "FROM data_item WHERE key = '";
-			ss << key << "' AND title = '";
-			ss << title << "'";
+			ss << "SELECT ";
+			ss << "data_time.time, data_time.ttl, ";
+			ss << "data_header.title, data_item.data ";
+			ss << "FROM data_header, data_time, data_item ";
+			ss << "WHERE data_header.id IN (";
+			ss << "SELECT data_header.id ";
+			ss << "FROM data_header WHERE key = '" << key << "'";
+			ss << " AND title = '" << title << "') ";
+			ss << "AND data_time.time_id IN ( ";
+			ss << "SELECT data_time.time_id ";
+			ss << "FROM data_header, data_time ";
+			ss << "WHERE data_header.key = '" << key << "' "; 
+			ss << "AND data_header.title = '" << title <<  "' ";
+			ss << " AND data_header.id = data_time.time_id) ";
+			ss << "AND data_item.item_id IN ( ";
+			ss << "SELECT data_item.item_id ";
+			ss << "FROM data_header, data_item ";
+			ss << "WHERE data_header.key = '" << key << "' ";
+			ss << "AND data_header.title = '" << title << "' ";
+			ss << "AND data_header.id = data_item.item_id);";
 			rc = sqlite3_prepare_v2(
 				db_,
 				ss.str().c_str(),
 				-1,
 				&stmt,
-				&szMsg);
+				NULL);
 		}
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT [key title] : ";
-			ss << szMsg;
-			sqlite3_free(&szMsg);
+			ss << sqlite3_errmsg(db_);
 			throw std::runtime_error(ss.str());
 		}
 		if (sqlite3_step(stmt) != SQLITE_ROW) {
 			std::stringstream ss("");
-			ss << "SQL error in step : " << sqlite3_errmsg(db_);
+			ss << "SQL error in step : "; 
+			ss << sqlite3_errmsg(db_);
 			throw std::runtime_error(ss.str());
 		}
 		// for each column
@@ -567,24 +634,38 @@ namespace miniDHT {
 		std::list<data_item_t>& out)
 	{
 		int rc = 0;
-		const char* szMsg = NULL;
 		sqlite3_stmt* stmt = NULL;
 		{ // for ss I m lazy
 			std::stringstream ss("");
-			ss << "SELECT time, ttl, title, data FROM data_item WHERE key = '";
-			ss << key << "'";
+			ss << "SELECT ";
+			ss << "data_time.time, data_time.ttl, ";
+			ss << "data_header.title, data_item.data ";
+			ss << "FROM data_header, data_time, data_item ";
+			ss << "WHERE data_header.id IN ( ";
+			ss << "SELECT data_header.id ";
+			ss << "FROM data_header ";
+			ss << "WHERE key = '" << key << "') ";
+			ss << "AND data_time.time_id IN ( ";
+			ss << "SELECT data_time.time_id ";
+			ss << "FROM data_header, data_time ";
+			ss << "WHERE data_header.key = '" << key << "' "; 
+			ss << "AND data_header.id = data_time.time_id) ";
+			ss << "AND data_item.item_id IN ( ";
+			ss << "SELECT data_item.item_id ";
+			ss << "FROM data_header, data_item ";
+			ss << "WHERE data_header.key = '" << key << "' ";
+			ss << "AND data_header.id = data_item.item_id);";
 			rc = sqlite3_prepare_v2(
 				db_,
 				ss.str().c_str(),
 				-1,
 				&stmt,
-				&szMsg);
+				NULL);
 		}
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT [...] : ";
-			ss << szMsg;
-			sqlite3_free(&szMsg);
+			ss << sqlite3_errmsg(db_);
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -614,23 +695,80 @@ namespace miniDHT {
 			throw std::runtime_error("SQL error finalize in SELECT * !");
 	}
 
+	void db_multi_key_data::find_no_blob(
+		const std::string& key,
+		std::list<data_item_t>& out)
+	{
+		int rc = 0;
+		sqlite3_stmt* stmt = NULL;
+		{ // for ss I m lazy
+			std::stringstream ss("");
+			ss << "SELECT ";
+			ss << "data_time.time, data_time.ttl, data_header.title ";
+			ss << "FROM data_header, data_time, data_item ";
+			ss << "WHERE data_header.id IN ( ";
+			ss << "SELECT data_header.id ";
+			ss << "FROM data_header ";
+			ss << "WHERE key = '" << key << "') ";
+			ss << "AND data_time.time_id IN ( ";
+			ss << "SELECT data_time.time_id ";
+			ss << "FROM data_header, data_time ";
+			ss << "WHERE data_header.key = '" << key << "' "; 
+			ss << "AND data_header.id = data_time.time_id)";
+			rc = sqlite3_prepare_v2(
+				db_,
+				ss.str().c_str(),
+				-1,
+				&stmt,
+				NULL);
+		}
+		if (rc != SQLITE_OK) {
+			std::stringstream ss("");
+			ss << "SQL error in SELECT [...] : ";
+			ss << sqlite3_errmsg(db_);
+			throw std::runtime_error(ss.str());
+		}
+		// for each row
+		while (sqlite3_step(stmt) == SQLITE_ROW) {
+			// for each column
+			data_item_t di;
+			for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
+				std::string column_name = sqlite3_column_name(stmt, i);
+				if (column_name == std::string("time")) 
+					di.time = boost::posix_time::from_time_t(
+						sqlite3_column_int64(stmt, i));
+				if (column_name == std::string("ttl"))
+					di.ttl = boost::posix_time::seconds(
+						sqlite3_column_int64(stmt, i));
+				if (column_name == std::string("title"))
+					di.title = (const char*)sqlite3_column_text(stmt, i);
+			}
+			out.push_back(di);
+		}
+		rc = sqlite3_finalize(stmt);
+		if (rc != SQLITE_OK)
+			throw std::runtime_error("SQL error finalize in SELECT * !");
+	}
+
 	void db_multi_key_data::list(
 		std::multimap<std::string, data_item_t>& out) 
 	{
 		int rc = 0;
-		const char* szMsg = NULL;
 		sqlite3_stmt* stmt = NULL;
 		rc = sqlite3_prepare_v2(
 			db_,
-			"SELECT * FROM data_item",
+			"SELECT data_time.time, data_time.ttl, "\
+			"data_header.title, data_item.data "\
+			"FROM data_header, data_time, data_item "\
+			"WHERE data_header.id = data_time.time_id "\
+			"AND data_header.id = data_item.item_id",
 			-1,
 			&stmt,
-			&szMsg);
+			NULL);
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT * : ";
-			ss << szMsg;
-			sqlite3_free(&szMsg);
+			ss << sqlite3_errmsg(db_);
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -665,19 +803,21 @@ namespace miniDHT {
 		
 	void db_multi_key_data::list_headers(std::list<data_item_header_t>& out) {	
 		int rc = 0;
-		const char* szMsg = NULL;
 		sqlite3_stmt* stmt = NULL;
 		rc = sqlite3_prepare_v2(
 			db_,
-			"SELECT key, time, ttl, title FROM data_item",
+			"SELECT data_header.key, data_time.time, "\
+			"data_time.ttl, data_header.title "\
+			"FROM data_header, data_time, data_item "\
+			"WHERE data_header.id = data_time.time_id "\
+			"AND data_header.id = data_item.item_id",
 			-1,
 			&stmt,
-			&szMsg);
+			NULL);
 		if (rc != SQLITE_OK) {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT key, time, ttl, title : ";
-			ss << szMsg;
-			sqlite3_free(&szMsg);
+			ss << sqlite3_errmsg(db_);
 			throw std::runtime_error(ss.str());
 		}
 		// for each row

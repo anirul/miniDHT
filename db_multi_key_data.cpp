@@ -60,7 +60,12 @@ void add(
 			pfile);
 		fclose(pfile);
 	}	
-	db.insert(key, item);
+	db.insert(
+		key, 
+		item.title, 
+		miniDHT::to_time_t(item.time), 
+		item.ttl.total_seconds(), 
+		item.data);
 }
 
 void find(
@@ -99,10 +104,11 @@ void list(const std::string& db_file) {
 
 void remove(
 	const std::string& db_file,
-	const std::string& key) 
+	const std::string& key,
+	const std::string& title) 
 {
 	miniDHT::db_multi_key_data db(db_file);
-	db.remove(key);
+	db.remove(key, title);
 }
 
 int main(int ac, char** av) {
@@ -165,8 +171,10 @@ int main(int ac, char** av) {
 		if (vm.count("remove")) {
 			if (key == std::string(""))
 				throw std::runtime_error("Need a key to remove data!");
+			if (title == std::string(""))
+				throw std::runtime_error("Need a title to remove data!");
 			std::cout << "remove a data associated to a key in the DB" << std::endl;
-			remove(db_file, key);
+			remove(db_file, key, title);
 		}
 		if (vm.count("find")) {
 			if (key == std::string(""))
