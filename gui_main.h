@@ -49,6 +49,7 @@ public:
 	void OnCancel(wxCommandEvent& evt);
 	void OnInfo(wxCommandEvent& evt);
 	void OnNetworkStatus(wxCommandEvent& evt);
+	void OnClose(wxCloseEvent& evt);
 	void OnTimer(wxTimerEvent& evt);
 #ifdef __WXMAC__
 	void MacOpenFile(const wxString& fileName);

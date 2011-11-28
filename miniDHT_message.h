@@ -109,9 +109,9 @@ namespace miniDHT {
 		std::bitset<KEY_SIZE> from_id;
 		std::bitset<KEY_SIZE> to_id;
 		std::bitset<TOKEN_SIZE> token;
-		unsigned short listen_port;
+		uint16_t listen_port;
 		// specific to message
-		unsigned int check_val;
+		uint64_t check_val;
 		data_item_t data;
 		std::string hint;
 		std::list<contact<KEY_SIZE> > contact_list;

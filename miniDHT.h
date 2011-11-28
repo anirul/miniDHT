@@ -30,18 +30,6 @@
 
 #define DEFAULT_MAX_RECORDS (1024 * 1024)
 
-// #define SERIALIZE_XML
-
-#ifdef SERIALIZE_BINARY
-	#ifdef SERIALIZE_XML
-		#undef SERIALIZE_XML
-	#endif // SERIALIZE_XML
-#else // !SERIALIZE_BINARY
-	#ifndef SERIALIZE_XML
-		#define SERIALIZE_BINARY
-	#endif // !SERIALIZE_XML
-#endif // SERIALIZE_BINARY
-
 // STL
 #include <iostream>
 #include <fstream>
@@ -55,23 +43,10 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
-#ifdef SERIALIZE_XML
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#endif // SERIALIZE_BINARY
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
 // local
+#include "miniDHT_proto.pb.h"
 #include "miniDHT_session.h"
 #include "miniDHT_db.h"
-#include "miniDHT_message.h"
 #include "miniDHT_const.h"
 #include "miniDHT_contact.h"
 #include "miniDHT_bucket.h"
@@ -102,7 +77,6 @@ namespace miniDHT {
 		typedef std::bitset<TOKEN_SIZE> token_t;
 		typedef std::bitset<KEY_SIZE> key_t;
 		typedef contact<KEY_SIZE> contact_t;
-		typedef message<KEY_SIZE, TOKEN_SIZE> message_t;
 		typedef less_bitset<KEY_SIZE> less_key;
 		typedef less_bitset<TOKEN_SIZE> less_token;
 		typedef std::map<key_t, key_t, less_key> map_key_key_t;
@@ -205,13 +179,13 @@ namespace miniDHT {
 		// callback declaration
 		typedef boost::function<void (std::list<key_t> k)> 
 			node_callback_t;
-		typedef boost::function<void (const std::list<data_item_t>& b)>  
+		typedef boost::function<void (const std::list<data_item_proto>& b)>  
 			value_callback_t;
 
 		// iterative messages
 		void iterativeStore(
 			const key_t& k, 
-			const data_item_t& b) 
+			const data_item_proto& b) 
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			iterativeStore_nolock(k, b);
@@ -221,7 +195,7 @@ namespace miniDHT {
 
 		void iterativeStore_nolock(
 			const key_t& k, 
-			const data_item_t& b) 
+			const data_item_proto& b) 
 		{
 			token_t token = random_bitset<TOKEN_SIZE>();
 			{
@@ -355,7 +329,7 @@ namespace miniDHT {
 			}
 		}
 		
-		void insert_db(const key_t& k, const data_item_t& d) {
+		void insert_db(const key_t& k, const data_item_proto& d) {
 			// check if the element already exist
 			if (db_storage.count(key_to_string(k)) == 0) {
 				// check if size limit is reached
@@ -365,38 +339,39 @@ namespace miniDHT {
 				}
 				db_storage.insert(
 					key_to_string(k), 
-					d.title,
-					to_time_t(d.time),
-					d.ttl.total_seconds(),
-					d.data);
+					d.title(),
+					d.time(),
+					d.ttl(),
+					d.data());
 				return;
 			}
 			// key already in
-			std::list<data_item_t> ld;
+			std::list<data_item_proto> ld;
 			db_storage.find_no_blob(key_to_string(k), ld);
-			std::list<data_item_t>::iterator ite;
+			std::list<data_item_proto>::iterator ite;
 			for (ite = ld.begin(); ite != ld.end(); ++ite) {
-				if (ite->title == d.title) {
+				if (ite->title() == d.title()) {
 					boost::posix_time::ptime now = update_time();
 					boost::posix_time::time_duration temp_time =
-						now - ite->time;
-					boost::posix_time::time_duration d_time = now - d.time;
+						now - boost::posix_time::from_time_t(ite->time());
+					boost::posix_time::time_duration d_time = now - 
+						boost::posix_time::from_time_t(d.time());
 					if (d_time < temp_time)
 						db_storage.update(
 							key_to_string(k), 
-							d.title,
-							to_time_t(d.time),
-							d.ttl.total_seconds());
+							d.title(),
+							d.time(),
+							d.ttl());
 					return;
 				}
 			}
 			// a duplicate with different title (should not happen)
 			db_storage.insert(
 				key_to_string(k), 
-				d.title,
-				to_time_t(d.time),
-				d.ttl.total_seconds(),
-				d.data);
+				d.title(),
+				d.time(),
+				d.ttl(),
+				d.data());
 		}
 	
 		// called periodicly
@@ -472,9 +447,9 @@ namespace miniDHT {
 						std::cout
 							<< "!!! PERIODIC !!! part 3.3 - republish : "
 							<< ite->key << std::endl;
-						data_item_t item;
+						data_item_proto item;
 						db_storage.find(ite->key, ite->title, item);
-						item.ttl -= time_elapsed;
+						item.set_ttl(item.ttl() - time_elapsed.total_seconds());
 						iterativeStore_nolock(
 							string_to_key<KEY_SIZE>(ite->key), item);
 					}
@@ -652,47 +627,40 @@ namespace miniDHT {
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			sender_endpoint_ = ep;
-			message_t m;
+			message_proto m;
 			std::stringstream ss(std::string(msg.body(), msg.body_length()));
 			try {
-#ifdef SERIALIZE_XML
-				boost::archive::xml_iarchive xia(ss);
-				xia >> BOOST_SERIALIZATION_NVP(m);
-#endif // SERIALIZE_XML
-#ifdef SERIALIZE_BINARY
-				boost::archive::binary_iarchive xia(ss);
-				xia >> m;
-#endif // SERIALIZE_BINARY
-				switch (m.type) {
-					case message_t::SEND_PING :
+				m.ParseFromIstream(&ss);
+				switch (m.type()) {
+					case message_proto::SEND_PING :
 						handle_SEND_PING(m);
 						contact_list.add_contact(m.from_id, ep);
 						break;
-					case message_t::REPLY_PING :
+					case message_proto::REPLY_PING :
 						handle_REPLY_PING(m);
 						break;
-					case message_t::SEND_STORE :
+					case message_proto::SEND_STORE :
 						handle_SEND_STORE(m);
 						contact_list.add_contact(m.from_id, ep);
 						break;
-					case message_t::REPLY_STORE :
+					case message_proto::REPLY_STORE :
 						handle_REPLY_STORE(m);
 						break;
-					case message_t::SEND_FIND_NODE :
+					case message_proto::SEND_FIND_NODE :
 						handle_SEND_FIND_NODE(m);
 						contact_list.add_contact(m.from_id, ep);
 						break;
-					case message_t::REPLY_FIND_NODE :
+					case message_proto::REPLY_FIND_NODE :
 						handle_REPLY_FIND_NODE(m);
 						break;
-					case message_t::SEND_FIND_VALUE :
+					case message_proto::SEND_FIND_VALUE :
 						handle_SEND_FIND_VALUE(m);
 						contact_list.add_contact(m.from_id, ep);
 						break;
-					case message_t::REPLY_FIND_VALUE :
+					case message_proto::REPLY_FIND_VALUE :
 						handle_REPLY_FIND_VALUE(m);
 						break;
-					case message_t::NONE :
+					case message_proto::NONE :
 					default :
 						break;
 				}
@@ -707,11 +675,11 @@ namespace miniDHT {
 			}
 		}
 		
-		void handle_SEND_PING(const message_t& m) {
+		void handle_SEND_PING(const message_proto& m) {
 			reply_PING(sender_endpoint_, m.token);
 		}
 					
-		void handle_REPLY_PING(const message_t& m) {
+		void handle_REPLY_PING(const message_proto& m) {
 			const boost::posix_time::time_duration tTimeout = 
 			boost::posix_time::minutes(1);
 			{
@@ -729,48 +697,46 @@ namespace miniDHT {
 					}
 					map_ping_ttl.erase(map_ping_ttl.find(m.token));
 				} else {
-					std::cerr << "\ttoken [" << m.token
+					std::cerr << "\ttoken [" << m.token()
 						<< "] unknown." << std::endl;
 				}
 			}
 		}
 		
-		void handle_SEND_STORE(const message_t& m) {
-			data_item_t di = m.data;
-			di.time = update_time();
-			insert_db(m.to_id, di);
+		void handle_SEND_STORE(const message_proto& m) {
+			data_item_proto di = m.data();
+			di.set_time(to_time_t(update_time()));
+			insert_db(m.to_id(), di);
 			reply_STORE(sender_endpoint_, m.token, di);
 		}
 		
-		void handle_REPLY_STORE(const message_t& m) {
+		void handle_REPLY_STORE(const message_proto& m) {
 			if (map_store_check_val.find(m.token) != map_store_check_val.end()) {
-				if (m.check_val != map_store_check_val[m.token]) {
+				if (m.check_val() != map_store_check_val[m.token]) {
 					std::cerr 
 						<< "[" << socket_.local_endpoint()
 						<< "] check val missmatch storage problem?" 
 						<< std::endl;
 					std::cerr 
-						<< m.check_val << " != " 
+						<< m.check_val() << " != " 
 						<< map_store_check_val[m.token] << std::endl;
 				} 
 				map_store_check_val.erase(map_store_check_val.find(m.token));
 			} 
 		}
 		
-		void handle_SEND_FIND_NODE(const message_t& m) {
+		void handle_SEND_FIND_NODE(const message_proto& m) {
 			reply_FIND_NODE(sender_endpoint_, m.token,	m.to_id);
 		}
 		
-		void handle_REPLY_FIND_NODE(const message_t& m) {
+		void handle_REPLY_FIND_NODE(const message_proto& m) {
 			{ // check if the search exist
 				if (map_search.find(m.token) == map_search.end())
 					return;
 			}
-			std::list<contact_t> lc;
-			const_list_contact_t_iterator ite = m.contact_list.begin();
-			for (;ite != m.contact_list.end(); ++ite) {
-				contact_t c = (*ite);
-				std::string address = c.ep.address().to_string();
+			for (int i = 0; i < m.contact_list_size(); ++i) {
+				contact_proto c = m.contact_list(i);
+				std::string address = c.ep().address();
 				if ((address == std::string("0.0.0.0")) ||
 					(address == std::string("127.0.0.1")) ||
 					(address == std::string("localhost"))) {
@@ -788,7 +754,7 @@ namespace miniDHT {
 			replyIterative(lc, m.token, m.to_id);
 		}
 		
-		void handle_SEND_FIND_VALUE(const message_t& m) {
+		void handle_SEND_FIND_VALUE(const message_proto& m) {
 			bool is_present = false;
 			is_present = (db_storage.count(key_to_string(m.to_id)) != 0);
 			if (is_present) {
@@ -798,7 +764,7 @@ namespace miniDHT {
 			}
 		}
 		
-		void handle_REPLY_FIND_VALUE(const message_t& m) {
+		void handle_REPLY_FIND_VALUE(const message_proto& m) {
 			if (map_search.find(m.token) != map_search.end()) {
 				map_search[m.token].value_callback(m.data_item_list);
 				map_search.erase(m.token);
@@ -806,17 +772,21 @@ namespace miniDHT {
 		}
 
 		void send_MESSAGE(
-			const message_t& m,
+			const message_proto& m,
 			const boost::asio::ip::tcp::endpoint& ep) 
 		{
 			std::string address = ep.address().to_string();
 			unsigned short port = ep.port();
 			std::stringstream ss("");
 			try {
+#ifdef SERIALIZE_TEXT
+				boost::archive::text_oarchive xoa(ss);
+				xoa << m;
+#endif // SERIALIZE_TEXT
 #ifdef SERIALIZE_BINARY
 				boost::archive::binary_oarchive xoa(ss);
 				xoa << m;
-#endif // SERIZLIZE_BINARY
+#endif // SERIALIZE_BINARY
 #ifdef SERIALIZE_XML
 				boost::archive::xml_oarchive xoa(ss);
 				xoa << BOOST_SERIALIZATION_NVP(m);
@@ -932,7 +902,7 @@ namespace miniDHT {
 		void send_STORE(
 			const boost::asio::ip::tcp::endpoint& ep,
 			const key_t& to_id,
-			const data_item_t& cbf,
+			const data_item_proto& cbf,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			try {
@@ -1007,7 +977,7 @@ namespace miniDHT {
 		void reply_STORE(
 			const boost::asio::ip::tcp::endpoint& ep,
 			const token_t& tok,
-			const data_item_t& cbf)
+			const data_item_proto& cbf)
 		{
 			try {
 				digest_t digest;

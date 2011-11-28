@@ -34,42 +34,14 @@
 #define random rand
 #endif
 #include <ctime>
+#include "miniDHT_proto.pb.h"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace miniDHT {
 
 	const unsigned int DIGEST_LENGTH = 32;
-	
-	class data_item_t {
-	protected :
-		friend class boost::serialization::access;
-		template <class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			ar & BOOST_SERIALIZATION_NVP(ttl);
-			ar & BOOST_SERIALIZATION_NVP(time);
-			ar & BOOST_SERIALIZATION_NVP(title);
-			ar & BOOST_SERIALIZATION_NVP(data);
-		}
-	public :
-	
-		data_item_t() 
-			:	ttl(boost::posix_time::minutes(1)), 
-				time(boost::posix_time::microsec_clock::universal_time()) {}
-		
-	public :
-		boost::posix_time::time_duration ttl;
-		boost::posix_time::ptime time;
-		std::string title;
-		std::string data;
-	};
 
 	class digest_t {
-	protected :
-		friend class boost::serialization::access;
-		template <class Archive>
-		void serialize(Archive& ar, const unsigned int version) {
-			ar & BOOST_SERIALIZATION_NVP(l);
-		}
 	public :
 		digest_t() {}
 		union {
@@ -77,7 +49,7 @@ namespace miniDHT {
 			unsigned short s[DIGEST_LENGTH >> 1];
 			unsigned long l[DIGEST_LENGTH >> 2];
 		};
-	};
+	};	
 	
 	inline bool operator==(const digest_t& a, const digest_t& b) {
 		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i)
@@ -155,8 +127,11 @@ namespace miniDHT {
 		return 0;
 	}
 	
-	inline bool operator==(const data_item_t& l, const data_item_t& r) {
-		return ((l.title == r.title) && (l.data == r.data));
+	inline bool operator==(
+		const data_item_proto& l, 
+		const data_item_proto& r) 
+	{
+		return ((l.title() == r.title()) && (l.data() == r.data()));
 	}
 	
 	template <typename T>

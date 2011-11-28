@@ -561,7 +561,7 @@ namespace miniDHT {
 	void db_multi_key_data::find(
 		const std::string& key,
 		const std::string& title,
-		data_item_t& out)
+		data_item_proto& out)
 	{
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
@@ -610,17 +610,14 @@ namespace miniDHT {
 		for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
 			std::string column_name = sqlite3_column_name(stmt, i);
 			if (column_name == std::string("time")) 
-				out.time = boost::posix_time::from_time_t(
-					sqlite3_column_int64(stmt, i));
+				out.set_time(sqlite3_column_int64(stmt, i));
 			if (column_name == std::string("ttl"))
-				out.ttl = boost::posix_time::seconds(
-					sqlite3_column_int64(stmt, i));
+				out.set_ttl(sqlite3_column_int64(stmt, i));
 			if (column_name == std::string("title"))
-				out.title = (const char*)sqlite3_column_text(stmt, i);
+				out.set_title((const char*)sqlite3_column_text(stmt, i));
 			if (column_name == std::string("data")) {
 				size_t data_size = sqlite3_column_bytes(stmt, i);
-				out.data.resize(data_size);
-				memcpy(&(out.data[0]), sqlite3_column_blob(stmt, i), data_size);
+				out.set_data(sqlite3_column_blob(stmt, i), data_size);
 			}
 		}
 		rc = sqlite3_finalize(stmt);
@@ -631,7 +628,7 @@ namespace miniDHT {
 
 	void db_multi_key_data::find(
 		const std::string& key,
-		std::list<data_item_t>& out)
+		std::list<data_item_proto>& out)
 	{
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
@@ -671,21 +668,18 @@ namespace miniDHT {
 		// for each row
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 			// for each column
-			data_item_t di;
+			data_item_proto di;
 			for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
 				std::string column_name = sqlite3_column_name(stmt, i);
 				if (column_name == std::string("time")) 
-					di.time = boost::posix_time::from_time_t(
-						sqlite3_column_int64(stmt, i));
+					di.set_time(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("ttl"))
-					di.ttl = boost::posix_time::seconds(
-						sqlite3_column_int64(stmt, i));
+					di.set_ttl(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("title"))
-					di.title = (const char*)sqlite3_column_text(stmt, i);
+					di.set_title((const char*)sqlite3_column_text(stmt, i));
 				if (column_name == std::string("data")) {
 					size_t data_size = sqlite3_column_bytes(stmt, i);
-					di.data.resize(data_size);
-					memcpy(&(di.data[0]), sqlite3_column_blob(stmt, i), data_size);
+					di.set_data(sqlite3_column_blob(stmt, i), data_size);
 				}
 			}
 			out.push_back(di);
@@ -697,7 +691,7 @@ namespace miniDHT {
 
 	void db_multi_key_data::find_no_blob(
 		const std::string& key,
-		std::list<data_item_t>& out)
+		std::list<data_item_proto>& out)
 	{
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
@@ -731,17 +725,15 @@ namespace miniDHT {
 		// for each row
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 			// for each column
-			data_item_t di;
+			data_item_proto di;
 			for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
 				std::string column_name = sqlite3_column_name(stmt, i);
 				if (column_name == std::string("time")) 
-					di.time = boost::posix_time::from_time_t(
-						sqlite3_column_int64(stmt, i));
+					di.set_time(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("ttl"))
-					di.ttl = boost::posix_time::seconds(
-						sqlite3_column_int64(stmt, i));
+					di.set_ttl(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("title"))
-					di.title = (const char*)sqlite3_column_text(stmt, i);
+					di.set_title((const char*)sqlite3_column_text(stmt, i));
 			}
 			out.push_back(di);
 		}
@@ -751,7 +743,7 @@ namespace miniDHT {
 	}
 
 	void db_multi_key_data::list(
-		std::multimap<std::string, data_item_t>& out) 
+		std::multimap<std::string, data_item_proto>& out) 
 	{
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
@@ -774,27 +766,24 @@ namespace miniDHT {
 		// for each row
 		while (sqlite3_step(stmt) == SQLITE_ROW) {
 			// for each column
-			data_item_t di;
+			data_item_proto di;
 			std::string key = "";
 			for (int i = 0; i < sqlite3_column_count(stmt); ++i) {
 				std::string column_name = sqlite3_column_name(stmt, i);
 				if (column_name == std::string("key"))
 					key = (const char*)sqlite3_column_text(stmt, i);
 				if (column_name == std::string("time"))
-					di.time = boost::posix_time::from_time_t(
-						sqlite3_column_int64(stmt, i));
+					di.set_time(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("ttl"))
-					di.ttl = boost::posix_time::seconds(
-						sqlite3_column_int64(stmt, i));
+					di.set_ttl(sqlite3_column_int64(stmt, i));
 				if (column_name == std::string("title"))
-					di.title = (const char*)sqlite3_column_text(stmt, i);
+					di.set_title((const char*)sqlite3_column_text(stmt, i));
 				if (column_name == std::string("data")) {
 					size_t data_size = sqlite3_column_bytes(stmt, i);
-					di.data.resize(data_size);
-					memcpy(&(di.data[0]), sqlite3_column_blob(stmt, i), data_size);
+					di.set_data(sqlite3_column_blob(stmt, i), data_size);
 				}
 			}
-			out.insert(std::make_pair<std::string, data_item_t>(key, di));				
+			out.insert(std::make_pair<std::string, data_item_proto>(key, di));				
 		}
 		rc = sqlite3_finalize(stmt);
 		if (rc != SQLITE_OK)

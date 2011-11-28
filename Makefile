@@ -14,6 +14,7 @@ ALL += BitSmear.app
 endif
 
 CXX = clang++
+PROTOC = protoc
 FLAGS = -g -I/usr/include
 LIBS = \
 	-L/usr/lib \
@@ -24,6 +25,7 @@ LIBS = \
 	-lboost_program_options-mt \
 	-lboost_date_time-mt \
 	-lboost_filesystem-mt \
+	-lprotobuf \
 	-lcrypto \
 	-lpthread \
 	-lsqlite3 \
@@ -31,6 +33,12 @@ LIBS = \
 
 all: $(ALL)
 
+miniDHT_proto.pb.h: miniDHT_proto.proto
+	$(PROTOC) miniDHT_proto.proto --cpp_out=.
+miniDHT_proto.pb.cc: miniDHT_proto.proto
+	$(PROTOC) miniDHT_proto.proto --cpp_out=.
+miniDHT_proto.pb.o: miniDHT_proto.pb.cc miniDHT_proto.pb.h
+	$(CXX) -o miniDHT_proto.pb.o $(FLAGS) -c miniDHT_proto.pb.cc
 miniDHT_db.o: miniDHT_db.cpp miniDHT_db.h
 	$(CXX) -o miniDHT_db.o $(FLAGS) -c miniDHT_db.cpp
 
@@ -66,23 +74,24 @@ gui_recv.o: recv.cpp recv.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h miniDHT_
 gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h 
 	$(CXX) -o gui_list_ctrl.o $(FLAGS) `wx-config --cxxflags` -c gui_list_ctrl.cpp
 
-db_key_value: db_key_value.o miniDHT_db.o 
-	$(CXX) -o db_key_value db_key_value.o miniDHT_db.o  $(LIBS)
-db_multi_key_data: db_multi_key_data.o miniDHT_db.o 
-	$(CXX) -o db_multi_key_data db_multi_key_data.o miniDHT_db.o  $(LIBS)
+db_key_value: db_key_value.o miniDHT_db.o miniDHT_proto.pb.o
+	$(CXX) -o db_key_value db_key_value.o miniDHT_db.o miniDHT_proto.pb.o $(LIBS)
+db_multi_key_data: db_multi_key_data.o miniDHT_db.o miniDHT_proto.pb.o 
+	$(CXX) -o db_multi_key_data db_multi_key_data.o miniDHT_db.o miniDHT_proto.pb.o $(LIBS)
 session: session.o
 	$(CXX) -o session session.o  $(LIBS)
-miniDHT_server: server.o miniDHT_db.o 
-	$(CXX) -o miniDHT_server server.o miniDHT_db.o  $(LIBS)
-miniDHT_test: test.o miniDHT_db.o 
-	$(CXX) -o miniDHT_test test.o miniDHT_db.o  $(LIBS)
-miniDHT_send: send.o miniDHT_db.o 
-	$(CXX) -o miniDHT_send send.o miniDHT_db.o  $(LIBS)
-miniDHT_recv: recv.o miniDHT_db.o 
-	$(CXX) -o miniDHT_recv recv.o miniDHT_db.o  $(LIBS)
-BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui_send.o gui_recv.o gui_list_ctrl.o miniDHT_db.o
+miniDHT_server: server.o miniDHT_db.o miniDHT_proto.pb.o
+	$(CXX) -o miniDHT_server server.o miniDHT_db.o miniDHT_proto.pb.o  $(LIBS)
+miniDHT_test: test.o miniDHT_db.o miniDHT_proto.pb.o
+	$(CXX) -o miniDHT_test test.o miniDHT_db.o miniDHT_proto.pb.o  $(LIBS)
+miniDHT_send: send.o miniDHT_db.o miniDHT_proto.pb.o
+	$(CXX) -o miniDHT_send send.o miniDHT_db.o miniDHT_proto.pb.o  $(LIBS)
+miniDHT_recv: recv.o miniDHT_db.o miniDHT_proto.pb.o
+	$(CXX) -o miniDHT_recv recv.o miniDHT_db.o miniDHT_proto.pb.o  $(LIBS)
+BitSmear: gui_main.o gui_connect.o gui_info.o gui_network_status.o gui_dht.o gui_send.o gui_recv.o gui_list_ctrl.o miniDHT_db.o miniDHT_proto.pb.o
 	$(CXX) -o BitSmear \
 		miniDHT_db.o \
+		miniDHT_proto.pb.o \
 		gui_main.o \
 		gui_connect.o \
 		gui_info.o \

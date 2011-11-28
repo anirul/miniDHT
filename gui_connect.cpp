@@ -65,7 +65,7 @@ gui_connect::gui_connect(const wxString& title)
 	port_ctrl_ = new wxSpinCtrl(
 		panel,
 		wxID_ANY,
-		_("4000"),
+		_("4242"),
 		wxPoint(95, 50),
 		wxSize(80, -1),
 		wxSP_ARROW_KEYS,

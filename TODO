@@ -5,4 +5,7 @@ TODO list
  - Make a library out of miniDHT (libminiDHT.a)
  - Add a routing algorithm (in receive and send)
  + Fix including self in key-endpoint
- + Find a way to speed it up!
+ + 32 - 64 bit serialization issue
+	 - change from boost::serialize to google::protobuf
+ - Find a way to speed it up!
+

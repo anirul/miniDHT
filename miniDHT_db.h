@@ -96,14 +96,14 @@ namespace miniDHT {
 		void clear();
 		void find(
 			const std::string& key, 
-			std::list<data_item_t>& out);
+			std::list<data_item_proto>& out);
 		void find(
 			const std::string& key, 
 			const std::string& title, 
-			data_item_t& out);
+			data_item_proto& out);
 		void find_no_blob(
 			const std::string& key,
-			std::list<data_item_t>& out);
+			std::list<data_item_proto>& out);
 		void remove(const std::string& key, const std::string& title);
 		void remove_oldest();
 		void insert(
@@ -120,7 +120,7 @@ namespace miniDHT {
 		size_t count(const std::string& key);
 		size_t size();
 		// debug
-		void list(std::multimap<std::string, data_item_t>& out);
+		void list(std::multimap<std::string, data_item_proto>& out);
 		void list_headers(std::list<data_item_header_t>& ldh);
 	};
 }

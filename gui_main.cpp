@@ -334,6 +334,10 @@ void gui_main::OnNetworkStatus(wxCommandEvent& evt) {
 	dialog.ShowModal();
 }
 
+void gui_main::OnClose(wxCloseEvent& evt) {
+	wxMessageBox(_("TODO : close the window"));
+}
+
 void gui_main::OnQuit(wxCommandEvent& evt) {
 	gui_dht::instance(std::string(temp_path_.mb_str()))->release();
 	exit(0);

@@ -56,7 +56,7 @@ namespace miniDHT {
 		
 		// callback declaration
 		typedef boost::function<void (std::list<key_t> k)> node_callback_t;
-		typedef boost::function<void (const std::list<data_item_t>& b)>  
+		typedef boost::function<void (const std::list<data_item_proto>& b)>  
 			value_callback_t;
 
 	public :
@@ -71,7 +71,7 @@ namespace miniDHT {
 		bool node_callback_valid;
 		node_callback_t node_callback;
 		value_callback_t value_callback;
-		data_item_t buffer;
+		data_item_proto buffer;
 		unsigned int bucket_nb;
 		std::string hint;
 	

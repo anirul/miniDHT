@@ -29,6 +29,7 @@
 #include <boost/filesystem.hpp>
 #include <stdlib.h>
 #include <stdio.h>
+#include "miniDHT_proto.pb.h"
 #include "miniDHT_db.h"
 
 void add(
@@ -38,10 +39,11 @@ void add(
 	const std::string& file) 
 {
 	miniDHT::db_multi_key_data db(db_file);
-	miniDHT::data_item_t item;
-	item.time = boost::posix_time::second_clock::universal_time();
-	item.ttl = boost::posix_time::minutes(15);
-	item.title = title;
+	miniDHT::data_item_proto item;
+	item.set_time(
+		miniDHT::to_time_t(boost::posix_time::second_clock::universal_time()));
+	item.set_ttl(boost::posix_time::minutes(15).total_seconds());
+	item.set_title(title);
 	{
 		FILE* pfile = fopen(file.c_str(), "rb");
 		if (!pfile) {
@@ -52,9 +54,9 @@ void add(
 		fseeko(pfile, 0, SEEK_END);
 		size_t total_size = ftello(pfile);
 		fseeko(pfile, 0, SEEK_SET);
-		item.data.resize(total_size);
+		item.mutable_data()->resize(total_size);
 		size_t bytes_read = fread(
-			&(item.data[0]), 
+			&((*item.mutable_data())[0]), 
 			sizeof(char), 
 			total_size, 
 			pfile);
@@ -62,10 +64,10 @@ void add(
 	}	
 	db.insert(
 		key, 
-		item.title, 
-		miniDHT::to_time_t(item.time), 
-		item.ttl.total_seconds(), 
-		item.data);
+		item.title(), 
+		item.time(), 
+		item.ttl(), 
+		item.data());
 }
 
 void find(
@@ -74,31 +76,31 @@ void find(
 {
 	miniDHT::db_multi_key_data db(db_file);
 	std::cout << "\tkey   : " << key << std::endl;
-	std::list<miniDHT::data_item_t> item;
+	std::list<miniDHT::data_item_proto> item;
 	db.find(key, item);
-	std::list<miniDHT::data_item_t>::iterator ite;
+	std::list<miniDHT::data_item_proto>::iterator ite;
 	int i = 0;
 	for (ite = item.begin(); ite != item.end(); ++ite) {
 		std::cout << "\titem(" << ++i << ")" << std::endl;
-		std::cout << "\t\ttitle       : " << ite->title << std::endl;
-		std::cout << "\t\ttime        : " << ite->time << std::endl;
-		std::cout << "\t\tttl         : " << ite->ttl << std::endl;
-		std::cout << "\t\tdata.size() : " << ite->data.size() << std::endl;
+		std::cout << "\t\ttitle       : " << ite->title() << std::endl;
+		std::cout << "\t\ttime        : " << ite->time() << std::endl;
+		std::cout << "\t\tttl         : " << ite->ttl() << std::endl;
+		std::cout << "\t\tdata.size() : " << ite->data().size() << std::endl;
 	}
 }
 
 void list(const std::string& db_file) {
 	miniDHT::db_multi_key_data db(db_file);
-	std::multimap<std::string, miniDHT::data_item_t> mmkd;
+	std::multimap<std::string, miniDHT::data_item_proto> mmkd;
 	db.list(mmkd);
-	std::multimap<std::string, miniDHT::data_item_t>::iterator ite;
+	std::multimap<std::string, miniDHT::data_item_proto>::iterator ite;
 	std::cout << "\tkey, data_item (" << db.size() << ")" << std::endl;
 	for (ite = mmkd.begin(); ite != mmkd.end(); ++ite) {
 		std::cout << "\t\tkey    : " << ite->first << std::endl;
-		std::cout << "\t\t\ttitle       : " << ite->second.title << std::endl;
-		std::cout << "\t\t\ttime        : " << ite->second.time << std::endl;
-		std::cout << "\t\t\tttl         : " << ite->second.ttl << std::endl;
-		std::cout << "\t\t\tdata.size() : " << ite->second.data.size() << std::endl;
+		std::cout << "\t\t\ttitle       : " << ite->second.title() << std::endl;
+		std::cout << "\t\t\ttime        : " << ite->second.time() << std::endl;
+		std::cout << "\t\t\tttl         : " << ite->second.ttl() << std::endl;
+		std::cout << "\t\t\tdata.size() : " << ite->second.data().size() << std::endl;
 	}
 }
 
