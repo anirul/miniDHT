@@ -184,8 +184,8 @@ void dht_recv_file::check() {
 	}
 }
 
-void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
-	std::list<miniDHT::data_item_t>::const_iterator ite;
+void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
+	std::list<miniDHT::data_item_proto>::const_iterator ite;
 	for (ite = b.begin(); ite != b.end(); ++ite) {
 		std::string key;
 		{
@@ -193,7 +193,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 			ss << digest_;
 			key = ss.str();
 		}
-		std::string title = ite->title;		
+		std::string title = ite->title();		
 		std::string title_string_id;
 		size_t packet_number;
 		size_t packet_total;
@@ -241,7 +241,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_t>& b) {
 		}		 
 		map_load_.insert(std::pair<size_t, std::string>(
 				packet_number,
-				ite->data));
+				ite->data()));
 		map_state_[packet_number] = DOWNLOADED;
 		return;
 	}

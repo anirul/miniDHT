@@ -54,7 +54,7 @@ bool is_port_valid(unsigned short port) {
 
 void store_value(boost::asio::deadline_timer* t);
 
-void myValue (const list<miniDHT::data_item_t>& b) {
+void myValue (const list<miniDHT::data_item_proto>& b) {
 	g_receive_count++;
 	static unsigned long lost_nb = 0;
 //	if (lost_nb != g_send_count - g_receive_count) {
@@ -66,7 +66,7 @@ void myValue (const list<miniDHT::data_item_t>& b) {
 			<< "(" << percentage << "%)"
 			<< std::endl;
 //	}
-	list<miniDHT::data_item_t>::const_iterator ite = b.begin();
+	list<miniDHT::data_item_proto>::const_iterator ite = b.begin();
 	for (; ite != b.end(); ++ite) {
 //		std::cout 
 //			<< "<" << ite->time 
@@ -119,11 +119,11 @@ void store_value(boost::asio::deadline_timer* t) {
 	string hkey = miniDHT::key_to_string(g_key);
 	test += string(hkey.begin(), hkey.end());
 	test += ">> Hello World!";
-	miniDHT::data_item_t data;
-	data.ttl = minutes(5);
-	data.time = miniDHT::update_time();
-	data.title = string("test.message");
-	data.data = test;
+	miniDHT::data_item_proto data;
+	data.set_ttl(minutes(5).total_seconds());
+	data.set_time(miniDHT::to_time_t(miniDHT::update_time()));
+	data.set_title(string("test.message"));
+	data.set_data(&test[0], test.size());
 	miniDHT::miniDHT<key_size, token_size>* pDHT = 
 		list_ptd.at(random() % list_ptd.size());
 //	std::list<std::string> ls = pDHT->nodes_description();

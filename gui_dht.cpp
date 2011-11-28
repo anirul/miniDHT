@@ -84,7 +84,7 @@ void gui_dht::ping(const std::string& hostname, unsigned short port) {
 	mini_dht_->send_PING(*ite);
 }
 
-std::list<miniDHT_t::contact_t> gui_dht::status() {
+std::list<miniDHT::contact_proto> gui_dht::status() {
 	return mini_dht_->nodes_description();
 }
 

@@ -64,7 +64,7 @@ protected :
 	void decrypt(size_t index);
 	void write(size_t index);
 	void check();
-	void found(const std::list<miniDHT::data_item_t>& b);
+	void found(const std::list<miniDHT::data_item_proto>& b);
 	std::string decode(const std::string& key, const std::string& data);
 public : // from gui_action
 	virtual void run_once(boost::asio::deadline_timer* t);

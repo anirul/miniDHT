@@ -155,17 +155,16 @@ void dht_send_file::upload(size_t index) {
 		ss << " " << file_name_;
 		title_data = ss.str();
 	}
-	miniDHT::data_item_t data;
-	data.ttl = boost::posix_time::hours(24);
-	data.time = miniDHT::update_time();
-	data.title = string_to_hex(encode(digest_string, title_data));
+	miniDHT::data_item_proto data;
+	data.set_ttl(boost::posix_time::hours(24).total_seconds());
+	data.set_time(miniDHT::to_time_t(miniDHT::update_time()));
+	data.set_title(string_to_hex(encode(digest_string, title_data)));
 	std::string buffer = map_crypt_[index];
-	data.data.resize(buffer.size());
 	map_key_string_id_.insert(
 		std::make_pair<std::string, size_t>(
-			data.title,
+			data.title(),
 			index));
-	memcpy(&(data.data)[0], &buffer[0], buffer.size());
+	data.set_data(&buffer[0], buffer.size());
 	pDht_->iterativeStore(
 		miniDHT::digest_key_from_string<key_size>(storage_string_id), 
 		data);
@@ -181,17 +180,17 @@ void dht_send_file::check(size_t index) {
 		boost::bind(&dht_send_file::found, this, _1));
 }
 
-void dht_send_file::found(const std::list<miniDHT::data_item_t>& b) {
-	std::list<miniDHT::data_item_t>::const_iterator ite;
+void dht_send_file::found(const std::list<miniDHT::data_item_proto>& b) {
+	std::list<miniDHT::data_item_proto>::const_iterator ite;
 	for (ite = b.begin(); ite != b.end(); ++ite) {
-		if (map_key_string_id_.find(ite->title) != map_key_string_id_.end()) {
-			size_t index = map_key_string_id_[ite->title];
+		if (map_key_string_id_.find(ite->title()) != map_key_string_id_.end()) {
+			size_t index = map_key_string_id_[ite->title()];
 			// should not happen (make it faster not to check)
 			std::string from = map_crypt_[index];
-			std::string to = ite->data;
+			std::string to = ite->data();
 			if (from.size() != to.size())
 				throw "Check error (size missmatch)";
-			if (map_crypt_[index] != ite->data) {
+			if (map_crypt_[index] != ite->data()) {
 				if (map_state_[index] != CHECKED)
 					map_state_[index] = CRYPTED;
 				throw "Check error (content missmatch)";
@@ -199,7 +198,7 @@ void dht_send_file::found(const std::list<miniDHT::data_item_t>& b) {
 			// cleanup
 			std::cout << ".";
 			std::cout.flush();
-			map_key_string_id_.erase(map_key_string_id_.find(ite->title));
+			map_key_string_id_.erase(map_key_string_id_.find(ite->title()));
 			map_crypt_.erase(map_crypt_.find(index));
 			map_state_[index] = CHECKED;
 			packet_loaded_++;

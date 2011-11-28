@@ -93,8 +93,8 @@ void gui_network_status::Notify() {
 				title_));
 		count++;
 	}
-	std::list<miniDHT_t::contact_t> ls = gui_dht::instance()->status();
-	std::list<miniDHT_t::contact_t>::iterator ite = ls.begin();
+	std::list<miniDHT::contact_proto> ls = gui_dht::instance()->status();
+	std::list<miniDHT::contact_proto>::iterator ite = ls.begin();
 	while (list_ctrl_->GetItemCount() > ls.size())
 		list_ctrl_->DeleteItem(0);
 	while (list_ctrl_->GetItemCount() < ls.size())
@@ -102,21 +102,21 @@ void gui_network_status::Notify() {
 	for (int i = 0; ite != ls.end(); ++ite, ++i) {
 		{
 			std::stringstream ss("");
-			ss << miniDHT::key_to_string<key_size>(ite->key);
+			ss << ite->key();
 			wxString data = _(ss.str().c_str());
 			if (data != list_ctrl_->GetItemText(i, 0))
 				list_ctrl_->SetItem(i, 0, data);
 		}
 		{
 			std::stringstream ss("");
-			ss << ite->ttl;
+			ss << boost::posix_time::from_time_t(ite->time());
 			wxString data = _(ss.str().c_str());
 			if (data != list_ctrl_->GetItemText(i, 1))
 				list_ctrl_->SetItem(i, 1, data);
 		}
 		{
 			std::stringstream ss("");
-			ss << ite->ep;
+			ss << ite->ep().address() << ":" << ite->ep().port();
 			wxString data = _(ss.str().c_str());
 			if (data != list_ctrl_->GetItemText(i, 2))
 				list_ctrl_->SetItem(i, 2, data);

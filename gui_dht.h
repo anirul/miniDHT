@@ -53,7 +53,7 @@ public : // general DHT stuff
 	void start(unsigned short port = 4242);
 	void stop();
 	void ping(const std::string& host, unsigned short port);
-	std::list<miniDHT_t::contact_t> status();
+	std::list<miniDHT::contact_proto> status();
 public : // action related
 	void start_upload(const std::string& file);
 	void start_download(const miniDHT::digest_t& digest);

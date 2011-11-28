@@ -64,7 +64,7 @@ protected :
 	void upload(size_t index);
 	void check(size_t index);
 	void received(size_t index);
-	void found(const std::list<miniDHT::data_item_t>& b);
+	void found(const std::list<miniDHT::data_item_proto>& b);
 	std::string encode(const std::string& key, const std::string& data);
 public : // from gui_action
 	virtual void run_once(boost::asio::deadline_timer* t);
