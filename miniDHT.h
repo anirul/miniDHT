@@ -48,7 +48,6 @@
 #include "miniDHT_session.h"
 #include "miniDHT_db.h"
 #include "miniDHT_const.h"
-#include "miniDHT_contact.h"
 #include "miniDHT_bucket.h"
 #include "miniDHT_search.h"
 
@@ -76,7 +75,6 @@ namespace miniDHT {
 
 		typedef std::bitset<TOKEN_SIZE> token_t;
 		typedef std::bitset<KEY_SIZE> key_t;
-		typedef contact<KEY_SIZE> contact_t;
 		typedef less_bitset<KEY_SIZE> less_key;
 		typedef less_bitset<TOKEN_SIZE> less_token;
 		typedef std::map<key_t, key_t, less_key> map_key_key_t;
@@ -99,14 +97,6 @@ namespace miniDHT {
 		typedef typename 
 			std::map<key_t, key_t, less_key>::const_iterator
 			const_map_key_key_iterator;
-		typedef typename 
-			std::list<contact_t>::const_iterator 
-			const_list_contact_t_iterator;
-		typedef typename std::map<size_t, contact_t>::iterator
-			map_size_contact_iterator;
-		typedef typename 
-			std::map<token_t, std::list<contact_t>, less_token>::iterator
-			map_token_list_contact_iterator;
 			
 	private :
 	
@@ -126,13 +116,13 @@ namespace miniDHT {
 		// bucket (contact list)
 		bucket_t contact_list;
 		// search list
-		std::map<token_t, search_t, less_token> map_search;
+		std::map<std::string, search_t> map_search;
 		// key related storage
 		db_multi_key_data db_storage;
 		db_key_value db_backup;
 		// token related storage
-		std::map<token_t, boost::posix_time::ptime, less_token> map_ping_ttl;
-		std::map<token_t, unsigned int, less_token> map_store_check_val;
+		std::map<std::string, boost::posix_time::ptime> map_ping_ttl;
+		std::map<std::string, unsigned int> map_store_check_val;
 		// session pointers
 		map_endpoint_session_t map_endpoint_session;
 			
@@ -199,9 +189,9 @@ namespace miniDHT {
 		{
 			token_t token = random_bitset<TOKEN_SIZE>();
 			{
-				map_search[token] = search_t(id_, k, STORE_SEARCH);
+				map_search[key_to_string(token)] = search_t(id_, k, STORE_SEARCH);
 				// save it temporary in the local DB
-				map_search[token].buffer = b;
+				map_search[key_to_string(token)].buffer = b;
 			}
 			startNodeLookup(token, k);
 		}
@@ -221,8 +211,8 @@ namespace miniDHT {
 			const key_t& k)
 		{
 			token_t token = random_bitset<TOKEN_SIZE>();
-			map_search[token] = search_t(id_, k, NODE_SEARCH);
-			map_search[token].node_callback_valid = false;
+			map_search[key_to_string(token)] = search_t(id_, k, NODE_SEARCH);
+			map_search[key_to_string(token)].node_callback_valid = false;
 			startNodeLookup(token, k);
 		}
 		
@@ -235,9 +225,9 @@ namespace miniDHT {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			token_t token = random_bitset<TOKEN_SIZE>();
 			{
-				map_search[token] = search_t(id_, k, NODE_SEARCH);
-				map_search[token].node_callback_valid = true;
-				map_search[token].node_callback = c;
+				map_search[key_to_string(token)] = search_t(id_, k, NODE_SEARCH);
+				map_search[key_to_string(token)].node_callback_valid = true;
+				map_search[key_to_string(token)].node_callback = c;
 			}
 			startNodeLookup(token, k);
 		}
@@ -250,18 +240,18 @@ namespace miniDHT {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			token_t token = random_bitset<TOKEN_SIZE>();
 			{
-				map_search[token] = search_t(id_, k, VALUE_SEARCH);
-				map_search[token].value_callback = c;
-				map_search[token].hint = hint;
+				map_search[key_to_string(token)] = search_t(id_, k, VALUE_SEARCH);
+				map_search[key_to_string(token)].value_callback = c;
+				map_search[key_to_string(token)].hint = hint;
 			}
 			startNodeLookup(token, k);
 		}
 	
 	public :
 	
-		std::list<contact_t> nodes_description() {
+		std::list<contact_proto> nodes_description() {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::list<contact_t> ls;
+			std::list<contact_proto> ls;
 			bucket_iterator ite = contact_list.begin();
 			for (; ite != contact_list.end(); ++ite)
 				ls.push_back(ite->second);
@@ -329,16 +319,16 @@ namespace miniDHT {
 			}
 		}
 		
-		void insert_db(const key_t& k, const data_item_proto& d) {
+		void insert_db(const std::string& k, const data_item_proto& d) {
 			// check if the element already exist
-			if (db_storage.count(key_to_string(k)) == 0) {
+			if (db_storage.count(k) == 0) {
 				// check if size limit is reached
 				while (db_storage.size() >= max_records_) {
 					// drop the oldest record
 					db_storage.remove_oldest();
 				}
 				db_storage.insert(
-					key_to_string(k), 
+					k, 
 					d.title(),
 					d.time(),
 					d.ttl(),
@@ -347,7 +337,7 @@ namespace miniDHT {
 			}
 			// key already in
 			std::list<data_item_proto> ld;
-			db_storage.find_no_blob(key_to_string(k), ld);
+			db_storage.find_no_blob(k, ld);
 			std::list<data_item_proto>::iterator ite;
 			for (ite = ld.begin(); ite != ld.end(); ++ite) {
 				if (ite->title() == d.title()) {
@@ -357,17 +347,13 @@ namespace miniDHT {
 					boost::posix_time::time_duration d_time = now - 
 						boost::posix_time::from_time_t(d.time());
 					if (d_time < temp_time)
-						db_storage.update(
-							key_to_string(k), 
-							d.title(),
-							d.time(),
-							d.ttl());
+						db_storage.update(k, d.title(), d.time(), d.ttl());
 					return;
 				}
 			}
 			// a duplicate with different title (should not happen)
 			db_storage.insert(
-				key_to_string(k), 
+				k, 
 				d.title(),
 				d.time(),
 				d.ttl(),
@@ -389,15 +375,18 @@ namespace miniDHT {
 					if (itc->first == KEY_SIZE) continue;
 					// contact key
 					boost::posix_time::time_duration td = 
-						update_time() - itc->second.ttl;
+						update_time() - boost::posix_time::from_time_t(
+							itc->second.time());
 					if (td > tRefresh) {
-						send_PING_nolock(itc->second.ep);
+						send_PING_nolock(
+							itc->second.ep().address(),
+							itc->second.ep().port());
 						contact_list.erase(itc);
 						itc = contact_list.begin();
-						db_backup.remove(key_to_string(itc->second.key));
+						db_backup.remove(itc->second.key());
 					} else {
-						std::string key = key_to_string(itc->second.key);
-						std::string endpoint = endpoint_to_string(itc->second.ep);
+						std::string key = itc->second.key();
+						std::string endpoint = endpoint_to_string(itc->second.ep());
 						std::string value = db_backup.find(key);
 						// already in
 						if (value == endpoint) continue;
@@ -469,38 +458,47 @@ namespace miniDHT {
 		}
 
 		void startNodeLookup(const token_t& t, const key_t& k) {
-			std::list<contact_t> temp_list;
-			{ // get the proximity list from the contact_list
-				const map_key_key_t& map_proximity = 
-					contact_list.build_proximity(k);
-				const_map_key_key_iterator itp = map_proximity.begin();
-				for (; itp != map_proximity.end(); ++itp)	{
-					if (contact_list.find_key(itp->second) == contact_list.end())
-						continue;
-					contact_t c(itp->second, contact_list[itp->second]);
-					temp_list.push_back(c);
+			std::list<contact_proto> temp_list;
+			// get the proximity list from the contact_list
+			const map_key_key_t& map_proximity = 
+				contact_list.build_proximity(k);
+			const_map_key_key_iterator itp = map_proximity.begin();
+			for (; itp != map_proximity.end(); ++itp)	{
+				if (contact_list.find_key(itp->second) == contact_list.end())
+					continue;
+				contact_proto c;
+				c.set_key(key_to_string(itp->second));
+				boost::asio::ip::tcp::endpoint ep = contact_list[itp->second];
+				endpoint_proto epp;
+				epp.set_address(ep.address().to_string());
+				{
+					std::stringstream ss("");
+					ss << ep.port();
+					epp.set_port(ss.str());
 				}
+				temp_list.push_back(c);
 			}
-			replyIterative(temp_list, t, k);
+			replyIterative(temp_list, key_to_string(t), key_to_string(k));
 		}
 		
 		map_key_key_t build_proximity(
 			const key_t& k, 
-			const std::list<contact_t>& lc)
+			const std::list<contact_proto>& lc)
 		{
 			map_key_key_t map_proximity;
-			const_list_contact_t_iterator itc;
+			std::list<contact_proto>::const_iterator itc;
 			for (itc = lc.begin(); itc != lc.end(); ++itc)
-				map_proximity[k ^ (key_t)(itc->first)] = itc->first;
+				map_proximity[k ^ string_to_key<KEY_SIZE>(itc->key())] = 
+					string_to_key<KEY_SIZE>(itc->key());
 			return map_proximity;
 		}
 		
 	protected :
 
 		void replyIterative(
-			const std::list<contact_t>& lc, 
-			const token_t& t, 
-			const key_t& k)
+			const std::list<contact_proto>& lc, 
+			const std::string& t, 
+			const std::string& k)
 		{
 			search_t local_search;
 			{
@@ -524,9 +522,9 @@ namespace miniDHT {
 		}
 		
 		void replyIterativeNodeSearch(
-			const std::list<contact_t>& lc, 
-			const token_t& t, 
-			const key_t& k)
+			const std::list<contact_proto>& lc, 
+			const std::string& t, 
+			const std::string& k)
 		{
 			if (map_search[t].update_list(lc)) {
 				// iterativeFindNode
@@ -546,31 +544,36 @@ namespace miniDHT {
 					i < ALPHA && !map_search[t].is_node_full(); 
 					++i)
 				{
-					send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
+					send_FIND_NODE(
+						map_search[t].get_node_endpoint(), 
+						k, 
+						string_to_key<TOKEN_SIZE>(t));
 				}
 			}
 		}
 		
 		void replyIterativeValueSearch(
-			const std::list<contact_t>& lc, 
-			const token_t& t, 
-			const key_t& k)
+			const std::list<contact_proto>& lc, 
+			const std::string& t, 
+			const std::string& k)
 		{
 			map_search[t].update_list(lc);
 			// iterativeFindValue
 			for (	unsigned int i = 0; 
 					i < ALPHA && !map_search[t].is_node_full(); 
 					++i)
-				send_FIND_VALUE(map_search[t].get_node_endpoint(), k, t);
+				send_FIND_VALUE(
+					map_search[t].get_node_endpoint(), 
+					k, 
+					string_to_key<TOKEN_SIZE>(t));
 		}
 		
 		void replyIterativeStoreSearch(
-			const std::list<contact_t>& lc, 
-			const token_t& t, 
-			const key_t& k)
+			const std::list<contact_proto>& lc, 
+			const std::string& t, 
+			const std::string& k)
 		{
-			assert(key_to_string(k) != 
-				std::string("0000000000000000000000000000000"\
+			assert(k != std::string("0000000000000000000000000000000"\
 					"000000000000000000000000000000000"));
 			if (map_search[t].update_list(lc)) {
 				// iterativeStore
@@ -579,14 +582,17 @@ namespace miniDHT {
 						map_search[t].get_value_endpoint(), 
 						k, 
 						map_search[t].buffer, 
-						t);
+						string_to_key<TOKEN_SIZE>(t));
 				// free some local space
 				map_search.erase(t);
 			} else {
 				for (	unsigned int i = 0; 
 						i < ALPHA && !map_search[t].is_node_full(); 
 						++i)
-					send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
+					send_FIND_NODE(
+						map_search[t].get_node_endpoint(), 
+						k, 
+						string_to_key<TOKEN_SIZE>(t));
 			}
 		}
 
@@ -634,28 +640,36 @@ namespace miniDHT {
 				switch (m.type()) {
 					case message_proto::SEND_PING :
 						handle_SEND_PING(m);
-						contact_list.add_contact(m.from_id, ep);
+						contact_list.add_contact(
+							string_to_key<KEY_SIZE>(m.from_id()), 
+							ep);
 						break;
 					case message_proto::REPLY_PING :
 						handle_REPLY_PING(m);
 						break;
 					case message_proto::SEND_STORE :
 						handle_SEND_STORE(m);
-						contact_list.add_contact(m.from_id, ep);
+						contact_list.add_contact(
+							string_to_key<KEY_SIZE>(m.from_id()), 
+							ep);
 						break;
 					case message_proto::REPLY_STORE :
 						handle_REPLY_STORE(m);
 						break;
 					case message_proto::SEND_FIND_NODE :
 						handle_SEND_FIND_NODE(m);
-						contact_list.add_contact(m.from_id, ep);
+						contact_list.add_contact(
+							string_to_key<KEY_SIZE>(m.from_id()), 
+							ep);
 						break;
 					case message_proto::REPLY_FIND_NODE :
 						handle_REPLY_FIND_NODE(m);
 						break;
 					case message_proto::SEND_FIND_VALUE :
 						handle_SEND_FIND_VALUE(m);
-						contact_list.add_contact(m.from_id, ep);
+						contact_list.add_contact(
+							string_to_key<KEY_SIZE>(m.from_id()), 
+							ep);
 						break;
 					case message_proto::REPLY_FIND_VALUE :
 						handle_REPLY_FIND_VALUE(m);
@@ -676,26 +690,26 @@ namespace miniDHT {
 		}
 		
 		void handle_SEND_PING(const message_proto& m) {
-			reply_PING(sender_endpoint_, m.token);
+			reply_PING(sender_endpoint_, m.token());
 		}
 					
 		void handle_REPLY_PING(const message_proto& m) {
 			const boost::posix_time::time_duration tTimeout = 
 			boost::posix_time::minutes(1);
 			{
-				if (map_ping_ttl.find(m.token) != map_ping_ttl.end()) {
+				if (map_ping_ttl.find(m.token()) != map_ping_ttl.end()) {
 					boost::posix_time::time_duration td = 
-						map_ping_ttl[m.token] - update_time();
+						map_ping_ttl[m.token()] - update_time();
 					if (td < tTimeout) {
 						contact_list.add_contact(
-							m.from_id, 
+							string_to_key<KEY_SIZE>(m.from_id()), 
 							sender_endpoint_);
 					} else {
 						std::cout 
 							<< "\tTimeout no recording." 
 							<< std::endl;
 					}
-					map_ping_ttl.erase(map_ping_ttl.find(m.token));
+					map_ping_ttl.erase(map_ping_ttl.find(m.token()));
 				} else {
 					std::cerr << "\ttoken [" << m.token()
 						<< "] unknown." << std::endl;
@@ -704,36 +718,37 @@ namespace miniDHT {
 		}
 		
 		void handle_SEND_STORE(const message_proto& m) {
-			data_item_proto di = m.data();
+			data_item_proto di(m.data_item());
 			di.set_time(to_time_t(update_time()));
 			insert_db(m.to_id(), di);
-			reply_STORE(sender_endpoint_, m.token, di);
+			reply_STORE(sender_endpoint_, m.token(), di);
 		}
 		
 		void handle_REPLY_STORE(const message_proto& m) {
-			if (map_store_check_val.find(m.token) != map_store_check_val.end()) {
-				if (m.check_val() != map_store_check_val[m.token]) {
+			if (map_store_check_val.find(m.token()) != map_store_check_val.end()) {
+				if (m.check_val() != map_store_check_val[m.token()]) {
 					std::cerr 
 						<< "[" << socket_.local_endpoint()
 						<< "] check val missmatch storage problem?" 
 						<< std::endl;
 					std::cerr 
 						<< m.check_val() << " != " 
-						<< map_store_check_val[m.token] << std::endl;
+						<< map_store_check_val[m.token()] << std::endl;
 				} 
-				map_store_check_val.erase(map_store_check_val.find(m.token));
+				map_store_check_val.erase(map_store_check_val.find(m.token()));
 			} 
 		}
 		
 		void handle_SEND_FIND_NODE(const message_proto& m) {
-			reply_FIND_NODE(sender_endpoint_, m.token,	m.to_id);
+			reply_FIND_NODE(sender_endpoint_, m.token(),	m.to_id());
 		}
 		
 		void handle_REPLY_FIND_NODE(const message_proto& m) {
 			{ // check if the search exist
-				if (map_search.find(m.token) == map_search.end())
+				if (map_search.find(m.token()) == map_search.end())
 					return;
 			}
+			std::list<contact_proto> lc;
 			for (int i = 0; i < m.contact_list_size(); ++i) {
 				contact_proto c = m.contact_list(i);
 				std::string address = c.ep().address();
@@ -741,33 +756,43 @@ namespace miniDHT {
 					(address == std::string("127.0.0.1")) ||
 					(address == std::string("localhost"))) {
 					address = sender_endpoint_.address().to_string();
-					unsigned short port = c.ep.port();
 					boost::asio::ip::tcp::endpoint uep(
 						boost::asio::ip::address::from_string(address),
-						port);
-					contact_list.add_contact(c.key, uep, false);
+						atoi(c.ep().port().c_str()));
+					contact_list.add_contact(
+						string_to_key<KEY_SIZE>(c.key()), 
+						uep, 
+						false);
 				} else {
-					contact_list.add_contact(c.key, c.ep, false);
+					contact_list.add_contact(
+						string_to_key<KEY_SIZE>(c.key()), 
+						boost::asio::ip::tcp::endpoint(
+							boost::asio::ip::address::from_string(c.ep().address()),
+							::atoi(c.ep().port().c_str())), 
+						false);
 				}
 				lc.push_back(c);				
 			}
-			replyIterative(lc, m.token, m.to_id);
+			replyIterative(lc, m.token(), m.to_id());
 		}
 		
 		void handle_SEND_FIND_VALUE(const message_proto& m) {
 			bool is_present = false;
-			is_present = (db_storage.count(key_to_string(m.to_id)) != 0);
+			is_present = (db_storage.count(m.to_id()) != 0);
 			if (is_present) {
-				reply_FIND_VALUE(sender_endpoint_, m.token, m.to_id, m.hint);
+				reply_FIND_VALUE(sender_endpoint_, m.token(), m.to_id(), m.hint());
 			} else {
-				reply_FIND_NODE(sender_endpoint_, m.token, m.to_id);
+				reply_FIND_NODE(sender_endpoint_, m.token(), m.to_id());
 			}
 		}
 		
 		void handle_REPLY_FIND_VALUE(const message_proto& m) {
-			if (map_search.find(m.token) != map_search.end()) {
-				map_search[m.token].value_callback(m.data_item_list);
-				map_search.erase(m.token);
+			if (map_search.find(m.token()) != map_search.end()) {
+				std::list<data_item_proto> ld;
+				for (int i = 0; i < m.data_item_list_size(); ++i)
+					ld.push_back(m.data_item_list(i));
+				map_search[m.token()].value_callback(ld);
+				map_search.erase(m.token());
 			}
 		}
 
@@ -779,18 +804,7 @@ namespace miniDHT {
 			unsigned short port = ep.port();
 			std::stringstream ss("");
 			try {
-#ifdef SERIALIZE_TEXT
-				boost::archive::text_oarchive xoa(ss);
-				xoa << m;
-#endif // SERIALIZE_TEXT
-#ifdef SERIALIZE_BINARY
-				boost::archive::binary_oarchive xoa(ss);
-				xoa << m;
-#endif // SERIALIZE_BINARY
-#ifdef SERIALIZE_XML
-				boost::archive::xml_oarchive xoa(ss);
-				xoa << BOOST_SERIALIZATION_NVP(m);
-#endif // SERIALIZE_XML
+				m.SerializeToOstream(&ss);
 				if (address == std::string("0.0.0.0"))
 					address = std::string("127.0.0.1");
 				boost::asio::ip::tcp::endpoint uep(
@@ -884,10 +898,11 @@ namespace miniDHT {
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			try {
-				message_t m(message_t::SEND_PING, id_, token);	
-				{
-					map_ping_ttl[m.token] = update_time();
-				}
+				message_proto m;
+				m.set_type(message_proto::SEND_PING);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(key_to_string(token));	
+				map_ping_ttl[m.token()] = update_time();
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -901,17 +916,18 @@ namespace miniDHT {
 
 		void send_STORE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const key_t& to_id,
+			const std::string& to_id,
 			const data_item_proto& cbf,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			try {
-				message_t m(message_t::SEND_STORE, id_, token);
-				m.to_id = to_id;
-				m.data = cbf;
-				{
-					map_store_check_val[token] = cbf.data.size();
-				}
+				message_proto m;
+				m.set_type(message_proto::SEND_STORE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(key_to_string(token));
+				m.set_to_id(to_id);
+				(*m.mutable_data_item()) = cbf;
+				map_store_check_val[key_to_string(token)] = cbf.data().size();
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -923,12 +939,15 @@ namespace miniDHT {
 
 		void send_FIND_NODE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const key_t& to_id,
+			const std::string& to_id,
 			token_t token = random_bitset<TOKEN_SIZE>())
 		{
 			try {
-				message_t m(message_t::SEND_FIND_NODE, id_, token);
-				m.to_id = to_id;
+				message_proto m;
+				m.set_type(message_proto::SEND_FIND_NODE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(key_to_string(token));
+				m.set_to_id(to_id);
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -940,14 +959,17 @@ namespace miniDHT {
 
 		void send_FIND_VALUE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const key_t& to_id,
+			const std::string& to_id,
 			token_t token = random_bitset<TOKEN_SIZE>(),
 			const std::string& hint = std::string(""))
 		{
 			try {
-				message_t m(message_t::SEND_FIND_VALUE, id_, token);	
-				m.to_id = to_id;
-				m.hint = hint;
+				message_proto m;
+				m.set_type(message_proto::SEND_FIND_VALUE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(key_to_string(token));
+				m.set_to_id(to_id);
+				m.set_hint(hint);
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -961,10 +983,13 @@ namespace miniDHT {
 	
 		void reply_PING(
 			const boost::asio::ip::tcp::endpoint& ep, 
-			const token_t& tok)
+			const std::string& tok)
 		{
 			try {
-				message_t m(message_t::REPLY_PING, id_, tok);
+				message_proto m;
+				m.set_type(message_proto::REPLY_PING);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(tok);
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -976,13 +1001,16 @@ namespace miniDHT {
 
 		void reply_STORE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const token_t& tok,
+			const std::string& tok,
 			const data_item_proto& cbf)
 		{
 			try {
 				digest_t digest;
-				message_t m(message_t::REPLY_STORE, id_, tok);
-				m.check_val = cbf.data.size();
+				message_proto m;
+				m.set_type(message_proto::REPLY_STORE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(tok);
+				m.set_check_val(cbf.data().size());
 				send_MESSAGE(m, ep);
 			} catch (std::exception& e) {
 				std::cerr 
@@ -994,22 +1022,25 @@ namespace miniDHT {
 
 		void reply_FIND_NODE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const token_t& tok,
-			const key_t& to_id)
+			const std::string& tok,
+			const std::string& to_id)
 		{
 			try {
-				message_t m(message_t::REPLY_FIND_NODE, id_, tok);
-				m.to_id = to_id;
+				message_proto m;
+				m.set_type(message_proto::REPLY_FIND_NODE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(tok);
+				m.set_to_id(to_id);
 				for (bucket_iterator bit = contact_list.begin(); 
 					bit != contact_list.end();) 
 				{
-					m.contact_list.push_back(bit->second);
+					(*m.add_contact_list()) = bit->second;
 					++bit;
-					if ((m.contact_list.size() >= ALPHA) || 
+					if ((m.contact_list_size() >= ALPHA) || 
 						(bit == contact_list.end()))
 					{
 						send_MESSAGE(m, ep);
-						m.contact_list.clear();
+						m.clear_contact_list();
 					}
 				}
 			} catch (std::exception& e) {
@@ -1022,23 +1053,27 @@ namespace miniDHT {
 
 		void reply_FIND_VALUE(
 			const boost::asio::ip::tcp::endpoint& ep,
-			const token_t& tok,
-			const key_t& to_id,
+			const std::string& tok,
+			const std::string& to_id,
 			const std::string& hint = std::string(""))
 		{
 			try {
-				message_t m(message_t::REPLY_FIND_VALUE, id_, tok);
-				m.to_id = to_id;
+				message_proto m;
+				m.set_type(message_proto::REPLY_FIND_VALUE);
+				m.set_from_id(key_to_string(id_));
+				m.set_token(tok);
+				m.set_to_id(to_id);
 				{
-					std::list<data_item_t> ld;
-					std::list<data_item_t>::iterator ite;
-					db_storage.find(key_to_string(to_id), ld);
+					std::list<data_item_proto> ld;
+					std::list<data_item_proto>::iterator ite;
+					db_storage.find(to_id, ld);
 					for (ite = ld.begin(); ite != ld.end(); ++ite) {
-						if (ite->title.find(hint) != std::string::npos)
-							m.data_item_list.push_back((*ite));
+						const data_item_proto& item = (*ite);
+						if (item.title().find(hint) != std::string::npos)
+							(*m.add_data_item_list()) = item;
 					}
 				}
-				if (m.data_item_list.size() > 0) {
+				if (m.data_item_list_size() > 0) {
 					send_MESSAGE(m, ep);
 				}
 			} catch (std::exception& e) {

@@ -48,16 +48,17 @@ bool is_port_valid(unsigned short port) {
 }
 
 void watch(boost::asio::deadline_timer* t) {
-	std::list<miniDHT::contact<key_size> > ls;
-	std::list<miniDHT::contact<key_size> >::iterator ite;
+	std::list<miniDHT::contact_proto> ls;
+	std::list<miniDHT::contact_proto>::iterator ite;
 	ls = pDht->nodes_description();
 //	std::cout << std::endl;
 //	std::cout << miniDHT::update_time() << std::endl;
 	for (ite = ls.begin(); ite != ls.end(); ++ite)
 		std::cout 
-			<< "<<" << miniDHT::key_to_string<key_size>(ite->key) << ">>" 
-			<< " - [" << ite->ttl << "]"
-			<< " - {" << ite->ep << "}"
+			<< "<<" << ite->key() << ">>" 
+			<< " - [" << ite->time() << "]"
+			<< " - {" << ite->ep().address() << ":" 
+			<< ite->ep().port() << "}"
 			<< std::endl;
 	t->expires_at(t->expires_at() + boost::posix_time::seconds(1));
 	t->async_wait(boost::bind(watch, t));

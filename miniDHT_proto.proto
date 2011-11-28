@@ -1,0 +1,45 @@
+// Prototype for message in the DHT
+
+package miniDHT;
+
+message endpoint_proto {
+	required string address = 1;
+	required string port = 2;
+}
+
+message data_item_proto {
+	required uint64 ttl = 1;
+	required uint64 time = 2;
+	required string title = 3;
+	required bytes data = 4;
+}
+
+message contact_proto {
+	required string key = 1;
+	required endpoint_proto ep = 2;
+	optional uint64 time = 3;
+}
+
+message message_proto {
+	enum message_type {
+		NONE = 1;
+		SEND_PING = 2;
+		REPLY_PING = 3;
+		SEND_STORE = 4;
+		REPLY_STORE = 5;
+		SEND_FIND_NODE = 6;
+		REPLY_FIND_NODE = 7;
+		SEND_FIND_VALUE = 8;
+		REPLY_FIND_VALUE = 9;		
+	}
+	required message_type type = 1 [default = NONE];
+	required string from_id = 2;
+	required string to_id = 3;
+	required string token = 4;
+	required uint32 listen_port = 5;
+	optional uint64 check_val = 6;
+	optional data_item_proto data_item = 7;
+	optional string hint = 8;
+	repeated contact_proto contact_list = 9;
+	repeated data_item_proto data_item_list = 10;
+}

@@ -286,6 +286,14 @@ namespace miniDHT {
 	}
 
 	inline std::string endpoint_to_string(
+		const endpoint_proto& ep)
+	{
+		std::stringstream ss("");
+		ss << ep.address() << ":" << ep.port();
+		return ss.str();
+	}
+
+	inline std::string endpoint_to_string(
 		const boost::asio::ip::tcp::endpoint& ep) 
 	{
 		std::stringstream ss("");

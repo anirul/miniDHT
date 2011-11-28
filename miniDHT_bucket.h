@@ -36,7 +36,7 @@
 namespace miniDHT {
 	
 	template <unsigned int BUCKET_SIZE, unsigned int KEY_SIZE>
-	class bucket : public std::multimap<unsigned int, contact<KEY_SIZE> > {
+	class bucket : public std::multimap<unsigned int, contact_proto> {
 	public :
 	
 		typedef std::bitset<KEY_SIZE> key_t;
@@ -45,7 +45,7 @@ namespace miniDHT {
 			std::map<key_t, key_t, less_bitset<KEY_SIZE> >::iterator
 			map_key_key_iterator;
 		typedef typename 
-			std::multimap<unsigned int, contact<KEY_SIZE> >::iterator 
+			std::multimap<unsigned int, contact_proto>::iterator 
 			iterator;
 				
 	protected :
@@ -66,8 +66,11 @@ namespace miniDHT {
 			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
 			iterator ite = this->find(common);
 			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (ite->second.key == k)
-					return ite->second.ep;
+				if (string_to_key<KEY_SIZE>(ite->second.key()) == k) 
+					return boost::asio::ip::tcp::endpoint(
+						boost::asio::ip::address::from_string(
+							ite->second.ep().address()),
+						::atoi(ite->second.ep().port().c_str()));
 				++ite;
 			}
 			throw std::string("unknown key");
@@ -80,23 +83,33 @@ namespace miniDHT {
 		{
 			now_ = update_time();
 			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
-			contact<KEY_SIZE> c(k, ep, now_);
-			std::pair<unsigned int, contact<KEY_SIZE> > p(common, c);
+			contact_proto c;
+			c.set_key(key_to_string(k));
+			endpoint_proto epp;
+			epp.set_address(ep.address().to_string());
+			{
+				std::stringstream ss("");
+				ss << ep.port();
+				epp.set_port(ss.str());
+			}
+			(*c.mutable_ep()) = epp;
+			c.set_time(to_time_t(now_));
+			std::pair<unsigned int, contact_proto> p(common, c);
 			iterator ite = find_key(k);
 			if (ite == this->end()) {
 				size_t item_count = this->count(common);
 				if (item_count >= BUCKET_SIZE) {
 					ite = this->find(common);
-					std::map<boost::posix_time::ptime, iterator> map_time_ite;
+					std::map<uint64_t, iterator> map_time_ite;
 					for (unsigned int i = 0; i < item_count; ++i)
-						map_time_ite[ite->second.ttl] = ite;
+						map_time_ite[ite->second.time()] = ite++;
 					this->erase(map_time_ite.begin()->second);
 				} 
 				this->insert(p);
 				changed_ = true;
 			} else {
 				if (update_ttl)
-					ite->second.ttl = now_;
+					ite->second.set_time(to_time_t(now_));
 			}
 		}
 		
@@ -104,7 +117,7 @@ namespace miniDHT {
 			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
 			iterator ite = this->find(common);
 			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (ite->second.key == k)
+				if (ite->second.key() == key_to_string(k))
 					return ite;
 				++ite;
 			}
@@ -116,7 +129,9 @@ namespace miniDHT {
 			map_proximity_.clear();
 			iterator itc;
 			for (itc = this->begin(); itc != this->end(); ++itc)
-				map_proximity_[k ^ (key_t)(itc->second.key)] = itc->second.key;
+				map_proximity_
+					[k ^ (key_t)(string_to_key<KEY_SIZE>(itc->second.key()))] 
+					= string_to_key<KEY_SIZE>(itc->second.key());
 			changed_ = false;
 			return map_proximity_;
 		}

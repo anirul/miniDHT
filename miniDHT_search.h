@@ -28,6 +28,8 @@
 #ifndef MINIDHT_SEARCH_HEADER_DEFINED
 #define MINIDHT_SEARCH_HEADER_DEFINED
 
+#include "miniDHT_const.h"
+
 namespace miniDHT {
 
 	enum search_type_t {
@@ -42,17 +44,12 @@ namespace miniDHT {
 	public :
 	
 		typedef std::bitset<KEY_SIZE> key_t;
-		typedef	std::list<contact<KEY_SIZE> > list_contact_t_t;
 		typedef std::map<key_t, bool, less_bitset<KEY_SIZE> > map_key_bool_t;
-		typedef typename std::list<contact<KEY_SIZE> >::iterator 
-			list_contact_t_iterator;
-		typedef typename std::list<contact<KEY_SIZE> >::const_iterator
-			const_list_contact_t_iterator;
-		typedef std::map<key_t, contact<KEY_SIZE>, less_bitset<KEY_SIZE> >
-			map_key_contact_t_t;
+		typedef std::map<key_t, contact_proto, less_bitset<KEY_SIZE> >
+			map_key_contact_proto_t;
 		typedef typename
-			std::map<key_t, contact<KEY_SIZE>, less_bitset<KEY_SIZE> >::iterator
-			map_key_contact_t_iterator;
+			std::map<key_t, contact_proto, less_bitset<KEY_SIZE> >::iterator
+			map_key_contact_proto_iterator;
 		
 		// callback declaration
 		typedef boost::function<void (std::list<key_t> k)> node_callback_t;
@@ -61,7 +58,7 @@ namespace miniDHT {
 
 	public :
 
-		list_contact_t_t short_list;
+		std::list<contact_proto> short_list;
 		map_key_bool_t map_node_busy;
 		map_key_bool_t map_value_busy;
 		boost::posix_time::ptime ttl;
@@ -93,83 +90,106 @@ namespace miniDHT {
 		search() : buffer() {}
 		virtual ~search() {}
 		
-		bool is_bucket_full() {
+		bool is_bucket_full() const {
 			if (short_list_in_bucket() >= BUCKET_SIZE) return true;
 			return is_node_full();
 		}
 		
-		int nb_node_left() {
+		int nb_node_left() const {
 			int i = 0;
-			list_contact_t_iterator ite;
+			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (map_node_busy.find(ite->key) == map_node_busy.end())
+				if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
+						map_node_busy.end())
 					++i;
 			return i;
 		}
 		
-		bool is_node_full() {
-			list_contact_t_iterator ite;
+		bool is_node_full() const {
+			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (map_node_busy.find(ite->key) == map_node_busy.end())
+				if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
+						map_node_busy.end())
 					return false;
 			return true; 
 		}
 
-		bool is_value_full() {
-			list_contact_t_iterator ite;
+		bool is_value_full() const {
+			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (map_value_busy.find(ite->key) == map_value_busy.end())
+				if (map_value_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
+						map_value_busy.end())
 					return false;
 			return true;
 		}
 		
-		unsigned int short_list_in_bucket() {
+		unsigned int short_list_in_bucket() const {
 			unsigned int nb = 0;
-			list_contact_t_iterator ite;
+			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (common_bits(ite->key, destination) == bucket_nb)
+				if (common_bits(string_to_key<KEY_SIZE>(ite->key()), destination) 
+						== bucket_nb)
 					++nb;
 			return nb;
 		}
 		
 		boost::asio::ip::tcp::endpoint get_node_endpoint() {
-			list_contact_t_iterator ite;
+			std::list<contact_proto>::iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
-				if (map_node_busy.find(ite->key) == map_node_busy.end()) {
-					map_node_busy[ite->key] = true;
-					return ite->ep;
+				if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
+						map_node_busy.end()) 
+				{
+					map_node_busy[string_to_key<KEY_SIZE>(ite->key())] = true;
+					return boost::asio::ip::tcp::endpoint(
+						boost::asio::ip::address::from_string(ite->ep().address()),
+						::atoi(ite->ep().port().c_str()));
 				}
 			}
 			throw std::string("no endpoint found!");
 		}
 		
 		boost::asio::ip::tcp::endpoint get_value_endpoint() {
-			list_contact_t_iterator ite;
+			std::list<contact_proto>::iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
-				if (map_value_busy.find(ite->key) == map_value_busy.end()) {
-					map_value_busy[ite->key] = true;
-					return ite->ep;
+				if (map_value_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
+						map_value_busy.end()) 
+				{
+					map_value_busy[string_to_key<KEY_SIZE>(ite->key())] = true;
+					return boost::asio::ip::tcp::endpoint(
+						boost::asio::ip::address::from_string(ite->ep().address()),
+						::atoi(ite->ep().port().c_str()));
 				}
 			}
 			throw std::string("no endpoint found!");
 		}
 		
-		bool update_list(const list_contact_t_t& lc) {
-			map_key_contact_t_t map_sorted;
-			const_list_contact_t_iterator itc;
+		bool update_list(const std::list<contact_proto>& lc) {
+			map_key_contact_proto_t map_sorted;
+			std::list<contact_proto>::const_iterator itc;
 			for (itc = lc.begin(); itc != lc.end(); ++itc)
-				map_sorted[itc->key ^ destination] = (*itc);
-			list_contact_t_iterator itl;
+				map_sorted[string_to_key<KEY_SIZE>(itc->key()) ^ destination] = 
+					(*itc);
+			std::list<contact_proto>::iterator itl;
 			for (itl = short_list.begin(); itl != short_list.end(); ++itl)
-				map_sorted[itl->key ^ destination] = (*itl);
-			list_contact_t_t temp;
-			map_key_contact_t_iterator itm;
+				map_sorted[string_to_key<KEY_SIZE>(itl->key()) ^ destination] = 
+					(*itl);
+			std::list<contact_proto> temp;
+			map_key_contact_proto_iterator itm;
 			for (itm = map_sorted.begin(); itm != map_sorted.end(); ++itm) {
 				temp.push_back(itm->second);
 				if (temp.size() >= BUCKET_SIZE) break;
 			}
-			if ((short_list.size()) && (short_list == temp)) 
-				return true;
+			if (short_list.size()) { 
+				if (short_list.size() == temp.size()) 
+					return true;
+				std::list<contact_proto>::const_iterator it1 = short_list.begin();
+				std::list<contact_proto>::const_iterator it2 = temp.begin();
+				for (;it1 != short_list.end(); ++it1, ++it2) {
+					if (it1->key() != it2->key()) break;
+					if (it1->ep().address() != it2->ep().address()) break;
+					if (it1->ep().port() != it2->ep().port()) break;
+				}
+			}
 			short_list = temp;
 //			key_t k = map_sorted.begin()->first;
 //			std::cout << k << "\t" << map_sorted.size() << std::endl;
@@ -178,9 +198,9 @@ namespace miniDHT {
 		
 		void call_node_callback() {
 			std::list<key_t> lk;
-			list_contact_t_iterator itc;
+			std::list<contact_proto>::iterator itc;
 			for (itc = short_list.begin(); itc != short_list.end(); ++itc)
-				lk.push_back(itc->key);
+				lk.push_back(string_to_key<KEY_SIZE>(itc->key()));
 			node_callback(lk);
 		}
 	};
