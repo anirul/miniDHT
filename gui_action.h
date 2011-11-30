@@ -33,7 +33,7 @@ const unsigned int token_size = 32;
 const unsigned int wait_settle = 5;
 const unsigned int buf_size = 512 * 1024; // 512k
 
-typedef miniDHT::miniDHT<key_size, token_size> miniDHT_t;
+typedef miniDHT::miniDHT miniDHT_t;
 
 enum gui_action_type {
 	GUI_ACTION_DOWNLOAD = 0,

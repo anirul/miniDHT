@@ -46,7 +46,7 @@ private :
 	size_t packet_loaded_;
 	bool end_;
 	bool stop_;
-	miniDHT::miniDHT<key_size, token_size>* pDht_;
+	miniDHT::miniDHT* pDht_;
 	miniDHT::digest_t digest_;
 	std::map<size_t, download_state_t> map_state_;
 	std::map<size_t, std::string> map_load_;
@@ -56,7 +56,7 @@ private :
 public :
 	dht_recv_file(
 		const miniDHT::digest_t& digest,
-		miniDHT::miniDHT<key_size, token_size>* pDht);
+		miniDHT::miniDHT* pDht);
 	~dht_recv_file();
 protected :
 	void download(size_t index);

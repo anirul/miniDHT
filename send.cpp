@@ -67,7 +67,7 @@ std::string dht_send_file::encode(
 
 dht_send_file::dht_send_file(
 	const std::string& file_name,
-	miniDHT::miniDHT<key_size, token_size>* pDht) 
+	miniDHT::miniDHT* pDht) 
 {	
 	ifile_ = NULL;
 	pDht_ = pDht;
@@ -166,7 +166,8 @@ void dht_send_file::upload(size_t index) {
 			index));
 	data.set_data(&buffer[0], buffer.size());
 	pDht_->iterativeStore(
-		miniDHT::digest_key_from_string<key_size>(storage_string_id), 
+		miniDHT::key_to_string(
+			miniDHT::digest_key_from_string<key_size>(storage_string_id)), 
 		data);
 	map_state_[index] = UPLOADED;
 }
@@ -176,7 +177,8 @@ void dht_send_file::check(size_t index) {
 	ss << digest_ << " " << std::dec << index;
 	std::string storage_string_id = ss.str();
 	pDht_->iterativeFindValue(
-		miniDHT::digest_key_from_string<key_size>(storage_string_id),
+		miniDHT::key_to_string(
+			miniDHT::digest_key_from_string<key_size>(storage_string_id)),
 		boost::bind(&dht_send_file::found, this, _1));
 }
 
@@ -362,13 +364,11 @@ int main(int ac, char** av) {
 		{
 			boost::asio::io_service ios;
 //			boost::asio::io_service ios_send;
-			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+			miniDHT::miniDHT* pDht = NULL;
 			boost::asio::ip::tcp::endpoint ep(
 				boost::asio::ip::tcp::v4(),
 				listen);
-			pDht = new miniDHT::miniDHT<key_size, token_size>(
-				ios, 
-				ep);
+			pDht = new miniDHT::miniDHT(ios, ep);
 			if (is_port && is_address) 
 				pDht->send_PING(address, port);
 			std::cout 

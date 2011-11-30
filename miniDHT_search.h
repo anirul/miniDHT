@@ -43,16 +43,16 @@ namespace miniDHT {
 	
 	public :
 	
-		typedef std::bitset<KEY_SIZE> key_t;
-		typedef std::map<key_t, bool, less_bitset<KEY_SIZE> > map_key_bool_t;
-		typedef std::map<key_t, contact_proto, less_bitset<KEY_SIZE> >
-			map_key_contact_proto_t;
+		typedef std::string key_t;
+		typedef std::map<key_t, bool> map_key_bool_t;
+		typedef std::map<key_t, contact_proto> map_key_contact_proto_t;
 		typedef typename
-			std::map<key_t, contact_proto, less_bitset<KEY_SIZE> >::iterator
+			std::map<key_t, contact_proto>::iterator 
 			map_key_contact_proto_iterator;
 		
 		// callback declaration
-		typedef boost::function<void (std::list<key_t> k)> node_callback_t;
+		typedef boost::function<void (const std::list<key_t>& k)> 
+			node_callback_t;
 		typedef boost::function<void (const std::list<data_item_proto>& b)>  
 			value_callback_t;
 
@@ -85,7 +85,9 @@ namespace miniDHT {
 				node_callback_valid(false),
 				buffer()
 		{
-			bucket_nb = common_bits(destination, source);
+			bucket_nb = common_bits(
+				string_to_key<KEY_SIZE>(destination), 
+				string_to_key<KEY_SIZE>(source));
 		}
 		search() : buffer() {}
 		virtual ~search() {}
@@ -108,8 +110,7 @@ namespace miniDHT {
 		bool is_node_full() const {
 			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
-						map_node_busy.end())
+				if (map_node_busy.find(ite->key()) == map_node_busy.end())
 					return false;
 			return true; 
 		}
@@ -117,8 +118,7 @@ namespace miniDHT {
 		bool is_value_full() const {
 			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (map_value_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
-						map_value_busy.end())
+				if (map_value_busy.find(ite->key()) == map_value_busy.end())
 					return false;
 			return true;
 		}
@@ -127,7 +127,9 @@ namespace miniDHT {
 			unsigned int nb = 0;
 			std::list<contact_proto>::const_iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite)
-				if (common_bits(string_to_key<KEY_SIZE>(ite->key()), destination) 
+				if (common_bits(
+						string_to_key<KEY_SIZE>(ite->key()), 
+						string_to_key<KEY_SIZE>(destination)) 
 						== bucket_nb)
 					++nb;
 			return nb;
@@ -136,10 +138,8 @@ namespace miniDHT {
 		boost::asio::ip::tcp::endpoint get_node_endpoint() {
 			std::list<contact_proto>::iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
-				if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
-						map_node_busy.end()) 
-				{
-					map_node_busy[string_to_key<KEY_SIZE>(ite->key())] = true;
+				if (map_node_busy.find(ite->key()) == map_node_busy.end()) {
+					map_node_busy[ite->key()] = true;
 					return boost::asio::ip::tcp::endpoint(
 						boost::asio::ip::address::from_string(ite->ep().address()),
 						::atoi(ite->ep().port().c_str()));
@@ -151,10 +151,8 @@ namespace miniDHT {
 		boost::asio::ip::tcp::endpoint get_value_endpoint() {
 			std::list<contact_proto>::iterator ite;
 			for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
-				if (map_value_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
-						map_value_busy.end()) 
-				{
-					map_value_busy[string_to_key<KEY_SIZE>(ite->key())] = true;
+				if (map_value_busy.find(ite->key()) == map_value_busy.end()) {
+					map_value_busy[ite->key()] = true;
 					return boost::asio::ip::tcp::endpoint(
 						boost::asio::ip::address::from_string(ite->ep().address()),
 						::atoi(ite->ep().port().c_str()));
@@ -166,13 +164,20 @@ namespace miniDHT {
 		bool update_list(const std::list<contact_proto>& lc) {
 			map_key_contact_proto_t map_sorted;
 			std::list<contact_proto>::const_iterator itc;
-			for (itc = lc.begin(); itc != lc.end(); ++itc)
-				map_sorted[string_to_key<KEY_SIZE>(itc->key()) ^ destination] = 
-					(*itc);
+			std::bitset<KEY_SIZE> dest_bs = string_to_key<KEY_SIZE>(destination);
+			for (itc = lc.begin(); itc != lc.end(); ++itc) {
+				std::bitset<KEY_SIZE> source_bs = 
+					string_to_key<KEY_SIZE>(itc->key());
+				std::bitset<KEY_SIZE> result = ~(source_bs ^ dest_bs);
+				map_sorted[result.to_string()] = (*itc);
+			}
 			std::list<contact_proto>::iterator itl;
-			for (itl = short_list.begin(); itl != short_list.end(); ++itl)
-				map_sorted[string_to_key<KEY_SIZE>(itl->key()) ^ destination] = 
-					(*itl);
+			for (itl = short_list.begin(); itl != short_list.end(); ++itl) {
+				std::bitset<KEY_SIZE> source_bs = 
+					string_to_key<KEY_SIZE>(itc->key());
+				std::bitset<KEY_SIZE> result = ~(source_bs ^ dest_bs);
+				map_sorted[result.to_string()] = (*itl);
+			}
 			std::list<contact_proto> temp;
 			map_key_contact_proto_iterator itm;
 			for (itm = map_sorted.begin(); itm != map_sorted.end(); ++itm) {
@@ -200,7 +205,7 @@ namespace miniDHT {
 			std::list<key_t> lk;
 			std::list<contact_proto>::iterator itc;
 			for (itc = short_list.begin(); itc != short_list.end(); ++itc)
-				lk.push_back(string_to_key<KEY_SIZE>(itc->key()));
+				lk.push_back(itc->key());
 			node_callback(lk);
 		}
 	};

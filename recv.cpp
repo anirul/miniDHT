@@ -69,7 +69,7 @@ std::string dht_recv_file::decode(
 
 dht_recv_file::dht_recv_file(
 	const miniDHT::digest_t& digest,
-	miniDHT::miniDHT<key_size, token_size>* pDht)
+	miniDHT::miniDHT* pDht)
 {
 	ofile_ = NULL;
 	pDht_ = pDht;
@@ -111,7 +111,8 @@ void dht_recv_file::download(size_t index) {
 			index));
 	// ask for it!
 	pDht_->iterativeFindValue(
-		miniDHT::digest_key_from_string<key_size>(storage_string_id),
+		miniDHT::key_to_string(
+			miniDHT::digest_key_from_string<key_size>(storage_string_id)),
 		boost::bind(&dht_recv_file::found, this, _1));
 	map_state_[index] = ASKED;
 }
@@ -381,14 +382,14 @@ int main(int ac, char** av) {
 		}
       {
          boost::asio::io_service ios;
-			miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+			miniDHT::miniDHT* pDht = NULL;
          boost::asio::deadline_timer t(
 				ios, 
 				boost::posix_time::seconds(wait_settle));
 			boost::asio::ip::tcp::endpoint ep(
 				boost::asio::ip::tcp::v4(),
 				listen);
-			pDht = new miniDHT::miniDHT<key_size, token_size>(ios, ep);
+			pDht = new miniDHT::miniDHT(ios, ep);
 			if (is_port && is_address)
          	pDht->send_PING(address, port);
 			std::cout 

@@ -39,11 +39,7 @@ namespace miniDHT {
 	class bucket : public std::multimap<unsigned int, contact_proto> {
 	public :
 	
-		typedef std::bitset<KEY_SIZE> key_t;
-		typedef std::map<key_t, key_t, less_bitset<KEY_SIZE> > map_key_key_t;
-		typedef typename
-			std::map<key_t, key_t, less_bitset<KEY_SIZE> >::iterator
-			map_key_key_iterator;
+		typedef std::string key_t;
 		typedef typename 
 			std::multimap<unsigned int, contact_proto>::iterator 
 			iterator;
@@ -52,21 +48,23 @@ namespace miniDHT {
 		
 		boost::posix_time::ptime now_;
 		key_t local_key_;
-		map_key_key_t map_proximity_;
+		std::map<key_t, key_t> map_proximity_;
 		bool changed_;
 		
 	public :
 		
-		bucket(const std::bitset<KEY_SIZE>& k) : 
+		bucket(const key_t& k) : 
 			local_key_(k), changed_(true) {}
 		
 		boost::asio::ip::tcp::endpoint operator[](
-			const std::bitset<KEY_SIZE>& k) 
+			const key_t& k) 
 		{
-			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
+			unsigned int common = common_bits<KEY_SIZE>(
+				string_to_key<KEY_SIZE>(local_key_), 
+				string_to_key<KEY_SIZE>(k));
 			iterator ite = this->find(common);
 			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (string_to_key<KEY_SIZE>(ite->second.key()) == k) 
+				if (ite->second.key() == k) 
 					return boost::asio::ip::tcp::endpoint(
 						boost::asio::ip::address::from_string(
 							ite->second.ep().address()),
@@ -77,14 +75,16 @@ namespace miniDHT {
 		}
 		
 		void add_contact(
-			const std::bitset<KEY_SIZE>& k, 
+			const key_t& k, 
 			const boost::asio::ip::tcp::endpoint& ep,
 			bool update_ttl = true) 
 		{
 			now_ = update_time();
-			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
+			unsigned int common = common_bits<KEY_SIZE>(
+				string_to_key<KEY_SIZE>(local_key_), 
+				string_to_key<KEY_SIZE>(k));
 			contact_proto c;
-			c.set_key(key_to_string(k));
+			c.set_key(k);
 			endpoint_proto epp;
 			epp.set_address(ep.address().to_string());
 			{
@@ -113,25 +113,33 @@ namespace miniDHT {
 			}
 		}
 		
-		iterator find_key(const std::bitset<KEY_SIZE>& k) {
-			unsigned int common = common_bits<KEY_SIZE>(local_key_, k);
+		iterator find_key(const key_t& k) {
+			unsigned int common = common_bits<KEY_SIZE>(
+				string_to_key<KEY_SIZE>(local_key_), 
+				string_to_key<KEY_SIZE>(k));
 			iterator ite = this->find(common);
 			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (ite->second.key() == key_to_string(k))
+				if (ite->second.key() == k)
 					return ite;
 				++ite;
 			}
 			return this->end();
 		}
 		
-		const map_key_key_t& build_proximity(const key_t& k) {
+		const std::map<std::string, std::string>& build_proximity(
+			const key_t& k) 
+		{
 			if (!changed_) return map_proximity_;
 			map_proximity_.clear();
 			iterator itc;
-			for (itc = this->begin(); itc != this->end(); ++itc)
-				map_proximity_
-					[k ^ (key_t)(string_to_key<KEY_SIZE>(itc->second.key()))] 
-					= string_to_key<KEY_SIZE>(itc->second.key());
+			std::bitset<KEY_SIZE> search_key = string_to_key<KEY_SIZE>(k);
+			for (itc = this->begin(); itc != this->end(); ++itc) {
+				std::bitset<KEY_SIZE> loop_key = 
+					string_to_key<KEY_SIZE>(itc->second.key());
+				// calculate the xor distance, not to preserve order
+				std::bitset<KEY_SIZE> result = ~(search_key ^ loop_key);
+				map_proximity_[result.to_string()] = itc->second.key();
+			}
 			changed_ = false;
 			return map_proximity_;
 		}

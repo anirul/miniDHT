@@ -42,7 +42,7 @@ using boost::posix_time::minutes;
 const unsigned int key_size = 256;
 const unsigned int token_size = 32;
 
-std::vector<miniDHT::miniDHT<key_size, token_size>*> list_ptd;
+std::vector<miniDHT::miniDHT*> list_ptd;
 std::bitset<key_size> g_key = miniDHT::random_bitset<key_size>();
 unsigned int g_send_count = 0;
 unsigned int g_receive_count = 0;
@@ -79,7 +79,7 @@ void myValue (const list<miniDHT::data_item_proto>& b) {
 
 void retrieve_value(boost::asio::deadline_timer* t) {
 	g_send_count++;
-	std::vector<miniDHT::miniDHT<key_size, token_size>*>::iterator ite;
+	std::vector<miniDHT::miniDHT*>::iterator ite;
 //	int i = 0;
 //	for (ite = list_ptd.begin(); ite != list_ptd.end(); ++ite) {
 //		std::cout 
@@ -89,9 +89,9 @@ void retrieve_value(boost::asio::deadline_timer* t) {
 //			<< ">> IP " << (*ite)->get_local_endpoint() 
 //			<< std::endl;
 //	}
-	miniDHT::miniDHT<key_size, token_size>::value_callback_t vc = &myValue;
+	miniDHT::miniDHT::value_callback_t vc = &myValue;
 	unsigned long position = random() % list_ptd.size();
-	miniDHT::miniDHT<key_size, token_size>* pDHT = list_ptd.at(position);
+	miniDHT::miniDHT* pDHT = list_ptd.at(position);
 //	std::cout << "|| node : " << position << " knows : " 
 //		<< pDHT->bucket_size() << " nodes." << std::endl;
 //	std::cout << std::endl;
@@ -99,7 +99,7 @@ void retrieve_value(boost::asio::deadline_timer* t) {
 //	std::cout << std::endl;
 //	std::cout << "|| find value <<" << miniDHT::key_to_string(g_key) << ">>" << std::endl;
 //	std::cout << "|| from node  <<" << miniDHT::key_to_string(pDHT->get_local_key()) << ">>" << std::endl;
-	pDHT->iterativeFindValue(g_key, vc, "test");
+	pDHT->iterativeFindValue(miniDHT::key_to_string(g_key), vc, "test");
 	t->expires_at(t->expires_at() + boost::posix_time::millisec(milli_wait));
 	static int local_count = 0;
 	local_count++;
@@ -124,8 +124,7 @@ void store_value(boost::asio::deadline_timer* t) {
 	data.set_time(miniDHT::to_time_t(miniDHT::update_time()));
 	data.set_title(string("test.message"));
 	data.set_data(&test[0], test.size());
-	miniDHT::miniDHT<key_size, token_size>* pDHT = 
-		list_ptd.at(random() % list_ptd.size());
+	miniDHT::miniDHT* pDHT = list_ptd.at(random() % list_ptd.size());
 //	std::list<std::string> ls = pDHT->nodes_description();
 //	std::cout 
 //		<< "get local ID <<"
@@ -133,7 +132,7 @@ void store_value(boost::asio::deadline_timer* t) {
 //		<< ">> & IP " << pDHT->get_local_endpoint() << std::endl;
 //	for (std::list<std::string>::iterator ite = ls.begin(); ite != ls.end(); ++ite)
 //		std::cout << (*ite) << std::endl;
-	pDHT->iterativeStore(g_key, data);
+	pDHT->iterativeStore(miniDHT::key_to_string(g_key), data);
 	std::cout << std::endl;
 	t->expires_at(t->expires_at() + boost::posix_time::millisec(milli_wait));
 	t->async_wait(boost::bind(retrieve_value, t));
@@ -208,8 +207,7 @@ int main(int ac, char** av) {
 		boost::asio::ip::tcp::endpoint ep(
 			boost::asio::ip::tcp::v4(),
 			port);
-		miniDHT::miniDHT<key_size, token_size>* root = 
-			new miniDHT::miniDHT<key_size, token_size>(io_service, ep);
+		miniDHT::miniDHT* root = new miniDHT::miniDHT(io_service, ep);
 		list_ptd.push_back(root);
 		string previous_port = "";
 		{
@@ -224,15 +222,13 @@ int main(int ac, char** av) {
 			port++;
 			ss << port;
 			string next_port = ss.str();
-			miniDHT::miniDHT<key_size, token_size>* ptd = NULL;
+			miniDHT::miniDHT* ptd = NULL;
 			list_name.push_back(std::string("localhost"));
 			list_port.push_back(previous_port);
 			boost::asio::ip::tcp::endpoint ep(
 				boost::asio::ip::address::from_string("localhost"),
 				atoi(next_port.c_str()));
-			ptd = new miniDHT::miniDHT<key_size, token_size>(
-				io_service, 
-				ep);
+			ptd = new miniDHT::miniDHT(io_service, ep);
 			ptd->send_PING(
 				string("localhost"), // list_name, 
 				previous_port); // list_port);

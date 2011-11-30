@@ -34,14 +34,7 @@
 
 #include "miniDHT.h"
 
-#ifndef key_size
-#define key_size 256
-#endif
-#ifndef token_size
-#define token_size 32
-#endif
-
-miniDHT::miniDHT<key_size, token_size>* pDht = NULL;
+miniDHT::miniDHT* pDht = NULL;
 
 bool is_port_valid(unsigned short port) {
 	return ((port > 0) && (port < 0xc000));
@@ -157,9 +150,7 @@ int main(int ac, char** av) {
 			boost::asio::ip::tcp::endpoint ep(
 				boost::asio::ip::tcp::v4(),
 				listen);
-			pDht = new miniDHT::miniDHT<key_size, token_size>(
-				ios_dht,
-				ep);
+			pDht = new miniDHT::miniDHT(ios_dht, ep);
 			if (is_port && is_address)
 				pDht->send_PING(address, port);					
 			if (is_max_record) pDht->set_max_record(max_record);

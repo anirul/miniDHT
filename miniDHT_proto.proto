@@ -34,9 +34,9 @@ message message_proto {
 	}
 	required message_type type = 1 [default = NONE];
 	required string from_id = 2;
-	required string to_id = 3;
-	required string token = 4;
-	required uint32 listen_port = 5;
+	required uint32 token = 3;
+	optional string to_id = 4;
+	optional uint32 listen_port = 5;
 	optional uint64 check_val = 6;
 	optional data_item_proto data_item = 7;
 	optional string hint = 8;
