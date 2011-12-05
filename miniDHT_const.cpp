@@ -58,8 +58,8 @@ namespace miniDHT {
 		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i) {
 			char hex_hash[3];
 			memset(hex_hash, 0, 3);
-			is.width(2);
-			is >> hex_hash;
+			is >> hex_hash[0];
+			is >> hex_hash[1];
 			digest.c[i] = strtoul(hex_hash, NULL, 16);
 		}
 		return is;
