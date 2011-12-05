@@ -72,16 +72,7 @@ void gui_dht::stop() {
 }
 
 void gui_dht::ping(const std::string& hostname, unsigned short port) {
-	std::stringstream ss_port("");
-	ss_port << port;
-	boost::asio::ip::tcp::resolver resolver(io_service_);
-	boost::asio::ip::tcp::resolver::query query(
-		boost::asio::ip::tcp::v4(), 
-		hostname, 
-		ss_port.str());
-	boost::asio::ip::tcp::resolver::iterator ite = 
-		resolver.resolve(query);
-	mini_dht_->send_PING(*ite);
+	mini_dht_->send_PING(miniDHT::create_endpoint_proto(hostname, port));
 }
 
 std::list<miniDHT::contact_proto> gui_dht::status() {

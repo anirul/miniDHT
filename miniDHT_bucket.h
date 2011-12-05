@@ -56,7 +56,7 @@ namespace miniDHT {
 		bucket(const key_t& k) : 
 			local_key_(k), changed_(true) {}
 		
-		boost::asio::ip::tcp::endpoint operator[](
+		endpoint_proto operator[](
 			const key_t& k) 
 		{
 			unsigned int common = common_bits<KEY_SIZE>(
@@ -65,10 +65,7 @@ namespace miniDHT {
 			iterator ite = this->find(common);
 			for (unsigned int i = 0; i < this->count(common); ++i) {
 				if (ite->second.key() == k) 
-					return boost::asio::ip::tcp::endpoint(
-						boost::asio::ip::address::from_string(
-							ite->second.ep().address()),
-						::atoi(ite->second.ep().port().c_str()));
+					return ite->second.ep();
 				++ite;
 			}
 			throw std::string("unknown key");
@@ -76,7 +73,7 @@ namespace miniDHT {
 		
 		void add_contact(
 			const key_t& k, 
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& ep,
 			bool update_ttl = true) 
 		{
 			now_ = update_time();
@@ -85,14 +82,10 @@ namespace miniDHT {
 				string_to_key<KEY_SIZE>(k));
 			contact_proto c;
 			c.set_key(k);
-			endpoint_proto epp;
-			epp.set_address(ep.address().to_string());
-			{
-				std::stringstream ss("");
-				ss << ep.port();
-				epp.set_port(ss.str());
-			}
-			(*c.mutable_ep()) = epp;
+			c.mutable_ep()->set_address(ep.address());
+			c.mutable_ep()->set_port(ep.port());
+			assert(c.ep().address() != std::string(""));
+			assert(c.ep().port() != std::string(""));
 			c.set_time(to_time_t(now_));
 			std::pair<unsigned int, contact_proto> p(common, c);
 			iterator ite = find_key(k);
@@ -144,11 +137,11 @@ namespace miniDHT {
 			return map_proximity_;
 		}
 		
-		key_t random_key_in_bucket(unsigned int bn) {
-			key_t ret = local_key_;
+		std::string random_key_in_bucket(unsigned int bn) {
+			std::bitset<KEY_SIZE> ret = string_to_key<KEY_SIZE>(local_key_);
 			for (unsigned int i = bn; i < KEY_SIZE; ++i)
 				ret[i] = (random() % 2) != 0;
-			return ret;
+			return key_to_string(ret);
 		}
 	};
 		

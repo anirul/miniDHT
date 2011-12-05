@@ -34,8 +34,12 @@
 #define random rand
 #endif
 #include <ctime>
-#include "miniDHT_proto.pb.h"
+#include <bitset>
+#include <iostream>
+#include <fstream>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/asio.hpp>
+#include "miniDHT_proto.pb.h"
 
 namespace miniDHT {
 
@@ -50,90 +54,39 @@ namespace miniDHT {
 			unsigned long l[DIGEST_LENGTH >> 2];
 		};
 	};	
-	
-	inline bool operator==(const digest_t& a, const digest_t& b) {
-		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i)
-			if (a.c[i] != b.c[i]) return false;
-		return true;
-	}
 
-	inline bool operator!=(const digest_t& a, const digest_t& b) {
-		return (!(a == b));
-	}
-	
-	inline std::ostream& operator<< (
-		std::ostream& os,
-		const digest_t& digest)
-	{
-		char temp[(DIGEST_LENGTH * 2) + 1];
-		memset(temp, 0, (DIGEST_LENGTH * 2) + 1);
-		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i)
-			sprintf(&temp[i*2], "%02x", (int)digest.c[i]);
-		os << temp;
-		return os;
-	}
-	
-	inline std::istream& operator>> (
-		std::istream& is,
-		digest_t& digest) 
-	{
-		for (unsigned int i = 0; i < DIGEST_LENGTH; ++i) {
-			std::string hex_hash = "";
-			is.width(2);
-			is >> hex_hash;
-			digest.c[i] = strtoul(hex_hash.c_str(), NULL, 16);
-		}
-		return is;
-	}
-	
 	const size_t digest_size = sizeof(digest_t);
+	
+	bool operator==(const digest_t& a, const digest_t& b);
+	bool operator!=(const digest_t& a, const digest_t& b);
+	std::ostream& operator<< (std::ostream& os, const digest_t& digest);
+	std::istream& operator>> (std::istream& is, digest_t& digest);
+	boost::posix_time::ptime update_time();
+	void digest_sum(digest_t& digest, const void* p, size_t s);
+	int digest_file(digest_t& digest, const char* path);	
+	std::pair<std::string, std::string> string_to_endpoint_pair(
+		const std::string& str);
+	std::string endpoint_to_string(const endpoint_proto& ep);
+	std::string endpoint_to_string(
+		const boost::asio::ip::tcp::endpoint& ep);
+	time_t to_time_t(const boost::posix_time::ptime& t);
+	endpoint_proto endpoint_to_proto(
+		const boost::asio::ip::tcp::endpoint& ep);
+	boost::asio::ip::tcp::endpoint proto_to_endpoint(
+		const endpoint_proto& epp,
+		boost::asio::io_service& io);
+	endpoint_proto create_endpoint_proto(
+		const std::string& a, 
+		const std::string& p);
+	endpoint_proto create_endpoint_proto(
+		const std::string& a,
+		unsigned short p);
+	bool operator==(const contact_proto& cp1, const contact_proto& cp2);
+	bool operator==(const endpoint_proto& epp1, const endpoint_proto& epp2);
+	bool operator!=(const endpoint_proto& epp1, const endpoint_proto& epp2);
+	bool operator<(const endpoint_proto& epp1, const endpoint_proto& epp2);
+	bool operator==(const data_item_proto& l, const data_item_proto& r);
 
-	inline boost::posix_time::ptime update_time() {
-		boost::posix_time::ptime t(
-			boost::posix_time::microsec_clock::universal_time());
-		return t;
-	}
-	
-	inline void digest_sum(digest_t& digest, const void* p, size_t s) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-		EVP_MD_CTX* ctx = EVP_MD_CTX_create();
-		unsigned int digest_size = DIGEST_LENGTH;
-		EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
-		EVP_DigestUpdate(ctx, p, s);
-		EVP_DigestFinal_ex(ctx, digest.c, &digest_size);
-		EVP_MD_CTX_destroy(ctx);
-#pragma clang diagnostic pop
-	}
-    
-	inline int digest_file(digest_t& digest, const char* path) {
-		const size_t buf_size = 32768;
-		FILE* file = fopen(path, "rb");
-		if (!file) return -534;
-		size_t bytes_read = 0;
-		char buffer[buf_size];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-		EVP_MD_CTX* ctx = EVP_MD_CTX_create();
-		unsigned int digest_size = DIGEST_LENGTH;
-		EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
-		while ((bytes_read = fread(buffer, 1, buf_size, file))) {
-			EVP_DigestUpdate(ctx, buffer, bytes_read);
-		}
-		EVP_DigestFinal_ex(ctx, digest.c, &digest_size);
-		EVP_MD_CTX_destroy(ctx);
-#pragma clang diagnostic pop
-		fclose(file);
-		return 0;
-	}
-	
-	inline bool operator==(
-		const data_item_proto& l, 
-		const data_item_proto& r) 
-	{
-		return ((l.title() == r.title()) && (l.data() == r.data()));
-	}
-	
 	template <typename T>
 	digest_t digest_from_string(const std::basic_string<T>& str) {
 		digest_t digest;
@@ -245,6 +198,17 @@ namespace miniDHT {
 			return id1 < id2;
 		}
 	};
+
+	class less_endpoint_proto {
+		bool operator()(
+			const endpoint_proto& ep1,
+			const endpoint_proto& ep2) const
+		{
+			if (ep1.address() != ep2.address())
+				return ep1.address() < ep2.address();
+			return ep1.port() < ep2.port();
+		}
+	};
 	
 	template <size_t SIZE>
 	unsigned int common_bits(
@@ -264,49 +228,6 @@ namespace miniDHT {
 		for (unsigned int i = 0; i < SIZE; ++i)
 			bs[i] = (random() % 2) != 0;
 		return bs;
-	}
-
-	inline std::pair<std::string, std::string> string_to_endpoint_pair(
-		const std::string& str) 
-	{
-		std::pair<std::string, std::string> out;
-		size_t sep = str.find_last_of(':');
-		if (sep == std::string::npos)
-			throw std::runtime_error("malformed IP!");
-		if (str[0] == '[') { // IPv6
-			size_t pos = str.find(']');
-			if (pos == std::string::npos) 
-				throw std::runtime_error("malformed IP!");
-			out.first = str.substr(1, pos);
-		} else { // IPv4
-			out.first = str.substr(0, sep);
-		}
-		out.second = str.substr(sep + 1, str.size() - 1);
-		return out;
-	}
-
-	inline std::string endpoint_to_string(
-		const endpoint_proto& ep)
-	{
-		std::stringstream ss("");
-		ss << ep.address() << ":" << ep.port();
-		return ss.str();
-	}
-
-	inline std::string endpoint_to_string(
-		const boost::asio::ip::tcp::endpoint& ep) 
-	{
-		std::stringstream ss("");
-		ss << ep.address().to_string();
-		ss << ":" << ep.port();
-		return ss.str();
-	}
-	
-	inline time_t to_time_t(const boost::posix_time::ptime& t) {
-		using namespace boost::posix_time;
-		ptime epoch(boost::gregorian::date(1970,1,1));
-		time_duration::sec_type x = (t - epoch).total_seconds();
-		return time_t(x);
 	}
 
 } // end of namespace miniDHT

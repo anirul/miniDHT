@@ -230,8 +230,9 @@ int main(int ac, char** av) {
 				atoi(next_port.c_str()));
 			ptd = new miniDHT::miniDHT(io_service, ep);
 			ptd->send_PING(
-				string("localhost"), // list_name, 
-				previous_port); // list_port);
+				miniDHT::create_endpoint_proto(
+					string("localhost"), // list_name, 
+					previous_port)); // list_port);
 			previous_port = next_port;
 			list_ptd.push_back(ptd);
 		}

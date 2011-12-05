@@ -42,12 +42,14 @@ miniDHT_proto.pb.cc: miniDHT_proto.proto
 	$(PROTOC) miniDHT_proto.proto --cpp_out=.
 miniDHT_proto.pb.o: miniDHT_proto.pb.cc miniDHT_proto.pb.h
 	$(CXX) -o miniDHT_proto.pb.o $(FLAGS) -c miniDHT_proto.pb.cc
-miniDHT_db.o: miniDHT_db.cpp miniDHT_db.h
+miniDHT_db.o: miniDHT_db.cpp miniDHT_db.h miniDHT_proto.pb.h
 	$(CXX) -o miniDHT_db.o $(FLAGS) -c miniDHT_db.cpp
-miniDHT.o: miniDHT.cpp miniDHT.h
+miniDHT_const.o: miniDHT_const.cpp miniDHT_const.h miniDHT_proto.pb.h
+	$(CXX) -o miniDHT_const.o $(FLAGS) -c miniDHT_const.cpp
+miniDHT.o: miniDHT.cpp miniDHT.h miniDHT_db.h miniDHT_const.h miniDHT_bucket.h miniDHT_proto.pb.h miniDHT_search.h miniDHT_session.h
 	$(CXX) -o miniDHT.o $(FLAGS) -c miniDHT.cpp
-libminiDHT.a: miniDHT.o miniDHT_proto.pb.o miniDHT_db.o
-	$(AR) cru libminiDHT.a miniDHT.o miniDHT_proto.pb.o miniDHT_db.o
+libminiDHT.a: miniDHT.o miniDHT_proto.pb.o miniDHT_db.o miniDHT_const.o
+	$(AR) cru libminiDHT.a miniDHT.o miniDHT_proto.pb.o miniDHT_db.o miniDHT_const.o
 	$(RANLIB) libminiDHT.a
 
 db_key_value.o: db_key_value.cpp miniDHT_db.h 
@@ -56,28 +58,28 @@ db_multi_key_data.o: db_multi_key_data.cpp miniDHT_db.h
 	$(CXX) -o db_multi_key_data.o $(FLAGS) -c db_multi_key_data.cpp
 session.o: session.cpp miniDHT_session.h
 	$(CXX) -o session.o $(FLAGS) -c session.cpp
-server.o: server.cpp miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h miniDHT_session.h
+server.o: server.cpp miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h miniDHT_session.h
 	$(CXX) -o server.o $(FLAGS) -c server.cpp
-test.o: test.cpp  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+test.o: test.cpp  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o test.o $(FLAGS) -c test.cpp
-send.o: send.cpp send.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+send.o: send.cpp send.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o send.o $(FLAGS) -c send.cpp -DSEND_MAIN_TEST
-recv.o: recv.cpp recv.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+recv.o: recv.cpp recv.h aes_crypt.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o recv.o $(FLAGS) -c recv.cpp -DRECV_MAIN_TEST
 
-gui_main.o: gui_main.cpp gui_main.h gui_network_status.h gui_connect.h gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_main.o: gui_main.cpp gui_main.h gui_network_status.h gui_connect.h gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_main.o $(FLAGS) `wx-config --cxxflags` -c gui_main.cpp
-gui_connect.o: gui_connect.cpp gui_connect.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_connect.o: gui_connect.cpp gui_connect.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_connect.o $(FLAGS) `wx-config --cxxflags` -c gui_connect.cpp
-gui_info.o: gui_info.cpp gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_info.o: gui_info.cpp gui_info.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_info.o $(FLAGS) `wx-config --cxxflags` -c gui_info.cpp
-gui_network_status.o: gui_network_status.cpp gui_network_status.h gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_network_status.o: gui_network_status.cpp gui_network_status.h gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_network_status.o $(FLAGS) `wx-config --cxxflags` -c gui_network_status.cpp
-gui_dht.o: gui_dht.cpp gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_dht.o: gui_dht.cpp gui_dht.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_dht.o $(FLAGS) `wx-config --cxxflags` -c gui_dht.cpp
-gui_send.o: send.cpp send.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_send.o: send.cpp send.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_send.o $(FLAGS) -c send.cpp
-gui_recv.o: recv.cpp recv.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_serialize.h miniDHT_db.h miniDHT_session.h
+gui_recv.o: recv.cpp recv.h  miniDHT.h miniDHT_bucket.h miniDHT_const.h  miniDHT_search.h miniDHT_db.h miniDHT_session.h
 	$(CXX) -o gui_recv.o $(FLAGS) -c recv.cpp
 gui_list_ctrl.o: gui_list_ctrl.cpp gui_list_ctrl.h 
 	$(CXX) -o gui_list_ctrl.o $(FLAGS) `wx-config --cxxflags` -c gui_list_ctrl.cpp
@@ -86,8 +88,8 @@ db_key_value: db_key_value.o libminiDHT.a
 	$(CXX) -o db_key_value db_key_value.o libminiDHT.a $(LIBS)
 db_multi_key_data: db_multi_key_data.o libminiDHT.a
 	$(CXX) -o db_multi_key_data db_multi_key_data.o libminiDHT.a $(LIBS)
-session: session.o
-	$(CXX) -o session session.o  $(LIBS)
+session: session.o libminiDHT.a
+	$(CXX) -o session session.o libminiDHT.a $(LIBS)
 miniDHT_server: server.o libminiDHT.a
 	$(CXX) -o miniDHT_server server.o libminiDHT.a $(LIBS)
 miniDHT_test: test.o libminiDHT.a

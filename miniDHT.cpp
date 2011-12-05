@@ -168,7 +168,10 @@ namespace miniDHT {
 		for (ite = l.begin(); ite != l.end(); ++ite) {
 			endpoint_pair = string_to_endpoint_pair((*ite));
 			try {
-				send_PING_nolock(endpoint_pair.first, endpoint_pair.second);
+				endpoint_proto epp;
+				epp.set_address(endpoint_pair.first);
+				epp.set_port(endpoint_pair.second);
+				send_PING_nolock(epp);
 			} catch (std::exception& e) {
 				std::cerr 
 					<< "Contacting Host -> " << endpoint_pair.first 
@@ -223,7 +226,7 @@ namespace miniDHT {
 	void miniDHT::periodic() {
 		{ // check timeout on key
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::cout << "!!! PERIODIC !!! part 1" << std::endl;
+			std::cout << "!!! PERIODIC !!! part 1 - timeout" << std::endl;
 			bucket_iterator itc;
 			const boost::posix_time::time_duration tRefresh = 
 				boost::posix_time::minutes(PERIODIC);
@@ -237,9 +240,7 @@ namespace miniDHT {
 					update_time() - boost::posix_time::from_time_t(
 						itc->second.time());
 				if (td > tRefresh) {
-					send_PING_nolock(
-						itc->second.ep().address(),
-						itc->second.ep().port());
+					send_PING_nolock(itc->second.ep());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
 					db_backup.remove(itc->second.key());
@@ -259,7 +260,7 @@ namespace miniDHT {
 		periodic_thread_->yield();
 		{ // try to diversify the bucket list
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::cout << "!!! PERIODIC !!! part 2" << std::endl;
+			std::cout << "!!! PERIODIC !!! part 2 - populate" << std::endl;
 			for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 				if (contact_list.count(i)) continue;
 				key_t skey = contact_list.random_key_in_bucket(i);
@@ -329,14 +330,11 @@ namespace miniDHT {
 				continue;
 			contact_proto c;
 			c.set_key(itp->second);
-			boost::asio::ip::tcp::endpoint ep = contact_list[itp->second];
-			endpoint_proto epp;
-			epp.set_address(ep.address().to_string());
-			{
-				std::stringstream ss("");
-				ss << ep.port();
-				epp.set_port(ss.str());
-			}
+			const endpoint_proto& ep = contact_list[itp->second];
+			c.mutable_ep()->set_address(ep.address());
+			c.mutable_ep()->set_port(ep.port());
+			assert(c.ep().address() != std::string(""));
+			assert(c.ep().port() != std::string(""));
 			temp_list.push_back(c);
 		}
 		replyIterative(temp_list, t, k);
@@ -351,7 +349,7 @@ namespace miniDHT {
 		std::bitset<KEY_SIZE> search_key = string_to_key<KEY_SIZE>(k);
 		for (itc = lc.begin(); itc != lc.end(); ++itc) {
 			std::bitset<KEY_SIZE> loop_key = string_to_key<KEY_SIZE>(itc->key());
-			std::bitset<KEY_SIZE> result = ~(search_key ^ loop_key);
+			std::bitset<KEY_SIZE> result = search_key ^ loop_key;
 			map_proximity[result.to_string()] = itc->key();
 		}
 		return map_proximity;
@@ -362,10 +360,7 @@ namespace miniDHT {
 		const token_t& t, 
 		const key_t& k)
 	{
-		search_t local_search;
-		{
-			local_search = map_search[t];
-		}
+		search_t local_search = map_search[t];
 		switch (local_search.search_type) {
 			case NODE_SEARCH :
 				replyIterativeNodeSearch(lc, t, k);
@@ -457,7 +452,7 @@ namespace miniDHT {
 				this,
 				_1, 
 				_2),
-			map_endpoint_session);
+			map_ep_proto_session);
 		acceptor_.async_accept(
 			new_session->socket(),
 			boost::bind(
@@ -484,6 +479,7 @@ namespace miniDHT {
 	{
 		boost::mutex::scoped_lock lock_it(giant_lock_);
 		sender_endpoint_ = ep;
+		endpoint_proto epp = endpoint_to_proto(ep);
 		message_proto m;
 		std::stringstream ss(std::string(msg.body(), msg.body_length()));
 		try {
@@ -491,28 +487,28 @@ namespace miniDHT {
 			switch (m.type()) {
 				case message_proto::SEND_PING :
 					handle_SEND_PING(m);
-					contact_list.add_contact(m.from_id(), ep);
+					contact_list.add_contact(m.from_id(), epp);
 					break;
 				case message_proto::REPLY_PING :
 					handle_REPLY_PING(m);
 					break;
 				case message_proto::SEND_STORE :
 					handle_SEND_STORE(m);
-					contact_list.add_contact(m.from_id(), ep);
+					contact_list.add_contact(m.from_id(), epp);
 					break;
 				case message_proto::REPLY_STORE :
 					handle_REPLY_STORE(m);
 					break;
 				case message_proto::SEND_FIND_NODE :
 					handle_SEND_FIND_NODE(m);
-					contact_list.add_contact(m.from_id(), ep);
+					contact_list.add_contact(m.from_id(), epp);
 					break;
 				case message_proto::REPLY_FIND_NODE :
 					handle_REPLY_FIND_NODE(m);
 					break;
 				case message_proto::SEND_FIND_VALUE :
 					handle_SEND_FIND_VALUE(m);
-					contact_list.add_contact(m.from_id(), ep);
+					contact_list.add_contact(m.from_id(), epp);
 					break;
 				case message_proto::REPLY_FIND_VALUE :
 					handle_REPLY_FIND_VALUE(m);
@@ -533,18 +529,19 @@ namespace miniDHT {
 	}
 
 	void miniDHT::handle_SEND_PING(const message_proto& m) {
-		reply_PING(sender_endpoint_, m.token());
+		reply_PING(endpoint_to_proto(sender_endpoint_), m.token());
 	}
 
 	void miniDHT::handle_REPLY_PING(const message_proto& m) {
 		const boost::posix_time::time_duration tTimeout = 
-		boost::posix_time::minutes(1);
+			boost::posix_time::minutes(1);
 		{
 			if (map_ping_ttl.find(m.token()) != map_ping_ttl.end()) {
 				boost::posix_time::time_duration td = 
 					map_ping_ttl[m.token()] - update_time();
 				if (td < tTimeout) {
-					contact_list.add_contact(m.from_id(), sender_endpoint_);
+					endpoint_proto epp = endpoint_to_proto(sender_endpoint_);
+					contact_list.add_contact(m.from_id(), epp);
 				} else {
 					std::cout 
 						<< "\tTimeout no recording." 
@@ -562,7 +559,7 @@ namespace miniDHT {
 		data_item_proto di(m.data_item());
 		di.set_time(to_time_t(update_time()));
 		insert_db(m.to_id(), di);
-		reply_STORE(sender_endpoint_, m.token(), di);
+		reply_STORE(endpoint_to_proto(sender_endpoint_), m.token(), di);
 	}
 		
 	void miniDHT::handle_REPLY_STORE(const message_proto& m) {
@@ -581,7 +578,10 @@ namespace miniDHT {
 	}
 		
 	void miniDHT::handle_SEND_FIND_NODE(const message_proto& m) {
-		reply_FIND_NODE(sender_endpoint_, m.token(),	m.to_id());
+		reply_FIND_NODE(
+			endpoint_to_proto(sender_endpoint_), 
+			m.token(), 
+			m.to_id());
 	}
 		
 	void miniDHT::handle_REPLY_FIND_NODE(const message_proto& m) {
@@ -592,23 +592,9 @@ namespace miniDHT {
 		std::list<contact_proto> lc;
 		for (int i = 0; i < m.contact_list_size(); ++i) {
 			contact_proto c = m.contact_list(i);
-			std::string address = c.ep().address();
-			if ((address == std::string("0.0.0.0")) ||
-				(address == std::string("127.0.0.1")) ||
-				(address == std::string("localhost"))) {
-				address = sender_endpoint_.address().to_string();
-				boost::asio::ip::tcp::endpoint uep(
-					boost::asio::ip::address::from_string(address),
-					atoi(c.ep().port().c_str()));
-				contact_list.add_contact(c.key(), uep, false);
-			} else {
-				contact_list.add_contact(
-					c.key(), 
-					boost::asio::ip::tcp::endpoint(
-						boost::asio::ip::address::from_string(c.ep().address()),
-						::atoi(c.ep().port().c_str())), 
-					false);
-			}
+			assert(c.ep().address() != std::string());
+			assert(c.ep().port() != std::string());
+			contact_list.add_contact(c.key(), c.ep(), false);
 			lc.push_back(c);				
 		}
 		replyIterative(lc, m.token(), m.to_id());
@@ -618,9 +604,16 @@ namespace miniDHT {
 		bool is_present = false;
 		is_present = (db_storage.count(m.to_id()) != 0);
 		if (is_present) {
-			reply_FIND_VALUE(sender_endpoint_, m.token(), m.to_id(), m.hint());
+			reply_FIND_VALUE(
+				endpoint_to_proto(sender_endpoint_), 
+				m.token(), 
+				m.to_id(), 
+				m.hint());
 		} else {
-			reply_FIND_NODE(sender_endpoint_, m.token(), m.to_id());
+			reply_FIND_NODE(
+				endpoint_to_proto(sender_endpoint_), 
+				m.token(), 
+				m.to_id());
 		}
 	}
 		
@@ -636,24 +629,23 @@ namespace miniDHT {
 
 	void miniDHT::send_MESSAGE(
 		const message_proto& m,
-		const boost::asio::ip::tcp::endpoint& ep) 
+		const endpoint_proto& epp) 
 	{
-		std::string address = ep.address().to_string();
-		unsigned short port = ep.port();
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		std::stringstream ss("");
 		try {
 			m.SerializeToOstream(&ss);
-			if (address == std::string("0.0.0.0"))
-				address = std::string("127.0.0.1");
-			boost::asio::ip::tcp::endpoint uep(
-				boost::asio::ip::address::from_string(address), 
-				port);
-			map_endpoint_session_iterator ite = map_endpoint_session.find(uep);
+			boost::asio::ip::tcp::endpoint uep;
+			uep = proto_to_endpoint(epp, io_service_);
+			map_ep_proto_session_iterator ite = 
+				map_ep_proto_session.find(
+					endpoint_to_proto(uep));
 			basic_message<PACKET_SIZE> msg(ss.str().size());
 			std::memcpy(msg.body(), &(ss.str())[0], ss.str().size());
 			msg.listen_port(listen_port_);
 			msg.encode_header();
-			if (ite == map_endpoint_session.end())	{
+			if (ite == map_ep_proto_session.end())	{
 				session<PACKET_SIZE>* new_session = new session<PACKET_SIZE>(
 					io_service_,
 					boost::bind(
@@ -661,7 +653,7 @@ namespace miniDHT {
 						this,
 						_1, 
 						_2),
-					map_endpoint_session);
+					map_ep_proto_session);
 				new_session->connect(uep);
 				new_session->deliver(msg);
 			} else {
@@ -669,7 +661,8 @@ namespace miniDHT {
 			}
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_MESSAGE(" << ep << " - " 
+				<< "Exception in send_MESSAGE(" << epp.address()
+				<< ":" << epp.port() << " - " 
 				<< ss.str().size()
 				<< ") : " << e.what() 
 				<< std::endl;				
@@ -677,118 +670,97 @@ namespace miniDHT {
 	}
 		
 	void miniDHT::send_PING(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const token_t& t)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		send_PING_nolock(ep, t);
-	}
-		
-	void miniDHT::send_PING(
-		const std::string& address,
-		const unsigned short port)
-	{
-		std::stringstream ss("");
-		ss << port;
-		send_PING(address, ss.str());
-	}
-
-	void miniDHT::send_PING(
-		const std::string& address,
-		const std::string& port)
-	{
-		boost::asio::ip::tcp::resolver resolver(io_service_);
-		boost::asio::ip::tcp::resolver::query query(
-			boost::asio::ip::tcp::v4(), 
-			address, 
-			port);
-		boost::asio::ip::tcp::resolver::iterator iterator = 
-			resolver.resolve(query);		
-		send_PING(*iterator);			
+		send_PING_nolock(epp, t);
 	}
 
 	void miniDHT::send_PING_nolock(
-		const std::string& address,
-		const std::string& port)
-	{
-		boost::asio::ip::tcp::resolver resolver(io_service_);
-		boost::asio::ip::tcp::resolver::query query(
-			boost::asio::ip::tcp::v4(), 
-			address, 
-			port);
-		boost::asio::ip::tcp::resolver::iterator iterator = 
-			resolver.resolve(query);		
-		send_PING_nolock(*iterator);
-	}
-
-	void miniDHT::send_PING_nolock(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const token_t& t)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_PING);
 			m.set_from_id(id_);
 			m.set_token(t);	
 			map_ping_ttl[m.token()] = update_time();
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_PING(" << ep
+				<< "Exception in send_PING(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_STORE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const key_t& to_id,
 		const data_item_proto& cbf,
 		const token_t& t)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_STORE);
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
-			(*m.mutable_data_item()) = cbf;
+			m.mutable_data_item()->set_ttl(cbf.ttl());
+			m.mutable_data_item()->set_time(cbf.time());
+			m.mutable_data_item()->set_title(cbf.title());
+			m.mutable_data_item()->set_data(cbf.data());
 			map_store_check_val[t] = cbf.data().size();
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_STORE(" << ep 
+				<< "Exception in send_STORE(" << epp.address()
+				<< ":" << epp.port() 
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_FIND_NODE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const key_t& to_id,
 		const token_t& t)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_FIND_NODE);
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_FIND_NODE(" << ep
+				<< "Exception in send_FIND_NODE(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_FIND_VALUE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const key_t& to_id,
 		const token_t& t,
 		const std::string& hint)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_FIND_VALUE);
@@ -796,38 +768,44 @@ namespace miniDHT {
 			m.set_token(t);
 			m.set_to_id(to_id);
 			m.set_hint(hint);
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_FIND_VALUE(" << ep
+				<< "Exception in send_FIND_VALUE(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 	
 	void miniDHT::reply_PING(
-		const boost::asio::ip::tcp::endpoint& ep, 
+		const endpoint_proto& epp, 
 		const token_t& t)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_PING);
 			m.set_from_id(id_);
 			m.set_token(t);
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in reply_PING(" << ep
+				<< "Exception in reply_PING(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::reply_STORE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const token_t& t,
 		const data_item_proto& cbf)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			digest_t digest;
 			message_proto m;
@@ -835,20 +813,23 @@ namespace miniDHT {
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_check_val(cbf.data().size());
-			send_MESSAGE(m, ep);
+			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in reply_STORE(" << ep
+				<< "Exception in reply_STORE(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::reply_FIND_NODE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const token_t& t,
 		const key_t& to_id)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_FIND_NODE);
@@ -863,24 +844,27 @@ namespace miniDHT {
 				if ((m.contact_list_size() >= ALPHA) || 
 					(bit == contact_list.end()))
 				{
-					send_MESSAGE(m, ep);
+					send_MESSAGE(m, epp);
 					m.clear_contact_list();
 				}
 			}
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "\t\t\tException in reply_FIND_NODE(" << ep
+				<< "\t\t\tException in reply_FIND_NODE(" << epp.address()
+				<< ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;
 		}
 	}
 
 	void miniDHT::reply_FIND_VALUE(
-		const boost::asio::ip::tcp::endpoint& ep,
+		const endpoint_proto& epp,
 		const token_t& t,
 		const key_t& to_id,
 		const std::string& hint)
 	{
+		assert(epp.address() != std::string(""));
+		assert(epp.port() != std::string(""));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_FIND_VALUE);
@@ -898,11 +882,12 @@ namespace miniDHT {
 				}
 			}
 			if (m.data_item_list_size() > 0) {
-				send_MESSAGE(m, ep);
+				send_MESSAGE(m, epp);
 			}
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in reply_FIND_VALUE(" << ep 
+				<< "Exception in reply_FIND_VALUE(" << epp.address()
+				<< ":" << epp.port() 
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}

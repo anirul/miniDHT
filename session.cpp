@@ -31,7 +31,7 @@
 
 boost::asio::io_service ios;
 boost::asio::ip::tcp::acceptor* acceptor;
-miniDHT::session<PACKET_SIZE>::map_endpoint_session_t map_endpoint_session;
+miniDHT::session<PACKET_SIZE>::map_ep_proto_session_t map_ep_proto_session;
 unsigned short listen_port;
 
 void start_accept();
@@ -47,7 +47,7 @@ void start_accept() {
 		new miniDHT::session<PACKET_SIZE>(
 		ios,
 		handle_receive,
-		map_endpoint_session);
+		map_ep_proto_session);
 	acceptor->async_accept(
 		accept_session->socket(),
 		boost::bind(
@@ -70,9 +70,10 @@ void handle_receive(
 {
 	std::cout << "receive packet from : " << ep << std::endl;
 	std::cout << std::string(s.body(), s.body_length()) << std::endl;
-	miniDHT::session<PACKET_SIZE>::map_endpoint_session_iterator ite = 
-		map_endpoint_session.find(ep);
-	if (ite == map_endpoint_session.end()) {
+	miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite = 
+		map_ep_proto_session.find(
+			miniDHT::endpoint_to_proto(ep));
+	if (ite == map_ep_proto_session.end()) {
 		std::cout 
 			<< "could not find : " << ep 
 			<< " in the session list..." << std::endl;
@@ -185,20 +186,21 @@ int main(int ac, char** av) {
 						resolver.resolve(query);
 					uep = *iterator;
 				}
-				miniDHT::session<PACKET_SIZE>::map_endpoint_session_iterator ite = 
-					map_endpoint_session.find(uep);
+				miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite = 
+					map_ep_proto_session.find(
+						miniDHT::endpoint_to_proto(uep));
 				std::string hello = "hello world!";
 				miniDHT::basic_message<PACKET_SIZE> msg;
 				msg.body_length(hello.size());
 				memcpy(msg.body(), hello.c_str(), hello.size());
 				msg.listen_port(listen);
 				msg.encode_header();
-				if (ite == map_endpoint_session.end()) {
+				if (ite == map_ep_proto_session.end()) {
 					miniDHT::session<PACKET_SIZE>* new_session = 
 						new miniDHT::session<PACKET_SIZE>(
 						ios,
 						handle_receive,
-						map_endpoint_session);
+						map_ep_proto_session);
 					new_session->connect(uep);
 					new_session->deliver(msg);
 				} else {

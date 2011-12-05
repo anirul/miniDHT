@@ -64,7 +64,7 @@ namespace miniDHT {
 	const unsigned int BUCKET_SIZE = 5;
 	// call back for clean up (minutes) this is also used as a timeout
 	// for the contact list (node list).
-	const size_t PERIODIC = 15;
+	const size_t PERIODIC = 5;
 	// maximum size of a packet (1MB)
 	const size_t PACKET_SIZE = 1024 * 1024;
 		
@@ -77,13 +77,11 @@ namespace miniDHT {
 		typedef search<KEY_SIZE, BUCKET_SIZE> search_t;
 		typedef bucket<BUCKET_SIZE, KEY_SIZE> bucket_t;
 		typedef 
-			std::map<boost::asio::ip::tcp::endpoint, session<PACKET_SIZE>*> 
-			map_endpoint_session_t;
+			std::map<endpoint_proto, session<PACKET_SIZE>*> 
+			map_ep_proto_session_t;
 		typedef 
-			std::map<
-				boost::asio::ip::tcp::endpoint, 
-				session<PACKET_SIZE>*>::iterator
-			map_endpoint_session_iterator;
+			std::map<endpoint_proto, session<PACKET_SIZE>*>::iterator
+			map_ep_proto_session_iterator;
 		typedef  
 			bucket<BUCKET_SIZE, KEY_SIZE>::iterator 
 			bucket_iterator;
@@ -115,7 +113,7 @@ namespace miniDHT {
 		std::map<token_t, boost::posix_time::ptime> map_ping_ttl;
 		std::map<token_t, unsigned int> map_store_check_val;
 		// session pointers
-		map_endpoint_session_t map_endpoint_session;
+		map_ep_proto_session_t map_ep_proto_session;
 			
 	public :
 	
@@ -211,46 +209,36 @@ namespace miniDHT {
 		void handle_REPLY_FIND_NODE(const message_proto& m);
 		void handle_SEND_FIND_VALUE(const message_proto& m);
 		void handle_REPLY_FIND_VALUE(const message_proto& m);
-		void send_MESSAGE(
-			const message_proto& m,
-			const boost::asio::ip::tcp::endpoint& ep);
+		void send_MESSAGE(const message_proto& m, const endpoint_proto& epp);
 		
 	public :
 	
-		// primitive messages
-		
 		// ping is now public so that you can bootstrap to a network after
 		// class initialization.
 		void send_PING(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
-		// helper function now that there is no more ping & constructor
-		void send_PING(const std::string& address, const unsigned short port);
-		void send_PING(const std::string& address, const std::string& port);
 
 	protected :
 
 		// ping with no lock to call from an already locked function
 		void send_PING_nolock(
-			const std::string& address,
-			const std::string& port);
-		void send_PING_nolock(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		
 	protected :
 
 		void send_STORE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const key_t& to_id,
 			const data_item_proto& cbf,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_NODE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const key_t& to_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_VALUE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const key_t& to_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong(),
 			const std::string& hint = std::string(""));
@@ -258,18 +246,18 @@ namespace miniDHT {
 	protected :
 	
 		void reply_PING(
-			const boost::asio::ip::tcp::endpoint& ep, 
+			const endpoint_proto& epp, 
 			const token_t& t);
 		void reply_STORE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const token_t& t,
 			const data_item_proto& cbf);
 		void reply_FIND_NODE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const token_t& t,
 			const key_t& to_id);
 		void reply_FIND_VALUE(
-			const boost::asio::ip::tcp::endpoint& ep,
+			const endpoint_proto& epp,
 			const token_t& t,
 			const key_t& to_id,
 			const std::string& hint = std::string(""));

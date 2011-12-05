@@ -51,19 +51,8 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
-#ifdef SERIALIZE_XML
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
-#endif
-#ifdef SERIALIZE_BINARY
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#endif
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
+#include "miniDHT_proto.pb.h"
+#include "miniDHT_const.h"
 
 namespace miniDHT {
 
@@ -193,14 +182,12 @@ namespace miniDHT {
 				const basic_message<PACKET_SIZE>& s)>
 			got_message_callback_t;
 		typedef 
-			std::map<boost::asio::ip::tcp::endpoint, session<PACKET_SIZE>*> 
-			map_endpoint_session_t;
+			std::map<endpoint_proto, session<PACKET_SIZE>*> 
+			map_ep_proto_session_t;
 		typedef std::deque<basic_message<PACKET_SIZE> > deque_basic_message_t;
 		typedef typename
-			std::map<
-				boost::asio::ip::tcp::endpoint, 
-				session<PACKET_SIZE>*>::iterator
-			map_endpoint_session_iterator;
+			std::map<endpoint_proto, session<PACKET_SIZE>*>::iterator
+			map_ep_proto_session_iterator;
 
 	protected:
 
@@ -211,7 +198,7 @@ namespace miniDHT {
 		bool connect_;
 		int ref_count_;
 		got_message_callback_t got_message_callback_;
-		map_endpoint_session_t& map_endpoint_session_;
+		map_ep_proto_session_t& map_ep_proto_session_;
 		boost::mutex local_lock_;
 
 	public:
@@ -219,12 +206,12 @@ namespace miniDHT {
 		session(
 			boost::asio::io_service& io_service,
 			const got_message_callback_t& c,
-			map_endpoint_session_t& map)
+			map_ep_proto_session_t& map)
 			:	socket_(io_service),
 				connect_(false),
 				ref_count_(1),
 				got_message_callback_(c),
-				map_endpoint_session_(map) {}
+				map_ep_proto_session_(map) {}
 
 		boost::asio::ip::tcp::socket& socket() {
 			boost::mutex::scoped_lock lock_it(local_lock_);
@@ -284,10 +271,11 @@ namespace miniDHT {
 			local_lock_.lock();
 			ref_count_ -= 1;
 			if (ref_count_ <= 0) {
-				map_endpoint_session_iterator ite = 
-					map_endpoint_session_.find(ep_);
-				if (ite != map_endpoint_session_.end())
-					map_endpoint_session_.erase(ite);
+				map_ep_proto_session_iterator ite = 
+					map_ep_proto_session_.find(
+						endpoint_to_proto(ep_));
+				if (ite != map_ep_proto_session_.end())
+					map_ep_proto_session_.erase(ite);
 				local_lock_.unlock();
 				delete this;
 				return;
@@ -320,14 +308,21 @@ namespace miniDHT {
 							socket_.remote_endpoint().address(), 
 							read_msg_.listen_port());
 					}
-					map_endpoint_session_iterator ite = 
-						map_endpoint_session_.find(ep_);
-					if (ite == map_endpoint_session_.end()) {
-						map_endpoint_session_.insert(std::make_pair(ep_, this));
+					map_ep_proto_session_iterator ite = 
+						map_ep_proto_session_.find(
+							endpoint_to_proto(ep_));
+					if (ite == map_ep_proto_session_.end()) {
+						map_ep_proto_session_.insert(
+							std::make_pair(
+								endpoint_to_proto(ep_), 
+								this));
 					} else {
 						if (ite->second != this) {
-							map_endpoint_session_.erase(ite);
-							map_endpoint_session_.insert(std::make_pair(ep_, this));
+							map_ep_proto_session_.erase(ite);
+							map_ep_proto_session_.insert(
+								std::make_pair(
+									endpoint_to_proto(ep_), 
+									this));
 						}
 					}
 					ref_count_ += 1;

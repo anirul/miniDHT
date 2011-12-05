@@ -152,7 +152,7 @@ int main(int ac, char** av) {
 				listen);
 			pDht = new miniDHT::miniDHT(ios_dht, ep);
 			if (is_port && is_address)
-				pDht->send_PING(address, port);					
+				pDht->send_PING(miniDHT::create_endpoint_proto(address, port));
 			if (is_max_record) pDht->set_max_record(max_record);
 			boost::asio::deadline_timer t(
 				ios_watch, 

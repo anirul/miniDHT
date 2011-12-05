@@ -369,8 +369,12 @@ int main(int ac, char** av) {
 				boost::asio::ip::tcp::v4(),
 				listen);
 			pDht = new miniDHT::miniDHT(ios, ep);
-			if (is_port && is_address) 
-				pDht->send_PING(address, port);
+			if (is_port && is_address) { 
+				std::cout 
+					<< "sending PING to " << address 
+					<< ":" << port << std::endl;
+				pDht->send_PING(miniDHT::create_endpoint_proto(address, port));
+			}
 			std::cout 
 				<< "Waiting to the DHT to settle ("
 				<< std::dec 
