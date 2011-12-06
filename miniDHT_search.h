@@ -178,7 +178,7 @@ namespace miniDHT {
 		}
 		
 		bool update_list(const std::list<contact_proto>& lc) {
-			assert(lc.size() != 0);
+			if (lc.size() == 0) return is_bucket_full();
 			map_key_contact_proto_t map_sorted;
 			std::list<contact_proto>::const_iterator itc;
 			std::bitset<KEY_SIZE> dest_bs = string_to_key<KEY_SIZE>(destination);

@@ -344,7 +344,11 @@ namespace miniDHT {
 				}
 			} catch (std::exception& e) {
 				local_lock_.unlock();
-				std::cerr << "Exception (catched) : " << e.what() << std::endl;
+				std::cerr 
+//					<< "Exception (catched) : " << e.what()
+					<< " -> " << ep_.address().to_string() << ":" << ep_.port() 
+					<< " Disconnected!"
+					<< std::endl;
 				release();
 			}
 		}

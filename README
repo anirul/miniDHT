@@ -12,8 +12,8 @@ Short description of warious part :
 
 Dependencies :
 
-	 - boost (ASIO & serialization)
-	 - openSSL (SHA256 or even MD5 if you enable it)
+	 - boost (ASIO)
+	 - openSSL (SHA256 AES)
 	 - sqlite3 (database managment)
 	 - protobuf (google::protocole serialization)
 	 - wxWidget (if you want the GUI)

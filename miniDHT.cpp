@@ -226,7 +226,6 @@ namespace miniDHT {
 	void miniDHT::periodic() {
 		{ // check timeout on key
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::cout << "!!! PERIODIC !!! part 1 - timeout" << std::endl;
 			bucket_iterator itc;
 			const boost::posix_time::time_duration tRefresh = 
 				boost::posix_time::minutes(PERIODIC);
@@ -260,7 +259,6 @@ namespace miniDHT {
 		periodic_thread_->yield();
 		{ // try to diversify the bucket list
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::cout << "!!! PERIODIC !!! part 2 - populate" << std::endl;
 			for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 				if (contact_list.count(i)) continue;
 				key_t skey = contact_list.random_key_in_bucket(i);
@@ -274,9 +272,6 @@ namespace miniDHT {
 			std::list<data_item_header_t>::iterator ite;
 			{
 				boost::mutex::scoped_lock lock_it(giant_lock_);
-				std::cout 
-					<< "!!! PERIODIC !!! part 3.1 - fetch header" 
-					<< std::endl;
 				db_storage.list_headers(ldh);
 			}
 			boost::posix_time::ptime check_time = update_time();
@@ -286,16 +281,10 @@ namespace miniDHT {
 				if (time_elapsed > boost::posix_time::seconds(ite->ttl)) {
 					// data is no more valid
 					boost::mutex::scoped_lock lock_it(giant_lock_);
-					std::cout
-						<< "!!! PERIODIC !!! part 3.2 - remove : "
-						<< ite->key << std::endl;
 					db_storage.remove(ite->key, ite->title);
 				} else {
 					// republish
 					boost::mutex::scoped_lock lock_it(giant_lock_);
-					std::cout
-						<< "!!! PERIODIC !!! part 3.3 - republish : "
-						<< ite->key << std::endl;
 					data_item_proto item;
 					db_storage.find(ite->key, ite->title, item);
 					item.set_ttl(item.ttl() - time_elapsed.total_seconds());
@@ -306,7 +295,6 @@ namespace miniDHT {
 		}
 		{
 			boost::mutex::scoped_lock lock_it(giant_lock_);
-			std::cout << "!!! PERIODIC !!! part 4" << std::endl;
 			// call back later
 			boost::posix_time::time_duration wait_time = 
 				periodic_ + boost::posix_time::seconds(random() % 60);
@@ -543,7 +531,7 @@ namespace miniDHT {
 					endpoint_proto epp = endpoint_to_proto(sender_endpoint_);
 					contact_list.add_contact(m.from_id(), epp);
 				} else {
-					std::cout 
+					std::cerr 
 						<< "\tTimeout no recording." 
 						<< std::endl;
 				}

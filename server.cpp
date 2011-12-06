@@ -41,18 +41,62 @@ bool is_port_valid(unsigned short port) {
 }
 
 void watch(boost::asio::deadline_timer* t) {
+	static std::list<miniDHT::contact_proto> s_ls;
 	std::list<miniDHT::contact_proto> ls;
-	std::list<miniDHT::contact_proto>::iterator ite;
+	std::list<miniDHT::contact_proto>::const_iterator ite;
+	std::list<miniDHT::contact_proto>::const_iterator s_ite;
 	ls = pDht->nodes_description();
-//	std::cout << std::endl;
-//	std::cout << miniDHT::update_time() << std::endl;
-	for (ite = ls.begin(); ite != ls.end(); ++ite)
-		std::cout 
-			<< "<<" << ite->key() << ">>" 
-			<< " - [" << ite->time() << "]"
-			<< " - {" << ite->ep().address() << ":" 
-			<< ite->ep().port() << "}"
-			<< std::endl;
+	if (ls != s_ls) {
+		std::cout << std::endl;
+		std::cout << miniDHT::update_time() << std::endl;
+		for (ite = ls.begin(); ite != ls.end(); ++ite) {
+			bool found_key = false;
+			bool found_time = false;
+			bool found_endpoint = false;
+			for (s_ite = s_ls.begin(); s_ite != s_ls.end(); ++s_ite) {
+				if (ite->key() == s_ite->key()) {
+					found_key = true;
+					if (ite->time() == s_ite->time())
+						found_time = true;
+					if (ite->ep() == s_ite->ep())
+						found_endpoint = true;
+				}
+			}
+			std::cout << "<<";
+			if (!found_key)
+				std::cout << "\e[31m";
+			for (int i = 0; i < 4; ++i)
+				std::cout << ite->key()[i];
+			std::cout << "...";
+			size_t last = ite->key().size();
+			for (int i = last - 4; i < last; ++i)
+				std::cout << ite->key()[i];
+			if (!found_key)
+				std::cout << "\e[0m";
+			std::cout << ">>";
+			std::cout << " - [";
+			if (!found_time)
+				std::cout << "\e[31m";
+			{
+				time_t time = ite->time();
+				boost::posix_time::ptime recv_time = 
+					boost::posix_time::from_time_t(time);
+				std::cout << recv_time;
+			}
+			if (!found_time)
+				std::cout << "\e[0m";
+			std::cout << "]"
+				<< " - {";
+			if (!found_endpoint)
+				std::cout << "\e[31m";
+			std::cout << ite->ep().address() << ":" 
+				<< ite->ep().port();
+			if (!found_endpoint)
+				std::cout << "\e[0m";
+			std::cout  << "}" << std::endl;
+		}
+		s_ls = ls;
+	}
 	t->expires_at(t->expires_at() + boost::posix_time::seconds(1));
 	t->async_wait(boost::bind(watch, t));
 }
