@@ -35,7 +35,7 @@ namespace miniDHT {
 		const std::string& path,
 		size_t max_records)
 		:	periodic_(boost::posix_time::minutes(PERIODIC)),
-			id_(key_to_string(local_key<KEY_SIZE>(ep.port()))),
+			id_(key_to_string(local_key<KEY_SIZE>(ep.port(), path))),
 			periodic_io_(),
 			max_records_(max_records),
 			io_service_(io_service),
