@@ -224,13 +224,13 @@ bool gui_main::OnInit() {
 			wxDefaultPosition,
 			wxDefaultSize,
 			wxLC_REPORT | wxLC_SINGLE_SEL);
-		list_ctrl_->InsertColumn(0, "Progress");
+		list_ctrl_->InsertColumn(0, _("Progress"));
 		list_ctrl_->SetColumnWidth(0, 100);
-		list_ctrl_->InsertColumn(1, "Digest");
+		list_ctrl_->InsertColumn(1, _("Digest"));
 		list_ctrl_->SetColumnWidth(1, 350);
-		list_ctrl_->InsertColumn(2, "Bytes");
+		list_ctrl_->InsertColumn(2, _("Bytes"));
 		list_ctrl_->SetColumnWidth(2, 100);
-		list_ctrl_->InsertColumn(3, "File");
+		list_ctrl_->InsertColumn(3, _("File"));
 		list_ctrl_->SetColumnWidth(3, 250);
 	}
 
@@ -352,11 +352,11 @@ void gui_main::MacOpenFile(const wxString& filename) {
 void gui_main::OnTimer(wxTimerEvent& evt) {
 	{
 		static wxString moving_string[] = {
-			_(".oOo.| %s |.oOo."),
-			_("oOo..| %s |..oOo"),
-			_("Oo..o| %s |o..oO"),
-			_("o..oO| %s |Oo..o"),
-			_("..oOo| %s |oOo..")
+			_T(".oOo.| %s |.oOo."),
+			_T("oOo..| %s |..oOo"),
+			_T("Oo..o| %s |o..oO"),
+			_T("o..oO| %s |Oo..o"),
+			_T("..oOo| %s |oOo..")
 		};
 		static unsigned int count = 0;
 		frame_->SetTitle(
@@ -371,7 +371,7 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 		while (list_ctrl_->GetItemCount() > ls.size())
 			list_ctrl_->DeleteItem(0);
 		while (list_ctrl_->GetItemCount() < ls.size())
-			list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
+			list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _T(".oOo."));
 		for (int i = 0; ite != ls.end(); ++ite, ++i) {
 			gui_action* p = dynamic_cast<gui_action*>(*ite);
 			{	// progress

@@ -75,13 +75,13 @@ gui_connect::gui_connect(const wxString& title)
 	wxButton *okButton = new wxButton(
 		this, 
 		wxID_OK, 
-		wxT("Ok"), 
+		_("Ok"), 
       wxDefaultPosition, 
 		wxSize(70, 30));
 	wxButton *closeButton = new wxButton(
 		this, 
 		wxID_CANCEL, 
-		wxT("Cancel"), 
+		_("Cancel"), 
 		wxDefaultPosition, 
 		wxSize(70, 30));
 
@@ -99,11 +99,11 @@ gui_connect::gui_connect(const wxString& title)
 void gui_connect::Notify() {
 	{
 		static wxString moving_string[] = {
-			_(".oOo.| %s |.oOo."),
-			_("oOo..| %s |..oOo"),
-			_("Oo..o| %s |o..oO"),
-			_("o..oO| %s |Oo..o"),
-			_("..oOo| %s |oOo..")
+			_T(".oOo.| %s |.oOo."),
+			_T("oOo..| %s |..oOo"),
+			_T("Oo..o| %s |o..oO"),
+			_T("o..oO| %s |Oo..o"),
+			_T("..oOo| %s |oOo..")
 		};
 		static unsigned int count = 0;
 		this->SetTitle(

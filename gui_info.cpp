@@ -58,7 +58,7 @@ gui_info::gui_info(long item, const wxString& title)
 	info_id_ = new wxTextCtrl(
 		panel,
 		wxID_ANY,
-		_(".oOo."),
+		_("?"),
 		wxPoint(65, 20),
 		wxSize(200, 20),
 		wxTE_READONLY);
@@ -71,7 +71,7 @@ gui_info::gui_info(long item, const wxString& title)
 	info_name_ = new wxTextCtrl(
 		panel,
 		wxID_ANY,
-		_(".oOo."),
+		_("?"),
 		wxPoint(65, 50),
 		wxSize(200, 20),
 		wxTE_READONLY);
@@ -79,7 +79,7 @@ gui_info::gui_info(long item, const wxString& title)
 	info_text_ = new wxTextCtrl(
 		panel,
 		wxID_ANY,
-		_(".oOo."),
+		_("?"),
 		wxPoint(15, 80),
 		wxSize(250, 90),
 		wxTE_READONLY | wxTE_MULTILINE);
@@ -87,7 +87,7 @@ gui_info::gui_info(long item, const wxString& title)
 	wxButton *okButton = new wxButton(
 		this, 
 		wxID_OK, 
-		wxT("Ok"), 
+		_("Ok"), 
       wxDefaultPosition, 
 		wxSize(70, 30));
 
@@ -104,11 +104,11 @@ gui_info::gui_info(long item, const wxString& title)
 void gui_info::Notify() {
 	{
 		static wxString moving_string[] = {
-			_(".oOo.| %s |.oOo."),
-			_("oOo..| %s |..oOo"),
-			_("Oo..o| %s |o..oO"),
-			_("o..oO| %s |Oo..o"),
-			_("..oOo| %s |oOo..")
+			_T(".oOo.| %s |.oOo."),
+			_T("oOo..| %s |..oOo"),
+			_T("Oo..o| %s |o..oO"),
+			_T("o..oO| %s |Oo..o"),
+			_T("..oOo| %s |oOo..")
 		};
 		static unsigned int count = 0;
 		this->SetTitle(
