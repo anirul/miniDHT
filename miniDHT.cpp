@@ -116,9 +116,14 @@ namespace miniDHT {
 	std::list<contact_proto> miniDHT::nodes_description() {
 		boost::mutex::scoped_lock lock_it(giant_lock_);
 		std::list<contact_proto> ls;
+		unsigned int last_bucket = 0;
 		bucket_iterator ite = contact_list.begin();
-		for (; ite != contact_list.end(); ++ite)
+		for (; ite != contact_list.end(); ++ite) {
+			unsigned int new_bucket = ite->first;
+			assert((ite->first) ? ite->first > last_bucket : true);
+			last_bucket = ite->first;
 			ls.push_back(ite->second);
+		}
 		return ls;
 	}
 
@@ -291,6 +296,7 @@ namespace miniDHT {
 					iterativeStore_nolock(ite->key, item);
 				}
 				periodic_thread_->yield();
+				usleep(100000);
 			}
 		}
 		{
