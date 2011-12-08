@@ -34,13 +34,9 @@
 #include <bitset>
 #include <sstream>
 // BOOST
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/version.hpp>
-#include <boost/serialization/split_member.hpp>
-#include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include <boost/bind.hpp>
+#include <boost/asio.hpp>
 // SQLite3
 #include <sqlite3.h>
 // local
@@ -52,6 +48,7 @@ namespace miniDHT {
 	protected :
 		sqlite3* db_;
 		std::string file_name_;
+		boost::mutex local_lock_;
 
 	public :
 		db_key_value()
@@ -83,6 +80,7 @@ namespace miniDHT {
 	protected :
 		sqlite3* db_;
 		std::string file_name_;
+		boost::mutex local_lock_;
 
 	public :
 		db_multi_key_data() 
