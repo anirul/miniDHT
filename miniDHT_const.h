@@ -142,8 +142,9 @@ namespace miniDHT {
 	}
 	
 	template <size_t SIZE>
-	std::bitset<SIZE> local_key(unsigned short port) {
+	std::bitset<SIZE> local_key(unsigned short port, const std::string& path) {
 		std::stringstream file_name("");
+		file_name << path;
 		file_name << "localhost.uid.";
 		file_name << port;
 		file_name << ".txt";
@@ -163,7 +164,7 @@ namespace miniDHT {
 			std::ofstream ofs(file_name.str().c_str());
 			ofs << random_str.str();
 			ofs.close();
-			return local_key<SIZE>(port);
+			return local_key<SIZE>(port, path);
 		}
 
 	}

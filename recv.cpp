@@ -128,11 +128,13 @@ void dht_recv_file::received(size_t index) {
 	}
 	// timeout didn't receive yet so ask for it again
 	if (map_index_counter_[index] > 20) {
+#ifdef RECV_MAIN_TEST
 		std::cout 
 			<< std::endl 
 			<< "Warning packet " 
 			<< index 
 			<< " missing requery." << std::endl;
+#endif
 		map_index_counter_.erase(
 		map_index_counter_.find(index));
 		map_state_[index] = WAIT;
@@ -155,7 +157,7 @@ void dht_recv_file::decrypt(size_t index) {
 
 void dht_recv_file::write(size_t index) {
 	if (!ofile_) ofile_ = fopen(file_name_.c_str(), "wb");
-	if (!ofile_) throw "Invalid file cannot write.";
+	if (!ofile_) throw std::runtime_error("Invalid file cannot write.");
 	fseeko(ofile_, (index * buf_size), SEEK_SET);
 	std::string buffer = map_crypt_[index];
 	fwrite(&buffer[0], 1, buffer.size(), ofile_);
@@ -166,18 +168,22 @@ void dht_recv_file::write(size_t index) {
 }
 
 void dht_recv_file::check() {
+#ifdef RECV_MAIN_TEST
 	std::cout 
 		<< std::endl
 		<< "Check DIGEST of file ["
 		<< file_name_
 		<< "] please wait." << std::endl;
+#endif
 	if (ofile_) fclose(ofile_);
 	ofile_ = NULL;
 	miniDHT::digest_t new_digest;
 	if (miniDHT::digest_file(new_digest, file_name_.c_str()))
-		throw "Could not open file";
+		throw std::runtime_error("Could not open file");
+#ifdef RECV_MAIN_TEST
 	std::cout << "asked digest [" << digest_ << "]" << std::endl;
 	std::cout << "got  digest  [" << new_digest << "]" << std::endl;
+#endif
 	if (new_digest == digest_) {
 		std::cout << "check ok!" << std::endl;
 	} else {
@@ -199,11 +205,13 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 		size_t packet_number;
 		size_t packet_total;
 		std::string decrypted_title = decode(key, hex_to_string(title));
-		if (!decrypted_title.size()) throw "unable to decode title";
+		if (!decrypted_title.size()) 
+			throw std::runtime_error("unable to decode title");
 		{
 			std::stringstream ss(decrypted_title);
 			ss >> title_string_id;
-			if (title_string_id != key) throw "incorrect packet";
+			if (title_string_id != key) 
+				throw std::runtime_error("incorrect packet");
 			ss >> packet_number;
 			ss >> packet_total;
 			size_t pos = 0;
@@ -213,6 +221,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 			pos++;
 			file_name_ = ss.str().substr(pos);
 		}
+#ifdef RECV_MAIN_TEST
 //		std::cout 
 //			<< "\t[" << packet_number 
 //			<< "/" << packet_total 
@@ -220,6 +229,7 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 //			<< "]";
 //		std::cout << " OK!" << std::endl;
 		std::cout << ".";
+#endif
 		// update packet total
 		if (!packet_total_) {
 			packet_total_ = packet_total;

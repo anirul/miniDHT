@@ -76,6 +76,8 @@ namespace miniDHT {
 			const endpoint_proto& ep,
 			bool update_ttl = true) 
 		{
+			// avoid adding self to contact list
+			if (k == local_key_) return;
 			now_ = update_time();
 			unsigned int common = common_bits<KEY_SIZE>(
 				string_to_key<KEY_SIZE>(local_key_), 
@@ -86,6 +88,11 @@ namespace miniDHT {
 			c.mutable_ep()->set_port(ep.port());
 			assert(c.ep().address() != std::string(""));
 			assert(c.ep().port() != std::string(""));
+			// check if the IP is not already in
+			for (iterator ite = this->begin(); ite != this->end(); ++ite)
+				if (ite->second.ep() == ep)
+					this->erase(ite);
+			// insert 
 			c.set_time(to_time_t(now_));
 			std::pair<unsigned int, contact_proto> p(common, c);
 			iterator ite = find_key(k);

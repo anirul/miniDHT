@@ -76,16 +76,20 @@ dht_send_file::dht_send_file(
 	packet_loaded_ = 0;
 	boost::filesystem::path p(file_name);
 	file_name_ = p.filename().string();
+#ifdef SEND_MAIN_TEST
 	std::cout 
 		<< "Compute DIGEST of file [" 
 		<< file_name 
 		<< "] please wait." << std::endl;
+#endif
 	if (miniDHT::digest_file(digest_, file_name.c_str()))
-		throw "Could not open file";
+		throw std::runtime_error("Could not open file");
+#ifdef SEND_MAIN_TEST
 	std::cout << " -> DIGEST : [" << digest_ << "]" << std::endl;
+#endif
 	ifile_ = fopen(file_name.c_str(), "rb");
 	if (!ifile_)
-		throw "Invalid file to be send.";
+		throw std::runtime_error("Invalid file to be send.");
 	fseeko(ifile_, 0, SEEK_END);
 	total_size_ = ftello(ifile_);
 	if (total_size_ % buf_size) 
@@ -191,15 +195,17 @@ void dht_send_file::found(const std::list<miniDHT::data_item_proto>& b) {
 			std::string from = map_crypt_[index];
 			std::string to = ite->data();
 			if (from.size() != to.size())
-				throw "Check error (size missmatch)";
+				throw std::runtime_error("Check error (size missmatch)");
 			if (map_crypt_[index] != ite->data()) {
 				if (map_state_[index] != CHECKED)
 					map_state_[index] = CRYPTED;
-				throw "Check error (content missmatch)";
+				throw std::runtime_error("Check error (content missmatch)");
 			}
 			// cleanup
+#ifdef SEND_MAIN_TEST
 			std::cout << ".";
 			std::cout.flush();
+#endif 
 			map_key_string_id_.erase(map_key_string_id_.find(ite->title()));
 			map_crypt_.erase(map_crypt_.find(index));
 			map_state_[index] = CHECKED;

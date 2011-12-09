@@ -80,11 +80,11 @@ gui_network_status::gui_network_status(const wxString& title)
 void gui_network_status::Notify() {
 	{
 		static wxString moving_string[] = {
-			_(".oOo.| %s |.oOo."),
-			_("oOo..| %s |..oOo"),
-			_("Oo..o| %s |o..oO"),
-			_("o..oO| %s |Oo..o"),
-			_("..oOo| %s |oOo..")
+			_T(".oOo.| %s |.oOo."),
+			_T("oOo..| %s |..oOo"),
+			_T("Oo..o| %s |o..oO"),
+			_T("o..oO| %s |Oo..o"),
+			_T("..oOo| %s |oOo..")
 		};
 		static unsigned int count = 0;
 		this->SetTitle(
@@ -98,7 +98,7 @@ void gui_network_status::Notify() {
 	while (list_ctrl_->GetItemCount() > ls.size())
 		list_ctrl_->DeleteItem(0);
 	while (list_ctrl_->GetItemCount() < ls.size())
-		list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _(".oOo."));
+		list_ctrl_->InsertItem(list_ctrl_->GetItemCount(), _("?"));
 	for (int i = 0; ite != ls.end(); ++ite, ++i) {
 		{
 			std::stringstream ss("");
