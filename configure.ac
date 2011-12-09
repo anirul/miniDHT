@@ -11,6 +11,7 @@ m4_include([m4/ax_boost_serialization.m4])
 m4_include([m4/ax_boost_system.m4])
 m4_include([m4/ax_boost_thread.m4])
 m4_include([m4/ax_check_openssl.m4])
+m4_include(wxwin.m4)
 
 AC_PREREQ([2.68])
 
