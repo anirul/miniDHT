@@ -26,6 +26,7 @@
  */
 
 #include <wx/wx.h>
+#include <wx/filefn.h>
 #include <wx/listctrl.h>
 #include <wx/spinctrl.h>
 #include <wx/stdpaths.h>
@@ -120,40 +121,47 @@ bool gui_main::OnInit() {
 	}
 	{	// set some path related stuff
 #ifdef __WXMAC__
-		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _("/");
-		temp_path_ = wxStandardPathsCF::Get().GetTempDir() + ("/");
+		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
+		temp_path_ = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
+        if(!wxDirExists(temp_path_)) {
+            if(!wxMkdir(temp_path_, 0755))
+                std::cerr << "WARNING : failed to create directory " << temp_path_ << std::endl;
+            else
+                std::cout << "INFO : created directory " << temp_path_ << std::endl;
+        } else
+            std::cout << "INFO : data directory " << temp_path_ << std::endl;
 #else
-		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _("/");
-		temp_path_ = wxStandardPaths::Get().GetTempDir() + ("/");
+		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _T("/");
+		temp_path_ = wxStandardPaths::Get().GetTempDir() + _T("/");
 #endif // __WXMAC__
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	if (!wxDirExists(ressources_path_)) {
-		ressources_path_ = _("./");
+		ressources_path_ = _T("./");
 		std::cout << "WARNING : Changed ressource path to \"./\"." << std::endl;
 	}
 	{	// toolbar
 		wxImage::AddHandler(new wxPNGHandler);		
 		wxBitmap download(
-			ressources_path_ + _("Knob Download.png"), 
+			ressources_path_ + _T("Knob Download.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap upload(
-			ressources_path_ + _("Knob Upload.png"), 
+			ressources_path_ + _T("Knob Upload.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap connected(
-			ressources_path_ + _("Knob Record On.png"), 
+			ressources_path_ + _T("Knob Record On.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap disconnected(
-			ressources_path_ + _("Knob Record Off.png"), 
+			ressources_path_ + _T("Knob Record Off.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap info(
-			ressources_path_ + _("Knob Info.png"), 
+			ressources_path_ + _T("Knob Info.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap cancel(
-			ressources_path_ + _("Knob Cancel.png"), 
+			ressources_path_ + _T("Knob Cancel.png"), 
 			wxBITMAP_TYPE_PNG);
 		wxBitmap grey(
-			ressources_path_ + _("Knob Grey.png"), 
+			ressources_path_ + _T("Knob Grey.png"), 
 			wxBITMAP_TYPE_PNG);
 
 		toolbar->AddTool(

@@ -1011,7 +1011,7 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af /opt/local/lib/libjpeg.8.dylib BitSmear.app/Contents/Frameworks/
 	cp -af /opt/local/lib/libtiff.3.dylib BitSmear.app/Contents/Frameworks/
 	cp -af /opt/local/lib/libwx*2.9.2.0.0.dylib BitSmear.app/Contents/Frameworks
-	./embed_wxWidgets.sh BitSmear
+	./embed_macosxlib.sh BitSmear
 #	cp -af /opt/local/lib/libboost_serialization-mt.dylib BitSmear.app/Contents/Frameworks/
 
 clean-local:
