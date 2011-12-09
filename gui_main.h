@@ -28,11 +28,13 @@
 #ifndef MINIDHT_GUI_MAIN_HEADER_DEFINED
 #define MINIDHT_GUI_MAIN_HEADER_DEFINED
 
+#include "gui_frame.h"
+
 class gui_list_ctrl;
 
 class gui_main : public wxApp {
 	bool OnInit();
-	wxFrame* frame_;
+	gui_frame* frame_;
 	gui_list_ctrl* list_ctrl_;
 	wxString title_;
 	wxString temp_path_;

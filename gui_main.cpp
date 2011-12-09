@@ -78,7 +78,7 @@ END_EVENT_TABLE()
 bool gui_main::OnInit() {
 	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
 	title_ = _("BitSmear");
-	frame_ = new wxFrame(
+	frame_ = new gui_frame(
 		(wxFrame *)NULL, 
 		-1,  
 		title_, 
@@ -128,7 +128,7 @@ bool gui_main::OnInit() {
 #endif // __WXMAC__
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
-	if (!wxFileExists(ressources_path_)) {
+	if (!wxDirExists(ressources_path_)) {
 		ressources_path_ = _("./");
 		std::cout << "WARNING : Changed ressource path to \"./\"." << std::endl;
 	}
@@ -332,10 +332,6 @@ void gui_main::OnInfo(wxCommandEvent& evt) {
 void gui_main::OnNetworkStatus(wxCommandEvent& evt) {
 	gui_network_status dialog;
 	dialog.ShowModal();
-}
-
-void gui_main::OnClose(wxCloseEvent& evt) {
-	wxMessageBox(_("TODO : close the window"));
 }
 
 void gui_main::OnQuit(wxCommandEvent& evt) {
