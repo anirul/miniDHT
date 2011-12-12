@@ -25,12 +25,7 @@ miniDHT_recv_SOURCES = recv.cpp recv.h miniDHT.h libminiDHT-1.0.la
 miniDHT_recv_LDADD = libminiDHT-1.0.la
 miniDHT_recv_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
 
-if USE_WX
-bin_PROGRAMS += BitSmear
-BitSmear_SOURCES = gui_main.cpp gui_main.h gui_network_status.h gui_network_status.cpp gui_info.h gui_info.cpp gui_frame.h gui_frame.cpp gui_connect.h gui_connect.cpp gui_dht.h gui_dht.cpp gui_list_ctrl.h gui_list_ctrl.cpp send.h send.cpp recv.h recv.cpp miniDHT.h
-BitSmear_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
-BitSmear_LDADD = libminiDHT-1.0.la
-endif
+
 
 lib_LTLIBRARIES = libminiDHT-1.0.la
 
@@ -45,16 +40,20 @@ miniDHT_proto.pb.cc: miniDHT_proto.proto
 	@PROTOC@ miniDHT_proto.proto --cpp_out=.
 
 
-if MACOSX
-bin_PROGRAMS += BitSmear.app
+if USE_WX
+bin_PROGRAMS += BitSmear
+BitSmear_SOURCES = gui_main.cpp gui_main.h gui_network_status.h gui_network_status.cpp gui_info.h gui_info.cpp gui_frame.h gui_frame.cpp gui_connect.h gui_connect.cpp gui_dht.h gui_dht.cpp gui_list_ctrl.h gui_list_ctrl.cpp send.h send.cpp recv.h recv.cpp miniDHT.h
+BitSmear_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
+BitSmear_LDADD = libminiDHT-1.0.la
 
-BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
-	-mkdir BitSmear.app
-	-mkdir BitSmear.app/Contents
-	-mkdir BitSmear.app/Contents/MacOS
-	-mkdir BitSmear.app/Contents/Frameworks
-	-mkdir BitSmear.app/Contents/Resources
-	-mkdir BitSmear.app/Contents/Resources/English.lproj
+if MACOSX
+bin_PROGRAMS += BitSmear_MACOSX
+.PHONY: BitSmear_MACOSX
+
+BitSmear_MACOSX: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
+	-mkdir -p BitSmear.app/Contents/MacOS
+	-mkdir -p BitSmear.app/Contents/Frameworks
+	-mkdir -p BitSmear.app/Contents/Resources/English.lproj
 	cp -f Info.plist BitSmear.app/Contents
 	cp -f Knob\ Download.png BitSmear.app/Contents/Resources
 	cp -f Knob\ Upload.png BitSmear.app/Contents/Resources
@@ -83,6 +82,8 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @PORT_LIB_DIR@/libwx*2.9.2.0.0.dylib BitSmear.app/Contents/Frameworks
 	./embed_macosxlib.sh BitSmear
 #	cp -af @BOOST_LIB_DIR@/libboost_serialization-mt.dylib BitSmear.app/Contents/Frameworks/
+
+endif
 
 endif
 

@@ -1,5 +1,9 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
+AC_INIT([BitSmear],[1.0],[frederic.dubouchet@gmail.com])
+
+AC_PREREQ([2.61])
+
 AC_CONFIG_MACRO_DIR([m4])
 m4_include([m4/ax_boost_base.m4])
 m4_include([m4/ax_lib_sqlite3.m4])
@@ -13,9 +17,7 @@ m4_include([m4/ax_boost_thread.m4])
 m4_include([m4/ax_check_openssl.m4])
 m4_include(m4/wxwin.m4)
 
-AC_PREREQ([2.68])
 
-AC_INIT([BitSmear],[1.0],[frederic.dubouchet@gmail.com])
 AM_INIT_AUTOMAKE(BitSmear, 1.0)
 AC_CONFIG_SRCDIR([miniDHT_db.h])
 AC_CONFIG_HEADERS([config.h])
@@ -74,24 +76,36 @@ AC_FUNC_FSEEKO
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memset socket strtol strtoul])
 
-AM_OPTIONS_WXCONFIG
-reqwx=2.9.0
-AM_PATH_WXCONFIG($reqwx, wxWin=1)
-if test "$wxWin" != 1
+
+ 	
+AC_ARG_WITH([wxwidgets],
+             AC_HELP_STRING([--with-wxwidgets],
+                            [use WxWidgets (default is YES)]),
+             [ac_cv_use_wx=$withval], [ac_cv_use_wx=yes])
+AC_CACHE_CHECK([whether to use WxWidgets],
+               [ac_cv_use_wx], [ac_cv_use_wx=yes])
+
+if test "x$ac_cv_use_wx" != xno 
 then
-	AC_MSG_ERROR([
-		wxWidgets must be installed on your system.
- 
-		Please check that wx-config is in path, the directory
-		where wxWidgets libraries are installed (returned by
-		'wx-config --libs' or 'wx-config --static --libs' command)
-		is in LD_LIBRARY_PATH or equivalent variable and
-		wxWidgets version is $reqwx or above.
-		])
-else
-AC_DEFINE([HAVE_WX], [], [Have the WxWidgets library])
+	AM_OPTIONS_WXCONFIG
+	reqwx=2.9.0
+	AM_PATH_WXCONFIG($reqwx, wxWin=yes)
+	if test x"$wxWin" != xyes
+	then
+		AC_MSG_ERROR([
+			wxWidgets must be installed on your system.
+	 
+			Please check that wx-config is in path, the directory
+			where wxWidgets libraries are installed (returned by
+			'wx-config --libs' or 'wx-config --static --libs' command)
+			is in LD_LIBRARY_PATH or equivalent variable and
+			wxWidgets version is $reqwx or above.
+			])
+	else
+	AC_DEFINE([HAVE_WX], [], [Have the WxWidgets library])
+	fi
 fi
-AM_CONDITIONAL(USE_WX, test "$wxWin" = 1)
+AM_CONDITIONAL(USE_WX, test x"$wxWin" = xyes)
 CPPFLAGS="$CPPFLAGS $SQLITE3_CFLAGS $OPENSSL_INCLUDES $BOOST_CPPFLAGS $WX_CPPFLAGS $PROTO_CPPFLAGS" 
 CXXFLAGS="$CXXFLAGS $WX_CXXFLAGS_ONLY"
 CFLAGS="$CFLAGS $WX_CFLAGS_ONLY"
