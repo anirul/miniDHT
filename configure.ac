@@ -1,5 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
+
+AC_INIT([BitSmear],[1.0],[frederic.dubouchet@gmail.com])
+AC_PREREQ([2.61])
 AC_CONFIG_MACRO_DIR([m4])
 m4_include([m4/ax_boost_base.m4])
 m4_include([m4/ax_lib_sqlite3.m4])
@@ -13,9 +16,7 @@ m4_include([m4/ax_boost_thread.m4])
 m4_include([m4/ax_check_openssl.m4])
 m4_include(m4/wxwin.m4)
 
-AC_PREREQ([2.68])
-
-AC_INIT([BitSmear],[1.0],[frederic.dubouchet@gmail.com])
+AC_PROG_LIBTOOL
 AM_INIT_AUTOMAKE(BitSmear, 1.0)
 AC_CONFIG_SRCDIR([miniDHT_db.h])
 AC_CONFIG_HEADERS([config.h])

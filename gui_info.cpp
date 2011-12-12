@@ -40,23 +40,24 @@ gui_info::gui_info(long item, const wxString& title)
 			wxSize(300, 300),
 			wxSTAY_ON_TOP | wxSYSTEM_MENU),
 		title_(title),
+		panel_(NULL),
 		info_id_(NULL),
 		info_name_(NULL),
 		info_text_(NULL),
 		item_index_(item)
 {
-	wxPanel *panel = new wxPanel(this, -1);
+	panel_ = new wxPanel(this, -1);
 
 	wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
 
 	wxStaticText* st1 = new wxStaticText(
-		panel,
+		panel_,
 		wxID_ANY,
 		_("ID"),
 		wxPoint(15, 20));
 	info_id_ = new wxTextCtrl(
-		panel,
+		panel_,
 		wxID_ANY,
 		_("?"),
 		wxPoint(65, 20),
@@ -64,25 +65,24 @@ gui_info::gui_info(long item, const wxString& title)
 		wxTE_READONLY);
 
 	wxStaticText* st2 = new wxStaticText(
-		panel,
+		panel_,
 		wxID_ANY,
 		_("Name"),
 		wxPoint(15, 50));
 	info_name_ = new wxTextCtrl(
-		panel,
+		panel_,
 		wxID_ANY,
 		_("?"),
 		wxPoint(65, 50),
 		wxSize(200, 20),
 		wxTE_READONLY);
 
-	info_text_ = new wxTextCtrl(
-		panel,
+	info_text_ = new wxStaticText(
+		panel_,
 		wxID_ANY,
 		_("?"),
 		wxPoint(15, 80),
-		wxSize(250, 90),
-		wxTE_READONLY | wxTE_MULTILINE);
+		wxSize(90, 90));
 
 	wxButton *okButton = new wxButton(
 		this, 
@@ -93,7 +93,7 @@ gui_info::gui_info(long item, const wxString& title)
 
 	hbox->Add(okButton, 1);
 
-	vbox->Add(panel, 1);
+	vbox->Add(panel_, 1);
 	vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
 
 	this->Start(250);
@@ -134,6 +134,26 @@ void gui_info::Notify() {
 					wxString name = _(p->get_filename().c_str());
 					if (name != info_name_->GetValue())
 						info_name_->SetValue(name);
+				}
+				{
+					std::stringstream ss("");
+					ss << p->get_filename() << std::endl;
+					ss << ((p->get_action_type() == GUI_ACTION_DOWNLOAD) ?
+						std::string("Download") : std::string("Upload"))
+						<< std::endl;
+					ss << p->get_file_size() << " Bytes" << std::endl;
+					ss << p->get_packet_loaded() << " / " << p->get_packet_total()
+						<< std::endl;
+					wxString text = _(ss.str().c_str());
+					delete info_text_;
+					info_text_ = new wxStaticText(
+						panel_,
+						wxID_ANY,
+						text,
+						wxPoint(15, 80),
+						wxSize(90, 90));
+//					if (text != info_text_->GetValue())
+//						info_text_->SetValue(text);
 				}
 			}
 		}
