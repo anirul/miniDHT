@@ -18,6 +18,8 @@ m4_include([m4/ax_check_openssl.m4])
 m4_include(m4/wxwin.m4)
 
 
+AC_PROG_LIBTOOL
+
 AM_INIT_AUTOMAKE(BitSmear, 1.0)
 AC_CONFIG_SRCDIR([miniDHT_db.h])
 AC_CONFIG_HEADERS([config.h])

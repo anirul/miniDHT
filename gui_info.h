@@ -31,9 +31,10 @@
 class gui_info : private wxTimer, public wxDialog {
 protected :
 	wxString title_;
+	wxPanel* panel_;
 	wxTextCtrl* info_id_;
 	wxTextCtrl* info_name_;
-	wxTextCtrl* info_text_;
+	wxStaticText* info_text_;
 	long item_index_;
 	void Notify();
 public :

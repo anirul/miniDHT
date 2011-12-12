@@ -333,8 +333,7 @@ void gui_main::OnInfo(wxCommandEvent& evt) {
 		return;
 	}
 	gui_info dialog(item);
-	if (dialog.ShowModal() == wxID_OK)
-		wxMessageBox(_("TODO : Info on some action."));
+	dialog.ShowModal();
 }
 
 void gui_main::OnNetworkStatus(wxCommandEvent& evt) {
