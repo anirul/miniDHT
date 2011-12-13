@@ -55,7 +55,7 @@ AC_SUBST(PROTOC)
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AX_CHECK_OPENSSL([], [AC_MSG_ERROR(You need the OpenSSL development library.)])
-reqsqlite=3.7.0
+reqsqlite=3.5.0
 AX_LIB_SQLITE3([$reqsqlite])
 
 if test x$SQLITE3_VERSION = x
