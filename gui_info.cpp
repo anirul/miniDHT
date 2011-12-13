@@ -82,7 +82,7 @@ gui_info::gui_info(long item, const wxString& title)
 		wxID_ANY,
 		_("?"),
 		wxPoint(15, 80),
-		wxSize(90, 90));
+		wxSize(200, 200));
 
 	wxButton *okButton = new wxButton(
 		this, 
@@ -151,7 +151,7 @@ void gui_info::Notify() {
 						wxID_ANY,
 						text,
 						wxPoint(15, 80),
-						wxSize(90, 90));
+						wxSize(200, 200));
 //					if (text != info_text_->GetValue())
 //						info_text_->SetValue(text);
 				}
