@@ -1,5 +1,7 @@
 ACLOCAL_AMFLAGS=-I m4
 
+
+# maybe use $target_cpu
 if MACOSX
 AM_CPPFLAGS = -arch x86_64 -arch i386 -mmacosx-version-min=10.6  
 AM_LDFLAGS =  -arch x86_64 -arch i386 -mmacosx-version-min=10.6 -headerpad_max_install_names
@@ -47,10 +49,13 @@ BitSmear_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
 BitSmear_LDADD = libminiDHT-1.0.la
 
 if MACOSX
-bin_PROGRAMS += BitSmear_MACOSX
-.PHONY: BitSmear_MACOSX
+#bin_PROGRAMS += BitSmear.app
+noinst_PROGRAMS = BitSmear.app
 
-BitSmear_MACOSX: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
+endif
+endif
+
+BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	-mkdir -p BitSmear.app/Contents/MacOS
 	-mkdir -p BitSmear.app/Contents/Frameworks
 	-mkdir -p BitSmear.app/Contents/Resources/English.lproj
@@ -81,11 +86,9 @@ BitSmear_MACOSX: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @PORT_LIB_DIR@/libtiff.3.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libwx*2.9.2.0.0.dylib BitSmear.app/Contents/Frameworks
 	./embed_macosxlib.sh BitSmear
-#	cp -af @BOOST_LIB_DIR@/libboost_serialization-mt.dylib BitSmear.app/Contents/Frameworks/
 
-endif
+.PHONY: BitSmear.app
 
-endif
 
 clean-local:
 	-rm -rf BitSmear.app

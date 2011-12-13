@@ -4,6 +4,10 @@ AC_INIT([BitSmear],[1.0],[frederic.dubouchet@gmail.com])
 
 AC_PREREQ([2.61])
 
+AC_CANONICAL_TARGET
+AC_CANONICAL_HOST
+AC_CANONICAL_SYSTEM
+
 AC_CONFIG_MACRO_DIR([m4])
 m4_include([m4/ax_boost_base.m4])
 m4_include([m4/ax_lib_sqlite3.m4])
@@ -29,9 +33,14 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CXX([clang++ g++])
 AC_PROG_CC([clang gcc]) 
-#AC_PROG_CPP([clang++ -E])
-AC_PROG_CPP([clang++ cpp])
-AM_CONDITIONAL(MACOSX, test `uname -s` = "Darwin")
+#AC_PROG_CPP([clang++ cpp])
+
+
+#AM_CONDITIONAL(MACOSX, test `uname -s` = "Darwin")
+target_os_version=`uname -r`
+AM_CONDITIONAL(MACOSX,  test "$target_os" = "darwin$target_os_version")
+AC_MSG_RESULT([$target_os])
+AC_SUBST(target_os)
 
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
@@ -46,7 +55,21 @@ AC_SUBST(PROTOC)
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AX_CHECK_OPENSSL([], [AC_MSG_ERROR(You need the OpenSSL development library.)])
-AX_LIB_SQLITE3([3.7.0])
+reqsqlite=3.7.0
+AX_LIB_SQLITE3([$reqsqlite])
+
+if test x$SQLITE3_VERSION = x
+then
+	AC_MSG_ERROR([
+			SQLite 3 must be installed on your system.
+	 
+			Please check that sqlite3.h is in path, the directory
+			where SQLite3 libraries are installed 
+			is in LD_LIBRARY_PATH or equivalent variable and
+			SQLite3 version is $reqsqlite or above.
+			])
+fi
+
 AX_BOOST_BASE([1.45.0])
 AX_BOOST_ASIO
 AX_BOOST_DATE_TIME
