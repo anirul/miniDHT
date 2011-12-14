@@ -37,6 +37,7 @@
 #endif // __WXMAC__
 #include "gui_main.h" 
 #include "gui_connect.h"
+#include "gui_download.h"
 #include "gui_info.h"
 #include "gui_network_status.h"
 #include "gui_list_ctrl.h"
@@ -294,9 +295,21 @@ void gui_main::OnUpload(wxCommandEvent& evt) {
 }
 
 void gui_main::OnDownload(wxCommandEvent& evt) {
-	// ask for a digest to be downloaded
-	// if success start the download?
-	wxMessageBox(_("TODO : Download from a digest."));
+	// ask for a digest for download
+	gui_download dialog;
+	while (dialog.ShowModal() == wxID_OK) {
+		// Check the digest and start download...
+		if (!dialog.validate()) {
+			wxMessageBox(_("Invalid digest should be \"[A-Fa-f0-9]{64}\"."));
+		} else {
+			miniDHT::digest_t digest;
+			std::string s = dialog.get_key();
+			std::stringstream ss(s);
+			ss >> digest;
+			gui_dht::instance()->start_download(digest);
+			return;
+		}
+	}
 }
 
 void gui_main::OnAbout(wxCommandEvent& evt) {

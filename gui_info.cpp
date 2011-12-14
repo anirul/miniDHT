@@ -101,6 +101,17 @@ gui_info::gui_info(long item, const wxString& title)
 	this->Center();
 }
 
+gui_info::~gui_info() {
+	if (info_id_) delete info_id_;
+	info_id_ = NULL;
+	if (info_name_) delete info_name_;
+	info_name_ = NULL;
+	if (info_text_) delete info_text_;
+	info_text_ = NULL;
+	if (panel_) delete panel_;
+	panel_ = NULL;
+}
+
 void gui_info::Notify() {
 	{
 		static wxString moving_string[] = {

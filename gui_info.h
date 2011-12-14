@@ -39,6 +39,7 @@ protected :
 	void Notify();
 public :
 	gui_info(long item, const wxString& title = _("Action Info"));
+	virtual ~gui_info();
 };
 
 #endif // GUI_INFO_HEADER_DEFINED
