@@ -303,7 +303,7 @@ void gui_main::OnDownload(wxCommandEvent& evt) {
 			wxMessageBox(_("Invalid digest should be \"[A-Fa-f0-9]{64}\"."));
 		} else {
 			miniDHT::digest_t digest;
-			std::string s = dialog.get_key();
+			std::string s = std::string(dialog.get_key().mb_str());
 			std::stringstream ss(s);
 			ss >> digest;
 			gui_dht::instance()->start_download(digest);

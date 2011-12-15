@@ -53,6 +53,7 @@ private :
 	std::map<size_t, std::string> map_crypt_;
 	std::map<std::string, size_t> map_key_string_id_;
 	std::map<size_t, size_t> map_index_counter_;
+	boost::mutex local_lock_;
 public :
 	dht_recv_file(
 		const miniDHT::digest_t& digest,

@@ -192,6 +192,7 @@ void dht_recv_file::check() {
 }
 
 void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
+	boost::mutex::scoped_lock lock_it(local_lock_);
 	std::list<miniDHT::data_item_proto>::const_iterator ite;
 	for (ite = b.begin(); ite != b.end(); ++ite) {
 		std::string key;
@@ -259,6 +260,8 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 }
 
 void dht_recv_file::run_once(boost::asio::deadline_timer* t) {
+	boost::mutex::scoped_lock lock_it(local_lock_);
+	assert(t != NULL);
 	std::map<size_t, download_state_t>::iterator ite;
 	ite = map_state_.begin();
 	for (int i = 0; i < 5; ++i) {

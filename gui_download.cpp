@@ -96,7 +96,7 @@ gui_download::~gui_download() {
 }
 
 bool gui_download::validate() const {
-	std::string s = this->get_key();
+	std::string s = std::string(this->get_key().mb_str());
 	static const boost::regex e("[A-Fa-f0-9]{64}");
 	return regex_match(s, e);
 }
