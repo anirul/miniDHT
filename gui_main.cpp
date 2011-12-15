@@ -124,13 +124,19 @@ bool gui_main::OnInit() {
 #ifdef __WXMAC__
 		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
-        if(!wxDirExists(temp_path_)) {
-            if(!wxMkdir(temp_path_, 0755))
-                std::cerr << "WARNING : failed to create directory " << temp_path_ << std::endl;
-            else
-                std::cout << "INFO : created directory " << temp_path_ << std::endl;
-        } else
-            std::cout << "INFO : data directory " << temp_path_ << std::endl;
+		if(!wxDirExists(temp_path_)) {
+			if(!wxMkdir(temp_path_, 0755)) {
+				std::cerr 
+					<< "WARNING : failed to create directory " 
+					<< temp_path_ << std::endl;
+			} else {
+				std::cout 
+					<< "INFO : created directory " 
+					<< temp_path_ << std::endl;
+			}
+		} else {
+			std::cout << "INFO : data directory " << temp_path_ << std::endl;
+		}
 #else
 		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPaths::Get().GetTempDir() + _T("/");
@@ -247,7 +253,14 @@ bool gui_main::OnInit() {
 	frame_->SetMenuBar(menubar);
 	frame_->Show();
 
-	gui_dht::instance(std::string(temp_path_.mb_str()))->start();
+	try {
+		gui_dht::instance(std::string(temp_path_.mb_str()))->start();
+	} catch (std::exception& ex) {
+		std::stringstream ss("Exception starting the DHT : ");
+		ss << ex.what();
+		wxMessageBox(_(ss.str().c_str()));
+		return false;
+	}
 
 #ifdef __WXMAC__
 	ProcessSerialNumber PSN;
@@ -421,19 +434,19 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 					list_ctrl_->SetItem(i, 3, data);	
 			}
 			{	// type (colour)
-//				const wxColour back_download = wxColour(0x00, 0x1f, 0x00);
-				const wxColour front_download = wxColour(0x00, 0xb3, 0x00);
+				const wxColour back_download = wxColour(0xaf, 0xff, 0xaf);
+				const wxColour front_download = wxColour(0x00, 0x7f, 0x00);
 				if (p->get_action_type() == GUI_ACTION_DOWNLOAD) {
-//					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
-//						list_ctrl_->SetItemBackgroundColour(i, back_download);
+					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
+						list_ctrl_->SetItemBackgroundColour(i, back_download);
 					if (list_ctrl_->GetItemTextColour(i) != front_download)
 						list_ctrl_->SetItemTextColour(i, front_download);
 				} 
-//				const wxColour back_upload = wxColour(0x00, 0x00, 0x1f);
-				const wxColour front_upload = wxColour(0x00, 0x00, 0xb3);
+				const wxColour back_upload = wxColour(0xaf, 0xaf, 0xff);
+				const wxColour front_upload = wxColour(0x00, 0x00, 0x7f);
 				if (p->get_action_type() == GUI_ACTION_UPLOAD) {
-//					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
-//						list_ctrl_->SetItemBackgroundColour(i, back_upload);
+					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
+						list_ctrl_->SetItemBackgroundColour(i, back_upload);
 					if (list_ctrl_->GetItemTextColour(i) != front_upload)
 						list_ctrl_->SetItemTextColour(i, front_upload);
 				}

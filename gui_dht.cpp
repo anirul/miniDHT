@@ -45,7 +45,7 @@ gui_dht* gui_dht::instance() {
 void gui_dht::release() {
 	if (instance_) {
 		instance_->stop();
-		delete instance_;
+//		delete instance_;
 		instance_ = NULL;
 	}
 }
