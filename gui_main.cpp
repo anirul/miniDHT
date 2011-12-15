@@ -422,7 +422,7 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 			}
 			{	// type (colour)
 //				const wxColour back_download = wxColour(0x00, 0x1f, 0x00);
-				const wxColour front_download = wxColour(0x00, 0xff, 0x00);
+				const wxColour front_download = wxColour(0x00, 0xb3, 0x00);
 				if (p->get_action_type() == GUI_ACTION_DOWNLOAD) {
 //					if (list_ctrl_->GetItemBackgroundColour(i) != back_download)
 //						list_ctrl_->SetItemBackgroundColour(i, back_download);
@@ -430,7 +430,7 @@ void gui_main::OnTimer(wxTimerEvent& evt) {
 						list_ctrl_->SetItemTextColour(i, front_download);
 				} 
 //				const wxColour back_upload = wxColour(0x00, 0x00, 0x1f);
-				const wxColour front_upload = wxColour(0x00, 0x00, 0xff);
+				const wxColour front_upload = wxColour(0x00, 0x00, 0xb3);
 				if (p->get_action_type() == GUI_ACTION_UPLOAD) {
 //					if (list_ctrl_->GetItemBackgroundColour(i) != back_upload)
 //						list_ctrl_->SetItemBackgroundColour(i, back_upload);
