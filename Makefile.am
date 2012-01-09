@@ -77,6 +77,7 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @BOOST_LIB_DIR@/libboost_program_options-mt.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @BOOST_LIB_DIR@/libboost_date_time-mt.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @BOOST_LIB_DIR@/libboost_filesystem-mt.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_regex-mt.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libprotobuf.7.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libSDL-1.2.0.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libiconv.2.dylib BitSmear.app/Contents/Frameworks/
@@ -84,7 +85,7 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @PORT_LIB_DIR@/libpng14.14.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libjpeg.8.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libtiff.3.dylib BitSmear.app/Contents/Frameworks/
-	cp -af @PORT_LIB_DIR@/libwx*2.9.2.0.0.dylib BitSmear.app/Contents/Frameworks
+	cp -af @PORT_LIB_DIR@/libwx*@WX_VERSION@.0.0.dylib BitSmear.app/Contents/Frameworks
 	./embed_macosxlib.sh BitSmear
 
 .PHONY: BitSmear.app

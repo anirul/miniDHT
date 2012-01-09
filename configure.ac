@@ -114,7 +114,7 @@ AC_CACHE_CHECK([whether to use WxWidgets],
 if test "x$ac_cv_use_wx" != xno 
 then
 	AM_OPTIONS_WXCONFIG
-	reqwx=2.9.0
+	reqwx=2.9.3
 	AM_PATH_WXCONFIG($reqwx, wxWin=yes)
 	if test x"$wxWin" != xyes
 	then

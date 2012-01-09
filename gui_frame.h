@@ -29,7 +29,7 @@
 #define MINIDHT_GUI_FRAME_HEADER_DEFINED
 #include <wx/wx.h>
 
-class gui_frame : public wxFrame
+class gui_frame : public wxNavigationEnabled<wxFrame>
 {
 public:
     gui_frame(wxWindow* parent, 
