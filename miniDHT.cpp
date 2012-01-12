@@ -245,9 +245,9 @@ namespace miniDHT {
 						itc->second.time());
 				if (td > tRefresh) {
 					send_PING_nolock(itc->second.ep());
+					db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
-					db_backup.remove(itc->second.key());
 				} else {
 					std::string key = itc->second.key();
 					std::string endpoint = endpoint_to_string(itc->second.ep());
@@ -286,6 +286,10 @@ namespace miniDHT {
 				if (time_elapsed > boost::posix_time::seconds(ite->ttl)) {
 					// data is no more valid
 					boost::mutex::scoped_lock lock_it(giant_lock_);
+					{
+						std::cout << "purge : " << ite->key << std::endl;
+						std::cout << "\t" << ite->title << std::endl;
+					}
 					db_storage.remove(ite->key, ite->title);
 				} else {
 					// republish
