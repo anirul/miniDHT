@@ -120,7 +120,7 @@ namespace miniDHT {
 		bucket_iterator ite = contact_list.begin();
 		for (; ite != contact_list.end(); ++ite) {
 			unsigned int new_bucket = ite->first;
-			assert((ite->first) ? ite->first > last_bucket : true);
+			assert((ite->first) ? ite->first >= last_bucket : true);
 			last_bucket = ite->first;
 			ls.push_back(ite->second);
 		}
@@ -286,10 +286,6 @@ namespace miniDHT {
 				if (time_elapsed > boost::posix_time::seconds(ite->ttl)) {
 					// data is no more valid
 					boost::mutex::scoped_lock lock_it(giant_lock_);
-					{
-						std::cout << "purge : " << ite->key << std::endl;
-						std::cout << "\t" << ite->title << std::endl;
-					}
 					db_storage.remove(ite->key, ite->title);
 				} else {
 					// republish
