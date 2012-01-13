@@ -89,9 +89,12 @@ namespace miniDHT {
 			assert(c.ep().address() != std::string(""));
 			assert(c.ep().port() != std::string(""));
 			// check if the IP is not already in
-			for (iterator ite = this->begin(); ite != this->end(); ++ite)
-				if (ite->second.ep() == ep)
+			for (iterator ite = this->begin(); ite != this->end(); ++ite) {
+				if (ite->second.ep() == ep) {
 					this->erase(ite);
+					break;
+				}
+			}
 			// insert 
 			c.set_time(to_time_t(now_));
 			std::pair<unsigned int, contact_proto> p(common, c);
