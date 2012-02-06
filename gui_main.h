@@ -39,6 +39,7 @@ class gui_main : public wxApp {
 	wxString title_;
 	wxString temp_path_;
 	wxString ressources_path_;
+	wxString download_path_;
 	wxTimer timer_;
 public:
 	DECLARE_EVENT_TABLE()
@@ -59,3 +60,4 @@ public:
 };
 
 #endif // MINIDHT_GUI_MAIN_HEADER_DEFINED
+

@@ -64,7 +64,7 @@ namespace miniDHT {
 	const unsigned int BUCKET_SIZE = 5;
 	// call back for clean up (minutes) this is also used as a timeout
 	// for the contact list (node list).
-	const size_t PERIODIC = 30;
+	const size_t PERIODIC = 5;
 	// maximum size of a packet (1MB)
 	const size_t PACKET_SIZE = 1024 * 1024;
 		

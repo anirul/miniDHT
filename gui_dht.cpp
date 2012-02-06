@@ -89,8 +89,11 @@ void gui_dht::start_upload(const std::string& file) {
 	list_action_.push_back(dynamic_cast<gui_action*>(p));
 }
 
-void gui_dht::start_download(const miniDHT::digest_t& digest) {
-	dht_recv_file* p = new dht_recv_file(digest, mini_dht_);
+void gui_dht::start_download(
+	const miniDHT::digest_t& digest, 
+	const std::string& path) 
+{
+	dht_recv_file* p = new dht_recv_file(digest, mini_dht_, path);
 	boost::asio::deadline_timer* t = new boost::asio::deadline_timer(
 		io_service_,
 		boost::posix_time::seconds(1));

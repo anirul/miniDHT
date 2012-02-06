@@ -124,6 +124,7 @@ bool gui_main::OnInit() {
 #ifdef __WXMAC__
 		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
+		download_path_ = _T("./");
 		if(!wxDirExists(temp_path_)) {
 			if(!wxMkdir(temp_path_, 0755)) {
 				std::cerr 
@@ -140,6 +141,7 @@ bool gui_main::OnInit() {
 #else
 		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPaths::Get().GetTempDir() + _T("/");
+		download_path_ = _T("./");
 #endif // __WXMAC__
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
@@ -319,7 +321,7 @@ void gui_main::OnDownload(wxCommandEvent& evt) {
 			std::string s = std::string(dialog.get_key().mb_str());
 			std::stringstream ss(s);
 			ss >> digest;
-			gui_dht::instance()->start_download(digest);
+			gui_dht::instance()->start_download(digest, download_path_);
 			return;
 		}
 	}

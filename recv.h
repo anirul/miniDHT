@@ -48,6 +48,7 @@ private :
 	bool stop_;
 	miniDHT::miniDHT* pDht_;
 	miniDHT::digest_t digest_;
+	std::string path_;
 	std::map<size_t, download_state_t> map_state_;
 	std::map<size_t, std::string> map_load_;
 	std::map<size_t, std::string> map_crypt_;
@@ -57,7 +58,8 @@ private :
 public :
 	dht_recv_file(
 		const miniDHT::digest_t& digest,
-		miniDHT::miniDHT* pDht);
+		miniDHT::miniDHT* pDht,
+		const std::string& path = std::string("./"));
 	~dht_recv_file();
 protected :
 	void download(size_t index);

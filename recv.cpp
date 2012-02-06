@@ -69,12 +69,14 @@ std::string dht_recv_file::decode(
 
 dht_recv_file::dht_recv_file(
 	const miniDHT::digest_t& digest,
-	miniDHT::miniDHT* pDht)
+	miniDHT::miniDHT* pDht,
+	const std::string& path)
 {
 	ofile_ = NULL;
 	pDht_ = pDht;
 	end_ = false;
 	stop_ = false;
+	path_ = path;
 	packet_total_ = 0;
 	packet_loaded_ = 0;
 	total_size_ = 0;	
@@ -156,8 +158,10 @@ void dht_recv_file::decrypt(size_t index) {
 }
 
 void dht_recv_file::write(size_t index) {
-	if (!ofile_) ofile_ = fopen(file_name_.c_str(), "wb");
-	if (!ofile_) throw std::runtime_error("Invalid file cannot write.");
+	if (!ofile_) 
+		ofile_ = fopen((path_ + file_name_).c_str(), "wb");
+	if (!ofile_) 
+		throw std::runtime_error("Invalid file cannot write.");
 	fseeko(ofile_, (index * buf_size), SEEK_SET);
 	std::string buffer = map_crypt_[index];
 	fwrite(&buffer[0], 1, buffer.size(), ofile_);

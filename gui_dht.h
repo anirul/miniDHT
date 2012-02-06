@@ -56,7 +56,9 @@ public : // general DHT stuff
 	std::list<miniDHT::contact_proto> status();
 public : // action related
 	void start_upload(const std::string& file);
-	void start_download(const miniDHT::digest_t& digest);
+	void start_download(
+		const miniDHT::digest_t& digest, 
+		const std::string& path = std::string("."));
 	bool stop_action(gui_action* p_action);
 	std::list<gui_action*> get_action_list();	
 };
