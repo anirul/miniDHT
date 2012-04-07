@@ -74,7 +74,14 @@ namespace miniDHT {
             }
         }
         else {
-            rc = sqlite3_open_v2(file_name_.c_str(), &db_, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL);
+            rc = sqlite3_open_v2(
+					file_name_.c_str(), 
+					&db_, 
+					SQLITE_OPEN_READWRITE | 
+					SQLITE_OPEN_CREATE | 
+					SQLITE_OPEN_FULLMUTEX | 
+					SQLITE_OPEN_SHAREDCACHE, 
+					NULL);
             if (rc) {
                 std::stringstream error("");
                 error << "Can't open database (full mutex, err = " << rc << " : ";
@@ -104,7 +111,14 @@ namespace miniDHT {
             }
         }
         else {
-            rc = sqlite3_open_v2(file_name_.c_str(), &db_, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_SHAREDCACHE, NULL);
+            rc = sqlite3_open_v2(
+					file_name_.c_str(), 
+					&db_, 
+					SQLITE_OPEN_READWRITE | 
+					SQLITE_OPEN_CREATE | 
+					SQLITE_OPEN_FULLMUTEX | 
+					SQLITE_OPEN_SHAREDCACHE, 
+					NULL);
             if (rc) {
                 std::stringstream error("");
                 error << "Can't open database (full mutex, err = " << rc << " : ";
@@ -521,7 +535,7 @@ namespace miniDHT {
 
 	size_t db_key_value::size() {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if(need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -548,7 +562,7 @@ namespace miniDHT {
 
 	size_t db_multi_key_data::count(const std::string& key) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if(need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
