@@ -114,7 +114,7 @@ namespace miniDHT {
 	}
 
 	std::list<contact_proto> miniDHT::nodes_description() {
-		boost::mutex::scoped_lock lock_it(giant_lock_);
+//		boost::mutex::scoped_lock lock_it(giant_lock_);
 		std::list<contact_proto> ls;
 		unsigned int last_bucket = 0;
 		bucket_iterator ite = contact_list.begin();

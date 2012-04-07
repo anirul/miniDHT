@@ -158,10 +158,12 @@ void dht_recv_file::decrypt(size_t index) {
 }
 
 void dht_recv_file::write(size_t index) {
+	std::string full_path = path_ + file_name_;
 	if (!ofile_) 
-		ofile_ = fopen((path_ + file_name_).c_str(), "wb");
+		ofile_ = fopen(full_path.c_str(), "wb");
 	if (!ofile_) 
-		throw std::runtime_error("Invalid file cannot write.");
+		throw std::runtime_error(
+			full_path + std::string(" is an invalid file, cannot write."));
 	fseeko(ofile_, (index * buf_size), SEEK_SET);
 	std::string buffer = map_crypt_[index];
 	fwrite(&buffer[0], 1, buffer.size(), ofile_);
@@ -189,7 +191,9 @@ void dht_recv_file::check() {
 	std::cout << "got  digest  [" << new_digest << "]" << std::endl;
 #endif
 	if (new_digest == digest_) {
+#ifdef RECV_MAIN_TEST
 		std::cout << "check ok!" << std::endl;
+#endif
 	} else {
 		std::cerr << "DIGEST MISSMATCH!" << std::endl;
 	}
