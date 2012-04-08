@@ -29,11 +29,16 @@
 #include <wx/listctrl.h>
 #include "gui_list_ctrl.h"
 #include "gui_dht.h"
+#include "gui_settings.h"
 
 using namespace miniDHT;
 
 #ifdef __WXMAC__
     #include <Carbon/Carbon.h>
+#endif
+
+#ifdef __WXGTK__
+#include <unistd.h>
 #endif
 
 DEFINE_EVENT_TYPE(wxID_LIST_CTRL)
@@ -110,24 +115,12 @@ void gui_list_ctrl::OnActivated(wxListEvent& event) {
     if(!p)
         return;
     
-#ifdef __WXMAC__
-    FSRef fsRef;
-
-    ProcessSerialNumber psn = { 0, kCurrentProcess };
-    OSStatus err = GetProcessBundleLocation(&psn, &fsRef);
-    if(err != noErr) {
-        char msg[128];
-        sprintf(msg, "get process bundle returned error : %ld", (long)err);
-        wxMessageBox(_(msg));
-        return;
-    }
     
-    CFURLRef url = CFURLCreateFromFSRef(kCFAllocatorDefault, &fsRef);
-    
-    std::string absolutPath(CFStringGetCStringPtr(CFURLCopyPath(url), CFStringGetSystemEncoding()));
-    absolutPath.append("../");
+    gui_settings* settings = gui_settings::getInstance();
+    std::string absolutPath = settings->getSetting(gui_settings::DOWNLOAD_PATH);
     absolutPath.append(p->get_filename());
     
+#ifdef __WXMAC__
     CFStringRef filename = CFStringCreateWithCString (
                                            kCFAllocatorDefault,
                                            absolutPath.c_str(),
@@ -142,7 +135,7 @@ void gui_list_ctrl::OnActivated(wxListEvent& event) {
     CFURLGetFSRef(urlFile, &fileRef);
     FSRef fileApp;
     
-    err = LSOpenFSRef(&fileRef, &fileApp);
+    OSStatus err = LSOpenFSRef(&fileRef, &fileApp);
     if(err != noErr) {
         char msg[128];
         sprintf(msg, "open URL returned error : %ld\n%s", (long)err, CFStringGetCStringPtr(CFURLCopyPath(urlFile), CFStringGetSystemEncoding()));
@@ -150,6 +143,22 @@ void gui_list_ctrl::OnActivated(wxListEvent& event) {
         return;
     }
     CFURLRef urlApp = CFURLCreateFromFSRef(kCFAllocatorDefault, &fileApp);
+#elif __WXGTK__
+    
+    pid_t pID = fork();
+    if (pID == 0)                // child
+    {
+        // Code only executed by child process
+        execl("/usr/bin/xdg-open", "/usr/bin/xdg-open", absolutPath.c_str());
+    }
+    else if (pID < 0)            // failed to fork
+    {
+        char msg[256];
+        sprintf(msg, "Failed to open file : %s", absolutPath.c_str());
+        wxMessageBox(_(msg));
+        return;
+    }
+    
 #endif
 }
 

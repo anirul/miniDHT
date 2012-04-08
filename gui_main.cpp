@@ -43,6 +43,7 @@
 #include "gui_network_status.h"
 #include "gui_list_ctrl.h"
 #include "gui_drop.h"
+#include "gui_settings.h"
 #include "gui_dht.h"
  
 IMPLEMENT_APP(gui_main)
@@ -123,28 +124,10 @@ bool gui_main::OnInit() {
 		menubar->Append(tool_menu, _("Tools"));
 	}
 	{	// set some path related stuff
-#ifdef __WXMAC__
-		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
-		temp_path_ = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
-		download_path_ = wxStandardPathsCF::Get().GetDocumentsDir() + _T("/");
-		if(!wxDirExists(temp_path_)) {
-			if(!wxMkdir(temp_path_, 0755)) {
-				std::cerr 
-					<< "WARNING : failed to create directory " 
-					<< temp_path_ << std::endl;
-			} else {
-				std::cout 
-					<< "INFO : created directory " 
-					<< temp_path_ << std::endl;
-			}
-		} else {
-			std::cout << "INFO : data directory " << temp_path_ << std::endl;
-		}
-#else
-		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _T("/");
-		temp_path_ = wxStandardPaths::Get().GetTempDir() + _T("/");
-		download_path_ = wxStandardPaths::Get().GetDocumentsDir() + _T("/");
-#endif // __WXMAC__
+        gui_settings* settings = gui_settings::getInstance();
+        ressources_path_ = settings->getSetting(gui_settings::RESSOURCES_PATH);
+        temp_path_ = settings->getSetting(gui_settings::TEMPFILE_PATH);
+        download_path_ = settings->getSetting(gui_settings::DOWNLOAD_PATH);
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	if (!wxDirExists(ressources_path_)) {
@@ -247,7 +230,7 @@ bool gui_main::OnInit() {
 		list_ctrl_->SetColumnWidth(2, 100);
 		list_ctrl_->InsertColumn(3, _("File"));
 		list_ctrl_->SetColumnWidth(3, 250);
-        list_ctrl_->SetDropTarget(new gui_drop::gui_drop(boost::bind(&gui_main::OnDropFiles, this, _1)));
+        list_ctrl_->SetDropTarget(new gui_drop(boost::bind(&gui_main::OnDropFiles, this, _1)));
 	}
 
 	frame_->Centre();
@@ -386,11 +369,16 @@ void gui_main::MacOpenURL (const wxString& url) {
 #endif // __WXMAC__
 
 bool gui_main::OnDropFiles(const wxArrayString& filenames) {
-    for (int i = 0, n = filenames.GetCount(); i < n; i++) {
+    int nbFilesAccepted = 0;
+    int nbFiles = filenames.GetCount();
+    for (int i = 0; i < nbFiles; i++) {
+        if(wxDirExists(wxString(filenames[i].c_str())))
+            continue;
         gui_dht::instance()->start_upload(std::string(filenames[i].c_str()));
+        nbFilesAccepted++;
     }
     
-    return true; // can return false to 'fail' the drop
+    return (nbFilesAccepted==nbFiles); // can return false to 'fail' the drop
 }
 
 void gui_main::OnTimer(wxTimerEvent& evt) {
