@@ -25,6 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef SEND_MAIN_TEST
+#include <wx/wx.h>
+#endif
+
 #include <boost/program_options.hpp>
 
 #include <openssl/sha.h>
@@ -194,12 +198,27 @@ void dht_send_file::found(const std::list<miniDHT::data_item_proto>& b) {
 			// should not happen (make it faster not to check)
 			std::string from = map_crypt_[index];
 			std::string to = ite->data();
-			if (from.size() != to.size())
+			if (from.size() != to.size()) {
+#ifdef SEND_MAIN_TEST
 				throw std::runtime_error("Check error (size missmatch)");
+#else
+				wxMessageBox(_("send exception : Check error (size missmatch)"));
+				stop_ = true;
+				end_ = true;
+				continue;
+#endif
+			}
 			if (map_crypt_[index] != ite->data()) {
 				if (map_state_[index] != CHECKED)
 					map_state_[index] = CRYPTED;
+#ifdef SEND_MAIN_TEST
 				throw std::runtime_error("Check error (content missmatch)");
+#else
+				wxMessageBox(_("send exception : Check error (content missmatch)"));
+				stop_ = true;
+				end_ = true;
+				continue;
+#endif
 			}
 			// cleanup
 #ifdef SEND_MAIN_TEST
@@ -234,39 +253,50 @@ void dht_send_file::received(size_t index) {
 }
 
 void dht_send_file::run_once(boost::asio::deadline_timer* t) {
-	std::map<size_t, upload_state_t>::iterator ite;
-	ite = map_state_.begin();
-	for (int i = 0; i < 5; ++i) {
-		while ((ite != map_state_.end()) && (ite->second == CHECKED))
-			++ite;
-		if (ite == map_state_.end()) {
-			if (i == 0) {
-				end_ = true;
-				return;
+	try {
+		std::map<size_t, upload_state_t>::iterator ite;
+		ite = map_state_.begin();
+		for (int i = 0; i < 5; ++i) {
+			while ((ite != map_state_.end()) && (ite->second == CHECKED))
+				++ite;
+			if (ite == map_state_.end()) {
+				if (i == 0) {
+					end_ = true;
+					return;
+				}
+				break;
 			}
-			break;
+			switch (ite->second) {
+				case WAIT :
+					load(ite->first);
+					++ite;
+					break;
+				case LOADED :
+					crypt(ite->first);
+					++ite;
+					break;
+				case CRYPTED :
+					upload(ite->first);
+					++ite;
+					break;
+				case UPLOADED :
+					received(ite->first);
+					++ite;
+					break;
+				default :
+					++ite;
+					break;
+			}
 		}
-		switch (ite->second) {
-			case WAIT :
-				load(ite->first);
-				++ite;
-				break;
-			case LOADED :
-				crypt(ite->first);
-				++ite;
-				break;
-			case CRYPTED :
-				upload(ite->first);
-				++ite;
-				break;
-			case UPLOADED :
-				received(ite->first);
-				++ite;
-				break;
-			default :
-				++ite;
-				break;
-		}
+	} catch (std::exception& e) {
+#ifdef SEND_MAIN_TEST
+		throw e;
+#else
+		stop_ = true;
+		end_ = true;
+		wxMessageBox(
+			_((std::string("send exception : ") + e.what()).c_str()));
+#endif
 	}
 	if (!stop_) {
 		boost::posix_time::ptime now(

@@ -189,12 +189,7 @@ void dht_recv_file::check() {
 	ofile_ = NULL;
 	miniDHT::digest_t new_digest;
 	if (miniDHT::digest_file(new_digest, (path_ + file_name_).c_str()))
-#ifdef RECV_MAIN_TEST
 		throw std::runtime_error("Could not open file");
-#else
-		wxMessageBox(
-			_("download error, digest missmatch, file may be corrupted!"));
-#endif
 #ifdef RECV_MAIN_TEST
 	std::cout << "asked digest [" << digest_ << "]" << std::endl;
 	std::cout << "got  digest  [" << new_digest << "]" << std::endl;
@@ -223,13 +218,29 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 		size_t packet_number;
 		size_t packet_total;
 		std::string decrypted_title = decode(key, hex_to_string(title));
-		if (!decrypted_title.size()) 
+		if (!decrypted_title.size()) {
+#ifdef RECV_MAIN_TEST
 			throw std::runtime_error("unable to decode title");
+#else
+			wxMessageBox(_("recv exception : unable to decode title"));
+			stop_ = true;
+			end_ = true;
+			continue;
+#endif
+		}
 		{
 			std::stringstream ss(decrypted_title);
 			ss >> title_string_id;
-			if (title_string_id != key) 
+			if (title_string_id != key) {
+#ifdef RECV_MAIN_TEST
 				throw std::runtime_error("incorrect packet");
+#else
+				wxMessageBox(_("recv exception : incorrect packet"));
+				stop_ = true;
+				end_ = true;
+				continue;
+#endif
+			}
 			ss >> packet_number;
 			ss >> packet_total;
 			size_t pos = 0;
@@ -278,41 +289,52 @@ void dht_recv_file::found(const std::list<miniDHT::data_item_proto>& b) {
 
 void dht_recv_file::run_once(boost::asio::deadline_timer* t) {
 	boost::mutex::scoped_lock lock_it(local_lock_);
-	assert(t != NULL);
-	std::map<size_t, download_state_t>::iterator ite;
-	ite = map_state_.begin();
-	for (int i = 0; i < 5; ++i) {
-		while ((ite != map_state_.end()) && (ite->second == WRITTEN))
-			++ite;
-		if (ite == map_state_.end()) {
-			if (i == 0) {
-				end_ = true;
-				check();
-				return;
+	try {
+		assert(t != NULL);
+		std::map<size_t, download_state_t>::iterator ite;
+		ite = map_state_.begin();
+		for (int i = 0; i < 5; ++i) {
+			while ((ite != map_state_.end()) && (ite->second == WRITTEN))
+				++ite;
+			if (ite == map_state_.end()) {
+				if (i == 0) {
+					end_ = true;
+					check();
+					return;
+				}
+				break;
 			}
-			break;
+			switch (ite->second) {
+				case WAIT :
+					download(ite->first);
+					++ite;
+					break;
+				case ASKED :
+					received(ite->first);
+					++ite;
+					break;
+				case DOWNLOADED :
+					decrypt(ite->first);
+					++ite;
+					break;
+				case DECRYPTED :
+					write(ite->first);
+					++ite;
+					break;
+				default :
+					++ite;
+					break;
+			}
 		}
-		switch (ite->second) {
-			case WAIT :
-				download(ite->first);
-				++ite;
-				break;
-			case ASKED :
-				received(ite->first);
-				++ite;
-				break;
-			case DOWNLOADED :
-				decrypt(ite->first);
-				++ite;
-				break;
-			case DECRYPTED :
-				write(ite->first);
-				++ite;
-				break;
-			default :
-				++ite;
-				break;
-		}
+	} catch (std::exception& e) {
+#ifdef RECV_MAIN_TEST
+		throw e;
+#else
+		stop_ = true;
+		end_ = true;
+		wxMessageBox(
+			_((std::string("recv exception : ") + e.what()).c_str()));
+#endif
 	}
 	if (!stop_) {
 		boost::posix_time::ptime now(
