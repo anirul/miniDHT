@@ -328,7 +328,6 @@ void gui_main::OnDownload(wxCommandEvent& evt) {
 
 void gui_main::OnAbout(wxCommandEvent& evt) {
 	// create the about dialog
-	wxMessageBox(_("TODO : Here are About."));
 	gui_about dialog;
 	dialog.ShowModal();
 }
