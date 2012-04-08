@@ -25,6 +25,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef RECV_MAIN_TEST
+#include <wx/wx.h>
+#endif
+
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
@@ -185,7 +189,12 @@ void dht_recv_file::check() {
 	ofile_ = NULL;
 	miniDHT::digest_t new_digest;
 	if (miniDHT::digest_file(new_digest, (path_ + file_name_).c_str()))
+#ifdef RECV_MAIN_TEST
 		throw std::runtime_error("Could not open file");
+#else
+		wxMessageBox(
+			_("download error, digest missmatch, file may be corrupted!"));
+#endif
 #ifdef RECV_MAIN_TEST
 	std::cout << "asked digest [" << digest_ << "]" << std::endl;
 	std::cout << "got  digest  [" << new_digest << "]" << std::endl;
