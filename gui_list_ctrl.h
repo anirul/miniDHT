@@ -28,6 +28,8 @@
 #ifndef MINIDHT_GUI_LIST_CTRL_HEADER_DEFINED
 #define MINIDHT_GUI_LIST_CTRL_HEADER_DEFINED
 
+#include "gui_frame.h"
+
 DECLARE_EVENT_TYPE(wxID_LIST_CTRL, wxID_HIGHEST + 20)
 
 class gui_list_ctrl : public wxListCtrl {
@@ -45,10 +47,12 @@ public :
 		: 	wxListCtrl(parent, id, pos, size, style),
 			updated_(-1),
 			selected_(-1),
-			attr_(*wxBLUE, *wxLIGHT_GREY, wxNullFont)
-		{}
+			attr_(*wxBLUE, *wxLIGHT_GREY, wxNullFont) { }
+    //void OnDropFiles(wxDropFilesEvent& event);
+    void OnDrag(wxListEvent &event);
 	void OnSelected(wxListEvent& event);
 	void OnDeselected(wxListEvent& event);
+    void OnActivated(wxListEvent& event);
 	long get_selected() const { return selected_; }
 private :
 	wxDECLARE_NO_COPY_CLASS(gui_list_ctrl);

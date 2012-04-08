@@ -29,8 +29,7 @@
 #define MINIDHT_GUI_MAIN_HEADER_DEFINED
 
 #include "gui_frame.h"
-
-class gui_list_ctrl;
+#include "gui_list_ctrl.h"
 
 class gui_main : public wxApp {
 	bool OnInit();
@@ -54,8 +53,10 @@ public:
 	void OnNetworkStatus(wxCommandEvent& evt);
 	void OnClose(wxCloseEvent& evt);
 	void OnTimer(wxTimerEvent& evt);
+    bool OnDropFiles(const wxArrayString& filenames);
 #ifdef __WXMAC__
-	void MacOpenFile(const wxString& fileName);
+    void MacOpenURL (const wxString& url);
+    void MacOpenFiles(const wxArrayString& fileNames);
 #endif // __WXMAC__
 };
 

@@ -30,7 +30,11 @@
 
 BEGIN_EVENT_TABLE(gui_frame, wxFrame)
 EVT_CLOSE(gui_frame::onClose)
+//EVT_DROP_FILES(gui_frame::OnDropFiles)
 END_EVENT_TABLE()
+
+
+
 
 gui_frame::gui_frame(wxWindow* parent, wxWindowID id, 
                  const wxString& title, const wxPoint& pos, 
@@ -38,8 +42,17 @@ gui_frame::gui_frame(wxWindow* parent, wxWindowID id,
                  const wxString& name) {
 
     wxFrame::Create(parent, id,  title, pos, size, style, name);
+    DragAcceptFiles(true);
+    //SetDropTarget(new gui_drop());
 
 }
+
+//void gui_frame::OnDropFiles(wxDropFilesEvent& event) {
+//    wxString* files = event.GetFiles();
+//    for (int i = 0, n = event.GetNumberOfFiles(); i < n; i++) {
+//        wxMessageBox(_("FRAME Drop file (") + files[i] + _(")"));
+//    }
+//}
 
 void gui_frame::onClose(wxCloseEvent& evt)
 {

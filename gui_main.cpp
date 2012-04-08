@@ -42,6 +42,7 @@
 #include "gui_info.h"
 #include "gui_network_status.h"
 #include "gui_list_ctrl.h"
+#include "gui_drop.h"
 #include "gui_dht.h"
  
 IMPLEMENT_APP(gui_main)
@@ -246,6 +247,7 @@ bool gui_main::OnInit() {
 		list_ctrl_->SetColumnWidth(2, 100);
 		list_ctrl_->InsertColumn(3, _("File"));
 		list_ctrl_->SetColumnWidth(3, 250);
+        list_ctrl_->SetDropTarget(new gui_drop::gui_drop(boost::bind(&gui_main::OnDropFiles, this, _1)));
 	}
 
 	frame_->Centre();
@@ -318,7 +320,7 @@ void gui_main::OnDownload(wxCommandEvent& evt) {
 			std::string s = std::string(dialog.get_key().mb_str());
 			std::stringstream ss(s);
 			ss >> digest;
-			gui_dht::instance()->start_download(digest, download_path_);
+			gui_dht::instance()->start_download(digest, std::string(download_path_.c_str()));
 			return;
 		}
 	}
@@ -375,10 +377,22 @@ void gui_main::OnQuit(wxCommandEvent& evt) {
 }
 
 #ifdef __WXMAC__
-void gui_main::MacOpenFile(const wxString& filename) {
-	wxMessageBox(_("MacOpenFile(") + filename + _(")"));
+void gui_main::MacOpenFiles(const wxArrayString& filenames) {
+    OnDropFiles(filenames);
+}
+
+void gui_main::MacOpenURL (const wxString& url) {
+    wxMessageBox(_("MacOpenURL(") + url + _(")"));
 }
 #endif // __WXMAC__
+
+bool gui_main::OnDropFiles(const wxArrayString& filenames) {
+    for (int i = 0, n = filenames.GetCount(); i < n; i++) {
+        gui_dht::instance()->start_upload(std::string(filenames[i].c_str()));
+    }
+    
+    return true; // can return false to 'fail' the drop
+}
 
 void gui_main::OnTimer(wxTimerEvent& evt) {
 	{

@@ -14,13 +14,39 @@
 	<key>CFBundleName</key>                    <string>BitSmear</string>
 	<key>CFBundleIconFile</key>                <string>BitSmear.icns</string>
 		
-	<key>CFBundleDocumentTypes</key> <array>
+	<key>CFBundleURLTypes</key>
+	<array>
 		<dict>
-			<key>CFBundleTypeRole</key>          <string>Viewer</string>
-			<key>LSIsAppleDefaultForType</key>   <true/>
-			<key>LSTypeIsPackage</key>           <false/>
+			<key>CFBundleURLName</key>
+			<string>BitSmear Magnet URL</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>bitsmear</string>
+				<string>magnet</string>
+			</array>
 		</dict>
-	</array>	
+	</array>
+			
+	<key>CFBundleDocumentTypes</key> 
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>*</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>All documents</string>
+			<key>CFBundleTypeOSTypes</key>
+			<array>
+				<string>****</string>
+			</array>
+			<key>CFBundleTypeRole</key>
+			<string>None</string>
+			<key>LSTypeIsPackage</key>
+			<false/>
+		</dict>	
+	</array>
+	
 	<key>LSArchitecturePriority</key>
 	<array>
 		<string>x86_64</string>

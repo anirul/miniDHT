@@ -28,6 +28,7 @@
 #ifndef MINIDHT_GUI_FRAME_HEADER_DEFINED
 #define MINIDHT_GUI_FRAME_HEADER_DEFINED
 #include <wx/wx.h>
+#include <wx/dnd.h>
 
 class gui_frame : public wxNavigationEnabled<wxFrame>
 {
@@ -40,6 +41,7 @@ public:
             long style = wxDEFAULT_FRAME_STYLE, 
             const wxString& name = "frame");
     void onClose(wxCloseEvent& evt);
+    //void OnDropFiles(wxDropFilesEvent& event);
     DECLARE_EVENT_TABLE()
 };
 
