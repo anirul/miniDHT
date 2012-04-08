@@ -82,7 +82,7 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @PORT_LIB_DIR@/libprotobuf.7.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libSDL-1.2.0.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libiconv.2.dylib BitSmear.app/Contents/Frameworks/
-	cp -af @PORT_LIB_DIR@/libexpat.1.5.2.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @PORT_LIB_DIR@/libexpat.1.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libpng14.14.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libjpeg.8.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libtiff.3.dylib BitSmear.app/Contents/Frameworks/

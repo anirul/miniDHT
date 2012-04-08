@@ -184,7 +184,7 @@ void dht_recv_file::check() {
 	if (ofile_) fclose(ofile_);
 	ofile_ = NULL;
 	miniDHT::digest_t new_digest;
-	if (miniDHT::digest_file(new_digest, file_name_.c_str()))
+	if (miniDHT::digest_file(new_digest, (path_ + file_name_).c_str()))
 		throw std::runtime_error("Could not open file");
 #ifdef RECV_MAIN_TEST
 	std::cout << "asked digest [" << digest_ << "]" << std::endl;
