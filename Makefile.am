@@ -44,7 +44,7 @@ miniDHT_proto.pb.cc: miniDHT_proto.proto
 
 if USE_WX
 bin_PROGRAMS += BitSmear
-BitSmear_SOURCES = gui_main.cpp gui_main.h gui_network_status.h gui_network_status.cpp gui_info.h gui_info.cpp gui_frame.h gui_frame.cpp gui_connect.h gui_connect.cpp gui_dht.h gui_dht.cpp gui_list_ctrl.h gui_list_ctrl.cpp gui_download.h gui_download.cpp send.h send.cpp recv.h recv.cpp miniDHT.h
+BitSmear_SOURCES = gui_main.cpp gui_main.h gui_network_status.h gui_network_status.cpp gui_info.h gui_info.cpp gui_frame.h gui_frame.cpp gui_connect.h gui_connect.cpp gui_dht.h gui_dht.cpp gui_list_ctrl.h gui_list_ctrl.cpp gui_download.h gui_download.cpp send.h send.cpp recv.h recv.cpp miniDHT.h gui_about.h gui_about.cpp
 BitSmear_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
 BitSmear_LDADD = libminiDHT-1.0.la
 
@@ -67,6 +67,7 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -f Knob\ Info.png BitSmear.app/Contents/Resources
 	cp -f Knob\ Cancel.png BitSmear.app/Contents/Resources
 	cp -f Knob\ Grey.png BitSmear.app/Contents/Resources
+	cp -f BitSmearIconCartoon.icns BitSmear.app/Contents/Resources/BitSmear.icns
 	echo -n 'APPL????' > BitSmear.app/Contents/PkgInfo
 	cp -f BitSmear BitSmear.app/Contents/MacOS/BitSmear
 	cp -f miniDHT_server BitSmear.app/Contents/MacOS/

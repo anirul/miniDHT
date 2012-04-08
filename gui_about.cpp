@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Frederic DUBOUCHET
+ * Copyright (c) 2012, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,82 +26,52 @@
  */
 
 #include <wx/wx.h>
-#include <boost/regex.hpp>
-#include "gui_download.h"
+#include <wx/stattext.h>
+#include "gui_about.h"
 
-gui_download::gui_download(const wxString& title) 
-	:	wxDialog(
-			NULL, 
-			wxID_ANY, 
-			title, 
-			wxDefaultPosition, 
-			wxSize(650, 170), 
-			wxSTAY_ON_TOP | wxCAPTION),
-		key_ctrl_(NULL),
-		panel_(NULL),
-		vbox_(NULL),
-		hbox_(NULL),
-		title_(title)
+gui_about::gui_about(const wxString& title) 
+	: 	title_(title),
+		wxDialog(
+			NULL,
+			wxID_ANY,
+			title,
+			wxDefaultPosition,
+			wxSize(250, 170),
+			wxSTAY_ON_TOP | wxCAPTION)
 {
-	panel_ = new wxPanel(this, -1);
+	wxPanel* panel = new wxPanel(this, -1);
 
-	vbox_ = new wxBoxSizer(wxVERTICAL);
-	hbox_ = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* vbox = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* hbox = new wxBoxSizer(wxHORIZONTAL);
 
-	wxStaticText *st1 = new wxStaticText(
-		panel_,
+	wxStaticText* sttitle = new wxStaticText(
+		panel,
 		wxID_ANY,
-		_("Key [A-Fa-f0-9]{64}"),
-		wxPoint(15, 20));
-	key_ctrl_ = new wxTextCtrl(
-		panel_, 
-		wxID_ANY, 
-		_("00000000000000000000"\
-		"00000000000000000000"\
-		"00000000000000000000"\
-		"0000"), 
-		wxPoint(15, 50),
-		wxSize(600, 20));
-	key_ctrl_->SetMaxLength(64);
+		_("BitSmear"),
+		wxPoint(15, 20),
+		wxDefaultSize,
+		wxALIGN_CENTRE);
+	// TODO add the greetings
 
-	wxButton *okButton = new wxButton(
-		this, 
-		wxID_OK, 
-		_("Ok"), 
-      wxDefaultPosition, 
-		wxSize(70, 30));
-	wxButton *closeButton = new wxButton(
-		this, 
-		wxID_CANCEL, 
-		_("Cancel"), 
-		wxDefaultPosition, 
+	wxButton* okButton = new wxButton(
+		this,
+		wxID_OK,
+		_("Ok"),
+		wxDefaultPosition,
 		wxSize(70, 30));
 
-	hbox_->Add(okButton, 1);
-	hbox_->Add(closeButton, 1, wxLEFT, 5);
+	hbox->Add(okButton, 1);
 
-	vbox_->Add(panel_, 1);
-	vbox_->Add(hbox_, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
-
+	vbox->Add(panel, 1);
+	vbox->Add(hbox, 0, wxALIGN_CENTER | wxTOP | wxBOTTOM, 10);
+	
 	this->Start(250);
-	this->SetSizer(vbox_);
+	this->SetSizer(vbox);
 	this->Center();
 }
 
-gui_download::~gui_download() {
-	if (key_ctrl_) delete key_ctrl_;
-	key_ctrl_ = NULL;
-	if (panel_) delete panel_;
-	panel_ = NULL;
-}
 
-bool gui_download::validate() const {
-	std::string s = std::string(this->get_key().mb_str());
-	const boost::regex e("[A-Fa-f0-9]{64}");
-	return regex_match(s, e);
-}
-
-void gui_download::Notify() {
+void gui_about::Notify() {
 	{
 		static wxString moving_string[] = {
 			_T(".oOo.| %s |.oOo."),

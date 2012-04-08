@@ -38,6 +38,7 @@
 #include "gui_main.h" 
 #include "gui_connect.h"
 #include "gui_download.h"
+#include "gui_about.h"
 #include "gui_info.h"
 #include "gui_network_status.h"
 #include "gui_list_ctrl.h"
@@ -124,7 +125,7 @@ bool gui_main::OnInit() {
 #ifdef __WXMAC__
 		ressources_path_ = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
-		download_path_ = _T("./");
+		download_path_ = wxStandardPathsCF::Get().GetDocumentsDir() + _T("/");
 		if(!wxDirExists(temp_path_)) {
 			if(!wxMkdir(temp_path_, 0755)) {
 				std::cerr 
@@ -141,7 +142,7 @@ bool gui_main::OnInit() {
 #else
 		ressources_path_ = wxStandardPaths::Get().GetResourcesDir() + _T("/");
 		temp_path_ = wxStandardPaths::Get().GetTempDir() + _T("/");
-		download_path_ = _T("./");
+		download_path_ = wxStandardPaths::Get().GetDocumentsDir() + _T("/");
 #endif // __WXMAC__
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
@@ -180,9 +181,7 @@ bool gui_main::OnInit() {
 			disconnected, 
 			wxITEM_NORMAL,
 			_("Connect to a server"));
-#ifndef __WXMAC__
 		toolbar->AddSeparator();
-#endif // __WXMAC__
 		toolbar->AddTool(
 			wxID_TOOLBAR_DOWNLOAD, 
 			_("Download"), 
@@ -195,9 +194,7 @@ bool gui_main::OnInit() {
 			_("Upload"), 
 			upload, 
 			_("Upload a file"));
-#ifndef __WXMAC__
 		toolbar->AddSeparator();
-#endif // __WXMAC__
 		toolbar->AddTool(
 			wxID_TOOLBAR_CANCEL,
 			_("Cancel"),
@@ -328,7 +325,10 @@ void gui_main::OnDownload(wxCommandEvent& evt) {
 }
 
 void gui_main::OnAbout(wxCommandEvent& evt) {
-	wxMessageBox(_("TODO : About this application."));
+	// create the about dialog
+	wxMessageBox(_("TODO : Here are About."));
+	gui_about dialog;
+	dialog.ShowModal();
 }
  
 void gui_main::OnPrefs(wxCommandEvent& evt) {
