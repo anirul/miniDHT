@@ -36,7 +36,7 @@ gui_about::gui_about(const wxString& title)
 			wxID_ANY,
 			title,
 			wxDefaultPosition,
-			wxSize(250, 170),
+			wxSize(250, 200),
 			wxSTAY_ON_TOP | wxCAPTION)
 {
 	wxPanel* panel = new wxPanel(this, -1);
@@ -49,9 +49,26 @@ gui_about::gui_about(const wxString& title)
 		wxID_ANY,
 		_("BitSmear"),
 		wxPoint(15, 20),
-		wxDefaultSize,
-		wxALIGN_CENTRE);
-	// TODO add the greetings
+		wxDefaultSize);
+	wxStaticText* stanirul = new wxStaticText(
+		panel,
+		wxID_ANY,
+		_("anirul (Frédéric DUBOUCHET)"),
+		wxPoint(15, 50),
+		wxDefaultSize);
+	wxStaticText* stmic = new wxStaticText(
+		panel,
+		wxID_ANY,
+		_("micmac (Michël JAUSSI)"),
+		wxPoint(15, 70),
+		wxDefaultSize);
+	wxStaticText* stdavid = new wxStaticText(
+		panel,
+		wxID_ANY,
+		_("david (David FISCHER)"),
+		wxPoint(15, 90),
+		wxDefaultSize);
+	// TODO add more greetings
 
 	wxButton* okButton = new wxButton(
 		this,
