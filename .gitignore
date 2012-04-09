@@ -15,9 +15,14 @@ Makefile.in
 *.lo
 *.so
 
+# specific data files #
+#######################
+*.db
+
 # Editors generated files #
 ###########################
 *~
+.*.swp
 
 # OS generated files #
 ######################

@@ -43,7 +43,7 @@ gui_settings::gui_settings(const std::string& pref_file) {
 	temp_path = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
 	download_path = wxStandardPathsCF::Get().GetDocumentsDir() + _T("/");
 	if (!wxDirExists(temp_path)) {
-		if(!wxMkdir(temp_path, 0755)) {
+		if (!wxMkdir(temp_path, 0755)) {
 			std::cerr 
 				<< "WARNING : failed to create directory " 
 				<< temp_path << std::endl;
@@ -59,15 +59,11 @@ gui_settings::gui_settings(const std::string& pref_file) {
 	download_path = wxStandardPaths::Get().GetDocumentsDir() + _T("/");
 #endif // __WXMAC__
 
-	try {
-		open(std::string(temp_path.c_str()) + pref_file);
-		create_table();
-		insert(DOWNLOAD_PATH, download_path);
-		insert(TEMPFILE_PATH, temp_path);
-		insert(RESSOURCES_PATH, ressources_path);
-	} catch (std::exception& e) {
-		std::cerr << "exception : " << e.what() << std::endl;
-	}
+	open(std::string(temp_path.c_str()) + pref_file);
+	create_table();
+	insert(DOWNLOAD_PATH, download_path);
+	insert(TEMPFILE_PATH, temp_path);
+	insert(RESSOURCES_PATH, ressources_path);
 }
 
 gui_settings* gui_settings::instance() {
