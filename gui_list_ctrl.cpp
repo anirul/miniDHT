@@ -145,19 +145,11 @@ void gui_list_ctrl::OnActivated(wxListEvent& event) {
     CFURLRef urlApp = CFURLCreateFromFSRef(kCFAllocatorDefault, &fileApp);
 #elif __WXGTK__
     
-    pid_t pID = fork();
-    if (pID == 0)                // child
-    {
-        // Code only executed by child process
-        execl("/usr/bin/xdg-open", "/usr/bin/xdg-open", absolutPath.c_str());
-    }
-    else if (pID < 0)            // failed to fork
-    {
-        char msg[256];
-        sprintf(msg, "Failed to open file : %s", absolutPath.c_str());
-        wxMessageBox(_(msg));
-        return;
-    }
+	// Code only executed by child process
+        char cmd[256];
+	sprintf(cmd, "/usr/bin/xdg-open %s", absolutPath.c_str());
+	system(cmd);
+	//execl("/usr/bin/xdg-open", "/usr/bin/xdg-open", absolutPath.c_str());
     
 #endif
 }
