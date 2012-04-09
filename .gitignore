@@ -1,9 +1,29 @@
-# Autotools files #
-###################
+# Autotools/protobuf files #
+############################
+.deps
+.libs
+autom4te.cache
+configure
 config.*
+depcomp
+install-sh
+ltmain.sh
+libtool
 Makefile
 Makefile.in
+miniDHT_proto.pb.*
+missing
+stamp-h1
+*.la
 *.m4
+
+# Binary files #
+################
+BitSmear
+miniDHT_recv
+miniDHT_send
+miniDHT_server
+miniDHT_test
 
 # Compiled source #
 ###################
