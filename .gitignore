@@ -24,6 +24,9 @@ miniDHT_recv
 miniDHT_send
 miniDHT_server
 miniDHT_test
+BitSmear.app
+db_key_value
+db_multi_key_data
 
 # Compiled source #
 ###################
@@ -38,6 +41,7 @@ miniDHT_test
 # specific data files #
 #######################
 *.db
+*.uid.*.txt
 
 # Editors generated files #
 ###########################
