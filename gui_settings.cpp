@@ -29,55 +29,52 @@
 #include <wx/wx.h>
 #include <wx/stdpaths.h>
 
-gui_settings::gui_settings() {
-    std::string ressources_path;
-    std::string temp_path;
-    std::string download_path;
+std::string gui_settings::DOWNLOAD_PATH = std::string("DOWNLOAD_PATH");
+std::string gui_settings::TEMPFILE_PATH = std::string("TEMPFILE_PATH");
+std::string gui_settings::RESSOURCES_PATH = std::string("RESSOURCES_PATH");
+gui_settings* gui_settings::instance_ = NULL;
+
+gui_settings::gui_settings(const std::string& pref_file) {
+	std::string ressources_path;
+	std::string temp_path;
+	std::string download_path;
 #ifdef __WXMAC__
-    ressources_path = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
-    temp_path = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
-    download_path = wxStandardPathsCF::Get().GetDocumentsDir() + _T("/");
-    if(!wxDirExists(temp_path)) {
-        if(!wxMkdir(temp_path, 0755)) {
-            std::cerr 
-            << "WARNING : failed to create directory " 
-            << temp_path << std::endl;
-        } else {
-            std::cout 
-            << "INFO : created directory " 
-            << temp_path << std::endl;
-        }
-    }
+	ressources_path = wxStandardPathsCF::Get().GetResourcesDir() + _T("/");
+	temp_path = wxStandardPathsCF::Get().GetUserDataDir() + _T("/");
+	download_path = wxStandardPathsCF::Get().GetDocumentsDir() + _T("/");
+	if (!wxDirExists(temp_path)) {
+		if(!wxMkdir(temp_path, 0755)) {
+			std::cerr 
+				<< "WARNING : failed to create directory " 
+				<< temp_path << std::endl;
+		} else {
+			std::cout 
+				<< "INFO : created directory " 
+				<< temp_path << std::endl;
+		}
+	}
 #else
-    ressources_path = wxStandardPaths::Get().GetResourcesDir() + _T("/");
-    temp_path = wxStandardPaths::Get().GetTempDir() + _T("/");
-    download_path = wxStandardPaths::Get().GetDocumentsDir() + _T("/");
+	ressources_path = wxStandardPaths::Get().GetResourcesDir() + _T("/");
+	temp_path = wxStandardPaths::Get().GetTempDir() + _T("/");
+	download_path = wxStandardPaths::Get().GetDocumentsDir() + _T("/");
 #endif // __WXMAC__
 
-    settings_map_.insert(std::make_pair(DOWNLOAD_PATH, download_path));
-    settings_map_.insert(std::make_pair(TEMPFILE_PATH, temp_path));
-    settings_map_.insert(std::make_pair(RESSOURCES_PATH, ressources_path));
-}
-    
-    
-gui_settings::gui_settings(std::string pref_file) {
-    // FIXME !
-}
-
-gui_settings* gui_settings::getInstance() {
-    static gui_settings* instance_ = NULL;
-    if(!instance_)
-        instance_ = new gui_settings();
-    
-    return instance_;
+	try {
+		open(std::string(temp_path.c_str()) + pref_file);
+		create_table();
+		insert(DOWNLOAD_PATH, download_path);
+		insert(TEMPFILE_PATH, temp_path);
+		insert(RESSOURCES_PATH, ressources_path);
+	} catch (std::exception& e) {
+		std::cerr << "exception : " << e.what() << std::endl;
+	}
 }
 
-std::string gui_settings::getSetting(gui_settings_type setting) {
-    std::string value("");
-    std::map<gui_settings_type, std::string>::iterator it;
-    it = settings_map_.find(setting);
-    if(it != settings_map_.end()) {
-        value = it->second;
-    }
-    return value;
+gui_settings* gui_settings::instance() {
+	if(!instance_)
+		instance_ = new gui_settings();
+	return instance_;
 }
+
+gui_settings::~gui_settings() {}
+

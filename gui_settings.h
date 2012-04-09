@@ -28,26 +28,21 @@
 #ifndef MINIDHT_GUI_SETTINGS_HEADER_DEFINED
 #define MINIDHT_GUI_SETTINGS_HEADER_DEFINED
 
+#include "miniDHT_db.h"
 #include <string>
 #include <map>
 
-class gui_settings {
-public:
-    typedef enum {DOWNLOAD_PATH, TEMPFILE_PATH, RESSOURCES_PATH} gui_settings_type;
-
-    static gui_settings* getInstance();
-    
-    std::string getSetting(gui_settings_type setting);
-    
-    //std::string getDownloadPath();
-    //std::string getTempFilePath();
-    //std::string getRessourcesPath();
-private:
-    std::map<gui_settings_type, std::string> settings_map_;
-    
-    gui_settings();
-    gui_settings(std::string pref_file);
-
+class gui_settings : public miniDHT::db_key_value {
+protected :
+	static gui_settings* instance_;
+public :
+	static std::string DOWNLOAD_PATH;
+	static std::string TEMPFILE_PATH;
+	static std::string RESSOURCES_PATH;
+	static gui_settings* instance();
+	virtual ~gui_settings();
+private :
+	gui_settings(const std::string& pref_file = std::string("file_setting.db"));
 };
 
 #endif

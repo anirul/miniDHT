@@ -124,10 +124,10 @@ bool gui_main::OnInit() {
 		menubar->Append(tool_menu, _("Tools"));
 	}
 	{	// set some path related stuff
-        gui_settings* settings = gui_settings::getInstance();
-        ressources_path_ = settings->getSetting(gui_settings::RESSOURCES_PATH);
-        temp_path_ = settings->getSetting(gui_settings::TEMPFILE_PATH);
-        download_path_ = settings->getSetting(gui_settings::DOWNLOAD_PATH);
+        gui_settings* settings = gui_settings::instance();
+        ressources_path_ = settings->find(gui_settings::RESSOURCES_PATH);
+        temp_path_ = settings->find(gui_settings::TEMPFILE_PATH);
+        download_path_ = settings->find(gui_settings::DOWNLOAD_PATH);
 	}
 	wxToolBar* toolbar = frame_->CreateToolBar(wxITEM_NORMAL | wxTB_TEXT);
 	if (!wxDirExists(ressources_path_)) {

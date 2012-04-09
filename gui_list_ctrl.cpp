@@ -116,8 +116,8 @@ void gui_list_ctrl::OnActivated(wxListEvent& event) {
         return;
     
     
-    gui_settings* settings = gui_settings::getInstance();
-    std::string absolutPath = settings->getSetting(gui_settings::DOWNLOAD_PATH);
+    gui_settings* settings = gui_settings::instance();
+    std::string absolutPath = settings->find(gui_settings::DOWNLOAD_PATH);
     absolutPath.append(p->get_filename());
     
 #ifdef __WXMAC__

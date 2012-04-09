@@ -48,7 +48,7 @@ namespace miniDHT {
 	protected :
 		sqlite3* db_;
 		std::string file_name_;
-        bool need_mutex_;
+		bool need_mutex_;
 		boost::mutex local_lock_;
 
 	public :
@@ -81,7 +81,7 @@ namespace miniDHT {
 	protected :
 		sqlite3* db_;
 		std::string file_name_;
-        bool need_mutex_;
+		bool need_mutex_;
 		boost::mutex local_lock_;
 
 	public :
