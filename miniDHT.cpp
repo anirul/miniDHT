@@ -243,22 +243,25 @@ namespace miniDHT {
 				boost::posix_time::time_duration td = 
 					update_time() - boost::posix_time::from_time_t(
 						itc->second.time());
-				if (td > tRefresh) {
-					send_PING_nolock(itc->second.ep());
+				if (td > (tRefresh * 2)) {
 					db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
-				} else {
-					std::string key = itc->second.key();
-					std::string endpoint = endpoint_to_string(itc->second.ep());
-					std::string value = db_backup.find(key);
-					// already in
-					if (value == endpoint) continue;
-					// remove in case present
-					if (value != std::string(""))
-						db_backup.remove(key);
-					db_backup.insert(key, endpoint);
-				}
+					continue;
+				}  
+				if (td > tRefresh) {
+					send_PING_nolock(itc->second.ep());
+					continue;
+				} 
+				std::string key = itc->second.key();
+				std::string endpoint = endpoint_to_string(itc->second.ep());
+				std::string value = db_backup.find(key);
+				// already in
+				if (value == endpoint) continue;
+				// remove in case present
+				if (value != std::string(""))
+					db_backup.remove(key);
+				db_backup.insert(key, endpoint);
 			}
 		}
 		periodic_thread_->yield();

@@ -61,9 +61,12 @@ gui_settings::gui_settings(const std::string& pref_file) {
 
 	open(std::string(temp_path.c_str()) + pref_file);
 	create_table();
-	insert(DOWNLOAD_PATH, download_path);
-	insert(TEMPFILE_PATH, temp_path);
-	insert(RESSOURCES_PATH, ressources_path);
+	if (find(DOWNLOAD_PATH).size() == 0)
+		insert(DOWNLOAD_PATH, download_path);
+	if (find(TEMPFILE_PATH).size() == 0)
+		insert(TEMPFILE_PATH, temp_path);
+	if (find(RESSOURCES_PATH).size() == 0)
+		insert(RESSOURCES_PATH, ressources_path);
 }
 
 gui_settings* gui_settings::instance() {
