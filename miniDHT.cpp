@@ -243,14 +243,11 @@ namespace miniDHT {
 				boost::posix_time::time_duration td = 
 					update_time() - boost::posix_time::from_time_t(
 						itc->second.time());
-				if (td > (tRefresh * 2)) {
+				if (td > tRefresh) {
+					send_PING_nolock(itc->second.ep());
 					db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
-					continue;
-				}  
-				if (td > tRefresh) {
-					send_PING_nolock(itc->second.ep());
 					continue;
 				} 
 				std::string key = itc->second.key();
