@@ -44,53 +44,63 @@ namespace miniDHT {
 	}
 
 	db_key_value::~db_key_value() { 
-		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
-		sqlite3_close(db_);	
-		db_ = NULL;
+		try {
+			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
+  	      if(need_mutex_) local_lock_.lock();
+			sqlite3_close(db_);	
+			db_ = NULL;
+		} catch (std::exception& ex) {
+			local_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	db_multi_key_data::~db_multi_key_data() {
-		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
-		sqlite3_close(db_);
-		db_ = NULL;
+		try {
+			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
+			if(need_mutex_) local_lock_.lock();
+			sqlite3_close(db_);
+			db_ = NULL;
+		} catch (std::exception& ex) {
+			local_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	void db_key_value::open(const std::string& file_name) {
 		file_name_ = std::string(file_name);
 		int rc = 0;
-        need_mutex_ = !sqlite3_threadsafe();
-        if (need_mutex_) {
-            boost::mutex::scoped_lock lock_it(local_lock_);
-            rc = sqlite3_open(file_name_.c_str(), &db_);
-            if (rc) {
-                std::stringstream error("");
-                error << "Can't open database: ";
-                error << sqlite3_errmsg(db_);
-                sqlite3_close(db_);
-                db_ = NULL;
-                throw std::runtime_error(error.str());
-            }
-        }
-        else {
-            rc = sqlite3_open_v2(
-					file_name_.c_str(), 
-					&db_, 
-					SQLITE_OPEN_READWRITE | 
-					SQLITE_OPEN_CREATE | 
-					SQLITE_OPEN_FULLMUTEX | 
-					SQLITE_OPEN_SHAREDCACHE, 
-					NULL);
-            if (rc) {
-                std::stringstream error("");
-                error << "Can't open database (full mutex, err = " << rc << " : ";
-                error << sqlite3_errmsg(db_);
-                sqlite3_close(db_);
-                db_ = NULL;
-                throw std::runtime_error(error.str());
-            }
-        }
+		need_mutex_ = !sqlite3_threadsafe();
+		if (need_mutex_) {
+			boost::mutex::scoped_lock lock_it(local_lock_);
+			rc = sqlite3_open(file_name_.c_str(), &db_);
+			if (rc) {
+				std::stringstream error("");
+				error << "Can't open database: ";
+				error << sqlite3_errmsg(db_);
+				sqlite3_close(db_);
+				db_ = NULL;
+				local_lock_.unlock();
+				throw std::runtime_error(error.str());
+			}
+		} else {
+			rc = sqlite3_open_v2(
+				file_name_.c_str(), 
+				&db_, 
+				SQLITE_OPEN_READWRITE | 
+				SQLITE_OPEN_CREATE | 
+				SQLITE_OPEN_FULLMUTEX | 
+				SQLITE_OPEN_SHAREDCACHE, 
+				NULL);
+			if (rc) {
+				std::stringstream error("");
+				error << "Can't open database (full mutex, err = " << rc << " : ";
+				error << sqlite3_errmsg(db_);
+				sqlite3_close(db_);
+				db_ = NULL;
+				throw std::runtime_error(error.str());
+			}
+		}
 		create_table();
 	}
 
@@ -98,42 +108,42 @@ namespace miniDHT {
 		file_name_ = std::string(file_name);
 		int rc = 0;
 		need_mutex_ = !sqlite3_threadsafe();
-        if (need_mutex_) {
-            boost::mutex::scoped_lock lock_it(local_lock_);
-            rc = sqlite3_open(file_name_.c_str(), &db_);
-            if (rc) {
-                std::stringstream error("");
-                error << "Can't open database: ";
-                error << sqlite3_errmsg(db_);
-                sqlite3_close(db_);
-                db_ = NULL;
-                throw std::runtime_error(error.str());
-            }
-        }
-        else {
-            rc = sqlite3_open_v2(
-					file_name_.c_str(), 
-					&db_, 
-					SQLITE_OPEN_READWRITE | 
-					SQLITE_OPEN_CREATE | 
-					SQLITE_OPEN_FULLMUTEX | 
-					SQLITE_OPEN_SHAREDCACHE, 
-					NULL);
-            if (rc) {
-                std::stringstream error("");
-                error << "Can't open database (full mutex, err = " << rc << " : ";
-                error << sqlite3_errmsg(db_);
-                sqlite3_close(db_);
-                db_ = NULL;
-                throw std::runtime_error(error.str());
-            }
-        }
+		if (need_mutex_) {
+			boost::mutex::scoped_lock lock_it(local_lock_);
+			rc = sqlite3_open(file_name_.c_str(), &db_);
+			if (rc) {
+				std::stringstream error("");
+				error << "Can't open database: ";
+				error << sqlite3_errmsg(db_);
+				sqlite3_close(db_);
+				db_ = NULL;
+				local_lock_.unlock();
+				throw std::runtime_error(error.str());
+			}
+		} else {
+			rc = sqlite3_open_v2(
+				file_name_.c_str(), 
+				&db_, 
+				SQLITE_OPEN_READWRITE | 
+				SQLITE_OPEN_CREATE | 
+				SQLITE_OPEN_FULLMUTEX | 
+				SQLITE_OPEN_SHAREDCACHE, 
+				NULL);
+			if (rc) {
+				std::stringstream error("");
+				error << "Can't open database (full mutex, err = " << rc << " : ";
+				error << sqlite3_errmsg(db_);
+				sqlite3_close(db_);
+				db_ = NULL;
+				throw std::runtime_error(error.str());
+			}
+		}
 		create_table();	
 	}
 
 	void db_key_value::create_table() {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if(need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szErrMsg = 0;
 		rc = sqlite3_exec(
@@ -148,13 +158,14 @@ namespace miniDHT {
 			ss << "SQL error in CREATE table : ";
 			ss << szErrMsg;
 			sqlite3_free(szErrMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 	}
 
 	void db_multi_key_data::create_table() {		
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if(need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szErrMsg = 0;
 		std::string sql_query = 
@@ -187,6 +198,7 @@ namespace miniDHT {
 			ss << "SQL error in CREATE TABLE : ";
 			ss << szErrMsg;
 			sqlite3_free(szErrMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 	}
@@ -196,7 +208,7 @@ namespace miniDHT {
 		char* szErrMsg = 0;
 		{
 			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+			if(need_mutex_) local_lock_.lock();
 			rc = sqlite3_exec(
 				db_,
 				"DROP TABLE IF EXISTS contacts",
@@ -208,6 +220,7 @@ namespace miniDHT {
 				ss << "SQL error in DROP table : ";
 				ss << szErrMsg;
 				sqlite3_free(szErrMsg);
+				local_lock_.unlock();
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -219,7 +232,7 @@ namespace miniDHT {
 		char* szErrMsg = 0;
 		{
 			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+			if (need_mutex_) local_lock_.lock();
 			rc = sqlite3_exec(
 				db_,
 				"DROP TABLE IF EXISTS data_header",
@@ -231,12 +244,13 @@ namespace miniDHT {
 				ss << "SQL error in DROP table : ";
 				ss << szErrMsg;
 				sqlite3_free(szErrMsg);
+				local_lock_.unlock();
 				throw std::runtime_error(ss.str());
 			}
 		}
 		{
 			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+			if (need_mutex_) local_lock_.lock();
 			rc = sqlite3_exec(
 				db_,
 				"DROP TABLE IF EXISTS data_time",
@@ -248,12 +262,13 @@ namespace miniDHT {
 				ss << "SQL error in DROP table : ";
 				ss << szErrMsg;
 				sqlite3_free(szErrMsg);
+				local_lock_.unlock();
 				throw std::runtime_error(ss.str());
 			}
 		}
 		{
 			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+			if (need_mutex_) local_lock_.lock();
 			rc = sqlite3_exec(
 				db_,
 				"DROP TABLE IF EXISTS data_item",
@@ -265,6 +280,7 @@ namespace miniDHT {
 				ss << "SQL error in DROP table : ";
 				ss << szErrMsg;
 				sqlite3_free(szErrMsg);
+				local_lock_.unlock();
 				throw std::runtime_error(ss.str());
 			}
 		}
@@ -273,7 +289,7 @@ namespace miniDHT {
 
 	std::string db_key_value::find(const std::string& key) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		std::stringstream ss("");
 		ss << "SELECT value FROM contacts WHERE key = '";
 		ss << key << "'";
@@ -294,6 +310,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		} 
 		std::string ret = "";
@@ -305,7 +322,7 @@ namespace miniDHT {
 
 	void db_key_value::remove(const std::string& key) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		std::stringstream ss("");
 		ss << "DELETE FROM contacts WHERE key = '";
 		ss << key << "'";
@@ -322,6 +339,7 @@ namespace miniDHT {
 			ss << "SQL error in DELETE : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 	}
@@ -331,7 +349,7 @@ namespace miniDHT {
 		const std::string& title) 
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if(need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szMsg;
 		{ // data header search and clean
@@ -351,13 +369,14 @@ namespace miniDHT {
 			ss << "SQL error in DELETE : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 	}
 
 	void db_multi_key_data::remove_oldest() {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szMsg;
 		rc = sqlite3_exec(
@@ -372,6 +391,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in DELETE oldest : ";
 			ss << szMsg;
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}	
 	}
@@ -381,7 +401,7 @@ namespace miniDHT {
 		const std::string& value) 
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		std::stringstream ss("");
 		ss << "INSERT INTO contacts VALUES('";
 		ss << key << "', '";
@@ -399,6 +419,7 @@ namespace miniDHT {
 			ss << "SQL error in INSERT table : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}			
 	}
@@ -410,7 +431,7 @@ namespace miniDHT {
 		const long long& ttl)
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szMsg;
 		{
@@ -435,6 +456,7 @@ namespace miniDHT {
 			ss << "SQL error in UPDATE table : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 	}
@@ -447,7 +469,7 @@ namespace miniDHT {
 		const std::string& data) 
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char* szMsg;
 		{ // insert the header
@@ -467,6 +489,7 @@ namespace miniDHT {
 			ss << "SQL error in INSERT data_header : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		{ // insert the time
@@ -489,6 +512,7 @@ namespace miniDHT {
 			ss << "SQL error in INSERT data_time : ";
 			ss << szMsg;
 			sqlite3_free(szMsg);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		sqlite3_stmt* stmt = NULL;
@@ -510,6 +534,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in prepare INSERT data_item : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// assign the BLOB
@@ -519,23 +544,28 @@ namespace miniDHT {
 			&(data[0]), 
 			data.size(), 
 			SQLITE_STATIC);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error("SQL error binding data in INSERT!");
+		}
 		rc = sqlite3_step(stmt);
 		if (rc != SQLITE_DONE) {
 			std::stringstream ss("");
 			ss << "SQL error step in INSERT : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error("SQL error finalize in INSERT!");
+		}
 	}
 
 	size_t db_key_value::size() {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-		if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -553,6 +583,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		if (ncol != 1) return 0;
@@ -562,7 +593,7 @@ namespace miniDHT {
 
 	size_t db_multi_key_data::count(const std::string& key) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-		if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -584,6 +615,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		if (ncol != 1) return 0;
@@ -593,7 +625,7 @@ namespace miniDHT {
 
 	size_t db_multi_key_data::size() {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -611,6 +643,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		if (ncol != 1) return 0;
@@ -620,7 +653,7 @@ namespace miniDHT {
 
 	void db_key_value::list(std::map<std::string, std::string>& mm) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -638,6 +671,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		if (ncol != 2) return;
@@ -656,7 +690,7 @@ namespace miniDHT {
 		data_item_proto& out)
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
 		{ // for ss I m lazy
@@ -692,12 +726,14 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT [key title] : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		if (sqlite3_step(stmt) != SQLITE_ROW) {
 			std::stringstream ss("");
 			ss << "SQL error in step : "; 
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// for each column
@@ -715,9 +751,11 @@ namespace miniDHT {
 			}
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error(
-				"SQL error finalize in SELECT [key value] !");	
+				"SQL error finalize in SELECT [key value] !");
+		}
 	}
 
 	void db_multi_key_data::find(
@@ -725,7 +763,7 @@ namespace miniDHT {
 		std::list<data_item_proto>& out)
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
 		{ // for ss I m lazy
@@ -759,6 +797,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT [...] : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -781,8 +820,10 @@ namespace miniDHT {
 			out.push_back(di);
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error("SQL error finalize in SELECT * !");
+		}
 	}
 
 	void db_multi_key_data::find_no_blob(
@@ -790,7 +831,7 @@ namespace miniDHT {
 		std::list<data_item_proto>& out)
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
 		{ // for ss I m lazy
@@ -818,6 +859,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT [...] : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -836,15 +878,17 @@ namespace miniDHT {
 			out.push_back(di);
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error("SQL error finalize in SELECT * !");
+		}
 	}
 
 	void db_multi_key_data::list(
 		std::multimap<std::string, data_item_proto>& out) 
 	{
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
 		rc = sqlite3_prepare_v2(
@@ -861,6 +905,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT * : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -886,13 +931,15 @@ namespace miniDHT {
 			out.insert(std::make_pair<std::string, data_item_proto>(key, di));				
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error("SQL error finalize in SELECT * !");
+		}
 	}
 		
 	void db_multi_key_data::list_headers(std::list<data_item_header_t>& out) {	
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		sqlite3_stmt* stmt = NULL;
 		rc = sqlite3_prepare_v2(
@@ -909,6 +956,7 @@ namespace miniDHT {
 			std::stringstream ss("");
 			ss << "SQL error in SELECT key, time, ttl, title : ";
 			ss << sqlite3_errmsg(db_);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());
 		}
 		// for each row
@@ -930,14 +978,16 @@ namespace miniDHT {
 			out.push_back(dh);				
 		}
 		rc = sqlite3_finalize(stmt);
-		if (rc != SQLITE_OK)
+		if (rc != SQLITE_OK) {
+			local_lock_.unlock();
 			throw std::runtime_error(
 				"SQL error finalize in SELECT key, time, ttl, title !");
+		}
 	}
 
 	void db_key_value::list_value(std::list<std::string>& l) {
 		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-        if(need_mutex_) local_lock_.lock();
+		if (need_mutex_) local_lock_.lock();
 		int rc = 0;
 		char** result;
 		int nrow, ncol;
@@ -955,6 +1005,7 @@ namespace miniDHT {
 			ss << szMsg;
 			sqlite3_free(szMsg);
 			sqlite3_free_table(result);
+			local_lock_.unlock();
 			throw std::runtime_error(ss.str());				
 		}
 		if (ncol != 1) return;

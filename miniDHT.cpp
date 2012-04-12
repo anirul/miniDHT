@@ -86,7 +86,12 @@ namespace miniDHT {
 
 	void miniDHT::iterativeFindNode(const std::string& k) {
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		iterativeFindNode_nolock(k);
+		try {
+			iterativeFindNode_nolock(k);
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	void miniDHT::iterativeFindNode_nolock(
@@ -104,37 +109,57 @@ namespace miniDHT {
 		const std::string& hint) 
 	{
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		token_t t = random_bitset<TOKEN_SIZE>().to_ulong();
-		{
-			map_search[t] = search_t(id_, k, VALUE_SEARCH);
-			map_search[t].value_callback = c;
-			map_search[t].hint = hint;
+		try {
+			token_t t = random_bitset<TOKEN_SIZE>().to_ulong();
+			{
+				map_search[t] = search_t(id_, k, VALUE_SEARCH);
+				map_search[t].value_callback = c;
+				map_search[t].hint = hint;
+			}
+			startNodeLookup(t, k);
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
-		startNodeLookup(t, k);
 	}
 
 	std::list<contact_proto> miniDHT::nodes_description() {
-//		boost::mutex::scoped_lock lock_it(giant_lock_);
-		std::list<contact_proto> ls;
-		unsigned int last_bucket = 0;
-		bucket_iterator ite = contact_list.begin();
-		for (; ite != contact_list.end(); ++ite) {
-			unsigned int new_bucket = ite->first;
-			assert((ite->first) ? ite->first >= last_bucket : true);
-			last_bucket = ite->first;
-			ls.push_back(ite->second);
+		boost::mutex::scoped_lock lock_it(giant_lock_);
+		try {
+			std::list<contact_proto> ls;
+			unsigned int last_bucket = 0;
+			bucket_iterator ite = contact_list.begin();
+			for (; ite != contact_list.end(); ++ite) {
+				unsigned int new_bucket = ite->first;
+				assert((ite->first) ? ite->first >= last_bucket : true);
+				last_bucket = ite->first;
+				ls.push_back(ite->second);
+			}
+			return ls;
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
-		return ls;
 	}
 
 	size_t miniDHT::storage_size() { 
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		return db_storage.size(); 
+		try {
+			return db_storage.size(); 
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	size_t miniDHT::bucket_size() { 
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		return db_backup.size(); 
+		try {
+			return db_backup.size(); 
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	const std::string& miniDHT::get_local_key() const { 
@@ -143,7 +168,12 @@ namespace miniDHT {
 
 	const boost::asio::ip::tcp::endpoint miniDHT::get_local_endpoint() { 
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		return socket_.local_endpoint(); 
+		try {
+			return socket_.local_endpoint(); 
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		} 
 	}
 
 	size_t miniDHT::storage_wait_queue() const { 
@@ -152,7 +182,12 @@ namespace miniDHT {
 
 	void miniDHT::set_max_record(size_t val) { 
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		max_records_ = val; 
+		try {
+			max_records_ = val; 
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	size_t miniDHT::get_max_record() const { 
@@ -229,7 +264,7 @@ namespace miniDHT {
 
 	// called periodicly
 	void miniDHT::periodic() {
-		{ // check timeout on key
+		try { // check timeout on key
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			bucket_iterator itc;
 			const boost::posix_time::time_duration tRefresh = 
@@ -245,7 +280,7 @@ namespace miniDHT {
 						itc->second.time());
 				if (td > tRefresh) {
 					send_PING_nolock(itc->second.ep());
-					db_backup.remove(itc->second.key());
+						db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
 					continue;
@@ -260,18 +295,24 @@ namespace miniDHT {
 					db_backup.remove(key);
 				db_backup.insert(key, endpoint);
 			}
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
 		periodic_thread_->yield();
-		{ // try to diversify the bucket list
+		try { // try to diversify the bucket list
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			for (unsigned int i = 0; i < (KEY_SIZE - 1); ++i) {
 				if (contact_list.count(i)) continue;
 				key_t skey = contact_list.random_key_in_bucket(i);
 				iterativeFindNode_nolock(skey); 
 			}
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
 		periodic_thread_->yield();
-		{ 
+		try { 
 			// search if storage DB need any cleaning
 			std::list<data_item_header_t> ldh;
 			std::list<data_item_header_t>::iterator ite;
@@ -298,8 +339,11 @@ namespace miniDHT {
 				periodic_thread_->yield();
 				usleep(100000);
 			}
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
-		{
+		try {
 			boost::mutex::scoped_lock lock_it(giant_lock_);
 			// call back later
 			boost::posix_time::time_duration wait_time = 
@@ -307,6 +351,9 @@ namespace miniDHT {
 			boost::posix_time::ptime now = update_time();
 			dt_.expires_at(now + wait_time);
 			dt_.async_wait(boost::bind(&miniDHT::periodic, this));
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
 	}
 
@@ -460,23 +507,28 @@ namespace miniDHT {
 		session<PACKET_SIZE>* ps,
 		const boost::system::error_code& error) 
 	{
-		boost::mutex::scoped_lock lock_it(giant_lock_);
-		if (!error) {
-			ps->start();
+		try {
+			boost::mutex::scoped_lock lock_it(giant_lock_);
+			if (!error) {
+				ps->start();
+			}
+			start_accept();
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
 		}
-		start_accept();
 	}
 		
 	void miniDHT::handle_receive(
 		const boost::asio::ip::tcp::endpoint& ep,
 		const basic_message<PACKET_SIZE>& msg)	
 	{
-		boost::mutex::scoped_lock lock_it(giant_lock_);
-		sender_endpoint_ = ep;
-		endpoint_proto epp = endpoint_to_proto(ep);
-		message_proto m;
 		std::stringstream ss(std::string(msg.body(), msg.body_length()));
 		try {
+			boost::mutex::scoped_lock lock_it(giant_lock_);
+			sender_endpoint_ = ep;
+			endpoint_proto epp = endpoint_to_proto(ep);
+			message_proto m;
 			m.ParseFromIstream(&ss);
 			switch (m.type()) {
 				case message_proto::SEND_PING :
@@ -491,7 +543,7 @@ namespace miniDHT {
 					contact_list.add_contact(m.from_id(), epp);
 					break;
 				case message_proto::REPLY_STORE :
-					handle_REPLY_STORE(m);
+					handle_REPLY_STORE(m);	
 					break;
 				case message_proto::SEND_FIND_NODE :
 					handle_SEND_FIND_NODE(m);
@@ -511,14 +563,16 @@ namespace miniDHT {
 				default :
 					break;
 			}
-		} catch (std::exception& e) {
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
 			std::cerr 
 				<< "[" << socket_.local_endpoint()
 				<< "] error in deserializing message (dump)." 
 				<< std::endl
-				<< "\texception : " << e.what() << std::endl;
+				<< "\texception : " << ex.what() << std::endl;
 			std::cerr
 				<< ss.str() << std::endl;
+			throw ex;
 		}
 	}
 
@@ -888,3 +942,4 @@ namespace miniDHT {
 	}
 
 } // end namespace miniDHT
+
