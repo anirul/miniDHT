@@ -581,7 +581,7 @@ namespace miniDHT {
 	}
 
 	void miniDHT::handle_disconnect(const boost::asio::ip::tcp::endpoint& ep) {
-		contact_list.remove_contact(epp);
+		contact_list.remove_contact(endpoint_to_proto(ep));
 	}
 
 	void miniDHT::handle_SEND_PING(const message_proto& m) {
