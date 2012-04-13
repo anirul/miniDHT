@@ -70,11 +70,22 @@ namespace miniDHT {
 			}
 			throw std::string("unknown key");
 		}
+
+		void remove_contact(const endpoint_proto& ep) {
+			for (iterator ite = this->begin(); ite != this->end(); ++ite) {
+				if (ite->second.ep() == ep) {
+					std::cout << "remove contact : " 
+						<< ep.address() << ":" << ep.port() << std::endl;
+					this->erase(ite);
+					ite = this->begin();
+					continue;
+				}
+			}
+		}
 		
 		void add_contact(
 			const key_t& k, 
-			const endpoint_proto& ep,
-			bool update_ttl = true) // FIXME 
+			const endpoint_proto& ep)
 		{
 			// avoid adding self to contact list
 			if (k == local_key_) return;
@@ -88,19 +99,14 @@ namespace miniDHT {
 			c.mutable_ep()->set_port(ep.port());
 			assert(c.ep().address() != std::string(""));
 			assert(c.ep().port() != std::string(""));
-			// check if the IP is not already in
-			for (iterator ite = this->begin(); ite != this->end(); ++ite) {
-				if (ite->second.ep() == ep) {
-					this->erase(ite);
-					break;
-				}
-			}
-			// insert 
-			c.set_time(to_time_t(now_)); // FIXME
+			c.set_time(to_time_t(now_));
 			std::pair<unsigned int, contact_proto> p(common, c);
+			// is key here
 			iterator ite = find_key(k);
+			// insert if key not present
 			if (ite == this->end()) {
 				size_t item_count = this->count(common);
+				// too many item in the bucket
 				if (item_count >= BUCKET_SIZE) {
 					ite = this->find(common);
 					std::map<uint64_t, iterator> map_time_ite;
@@ -108,11 +114,18 @@ namespace miniDHT {
 						map_time_ite[ite->second.time()] = ite++;
 					this->erase(map_time_ite.begin()->second);
 				} 
+				std::cout << "add contact : "
+					<< c.mutable_ep()->address() << ":"
+					<< c.mutable_ep()->port() << std::endl;
 				this->insert(p);
 				changed_ = true;
 			} else {
-				if (update_ttl)
-					ite->second.set_time(to_time_t(now_));
+				// if not the same endpoint change it
+				if (ite->second.ep() != ep) {
+					ite->second.mutable_ep()->set_address(ep.address());
+					ite->second.mutable_ep()->set_port(ep.port());
+				}
+				ite->second.set_time(to_time_t(now_));
 			}
 		}
 		

@@ -280,7 +280,7 @@ namespace miniDHT {
 						itc->second.time());
 				if (td > tRefresh) {
 					send_PING_nolock(itc->second.ep());
-						db_backup.remove(itc->second.key());
+					db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
 					continue;
@@ -493,6 +493,10 @@ namespace miniDHT {
 				this,
 				_1, 
 				_2),
+			boost::bind(
+				&miniDHT::handle_disconnect,
+				this,
+				_1),
 			map_ep_proto_session);
 		acceptor_.async_accept(
 			new_session->socket(),
@@ -574,6 +578,10 @@ namespace miniDHT {
 				<< ss.str() << std::endl;
 			throw ex;
 		}
+	}
+
+	void miniDHT::handle_disconnect(const boost::asio::ip::tcp::endpoint& ep) {
+		contact_list.remove_contact(epp);
 	}
 
 	void miniDHT::handle_SEND_PING(const message_proto& m) {
@@ -702,6 +710,10 @@ namespace miniDHT {
 						this,
 						_1, 
 						_2),
+					boost::bind(
+						&miniDHT::handle_disconnect,
+						this,
+						_1),
 					map_ep_proto_session);
 				new_session->connect(uep);
 				new_session->deliver(msg);

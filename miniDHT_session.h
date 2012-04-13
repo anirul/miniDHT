@@ -181,6 +181,9 @@ namespace miniDHT {
 				const boost::asio::ip::tcp::endpoint& ep, 
 				const basic_message<PACKET_SIZE>& s)>
 			got_message_callback_t;
+		typedef
+			boost::function<void (const boost::asio::ip::tcp::endpoint& ep)>
+			got_disconnected_callback_t;
 		typedef 
 			std::map<endpoint_proto, session<PACKET_SIZE>*> 
 			map_ep_proto_session_t;
@@ -198,6 +201,7 @@ namespace miniDHT {
 		bool connect_;
 		int ref_count_;
 		got_message_callback_t got_message_callback_;
+		got_disconnected_callback_t got_disconnected_callback_;
 		map_ep_proto_session_t& map_ep_proto_session_;
 		boost::mutex local_lock_;
 
@@ -206,11 +210,13 @@ namespace miniDHT {
 		session(
 			boost::asio::io_service& io_service,
 			const got_message_callback_t& c,
+			const got_disconnected_callback_t& d,
 			map_ep_proto_session_t& map)
 			:	socket_(io_service),
 				connect_(false),
 				ref_count_(1),
 				got_message_callback_(c),
+				got_disconnected_callback_(d),
 				map_ep_proto_session_(map) {}
 
 		boost::asio::ip::tcp::socket& socket() {
@@ -349,6 +355,7 @@ namespace miniDHT {
 					<< " -> " << ep_.address().to_string() << ":" << ep_.port() 
 					<< " Disconnected!"
 					<< std::endl;
+				got_disconnected_callback_(ep_);
 				release();
 			}
 		}
