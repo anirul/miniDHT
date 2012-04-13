@@ -74,7 +74,7 @@ namespace miniDHT {
 		void add_contact(
 			const key_t& k, 
 			const endpoint_proto& ep,
-			bool update_ttl = true) 
+			bool update_ttl = true) // FIXME 
 		{
 			// avoid adding self to contact list
 			if (k == local_key_) return;
@@ -96,7 +96,7 @@ namespace miniDHT {
 				}
 			}
 			// insert 
-			c.set_time(to_time_t(now_));
+			c.set_time(to_time_t(now_)); // FIXME
 			std::pair<unsigned int, contact_proto> p(common, c);
 			iterator ite = find_key(k);
 			if (ite == this->end()) {

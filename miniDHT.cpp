@@ -642,7 +642,8 @@ namespace miniDHT {
 			contact_proto c = m.contact_list(i);
 			assert(c.ep().address() != std::string());
 			assert(c.ep().port() != std::string());
-			contact_list.add_contact(c.key(), c.ep(), false);
+			// contact_list.add_contact(c.key(), c.ep(), false);
+			send_PING_nolock(c.ep());
 			lc.push_back(c);				
 		}
 		replyIterative(lc, m.token(), m.to_id());
