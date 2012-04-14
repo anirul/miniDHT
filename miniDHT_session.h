@@ -350,11 +350,6 @@ namespace miniDHT {
 				}
 			} catch (std::exception& e) {
 				local_lock_.unlock();
-				std::cerr 
-//					<< "Exception (catched) : " << e.what()
-					<< " -> " << ep_.address().to_string() << ":" << ep_.port() 
-					<< " Disconnected!"
-					<< std::endl;
 				got_disconnected_callback_(ep_);
 				release();
 			}

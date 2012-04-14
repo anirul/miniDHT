@@ -74,8 +74,6 @@ namespace miniDHT {
 		void remove_contact(const endpoint_proto& ep) {
 			for (iterator ite = this->begin(); ite != this->end(); ++ite) {
 				if (ite->second.ep() == ep) {
-					std::cout << "remove contact : " 
-						<< ep.address() << ":" << ep.port() << std::endl;
 					this->erase(ite);
 					ite = this->begin();
 					continue;
@@ -114,9 +112,6 @@ namespace miniDHT {
 						map_time_ite[ite->second.time()] = ite++;
 					this->erase(map_time_ite.begin()->second);
 				} 
-				std::cout << "add contact : "
-					<< c.mutable_ep()->address() << ":"
-					<< c.mutable_ep()->port() << std::endl;
 				this->insert(p);
 				changed_ = true;
 			} else {
