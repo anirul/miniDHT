@@ -465,8 +465,9 @@ namespace miniDHT {
 		const token_t& t, 
 		const key_t& k)
 	{
-		assert(k != std::string("0000000000000000000000000000000"\
-				"000000000000000000000000000000000"));
+		assert(k != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		if (map_search[t].update_list(lc)) {
 			// iterativeStore
 			while (!map_search[t].is_value_full())

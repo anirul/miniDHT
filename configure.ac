@@ -46,7 +46,7 @@ LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
 # Checks for libraries.
-PKG_CHECK_MODULES([protobuf], [protobuf])
+PKG_CHECK_MODULES([protobuf], protobuf)
 PROTO_CPPFLAGS=`pkg-config --cflags protobuf`
 PROTO_LIBS=`pkg-config --libs protobuf`
 PROTOC=protoc
