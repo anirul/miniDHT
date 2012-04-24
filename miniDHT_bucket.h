@@ -32,15 +32,15 @@
 #include <bitset>
 #include <ctime>
 #include <boost/asio.hpp>
+#include "miniDHT_const.h"
 
 namespace miniDHT {
 	
-	template <unsigned int BUCKET_SIZE, unsigned int KEY_SIZE>
 	class bucket : public std::multimap<unsigned int, contact_proto> {
 	public :
 	
 		typedef std::string key_t;
-		typedef typename 
+		typedef 
 			std::multimap<unsigned int, contact_proto>::iterator 
 			iterator;
 				
@@ -53,114 +53,14 @@ namespace miniDHT {
 		
 	public :
 		
-		bucket(const key_t& k) : 
-			local_key_(k), changed_(true) {}
-		
-		endpoint_proto operator[](
-			const key_t& k) 
-		{
-			unsigned int common = common_bits<KEY_SIZE>(
-				string_to_key<KEY_SIZE>(local_key_), 
-				string_to_key<KEY_SIZE>(k));
-			iterator ite = this->find(common);
-			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (ite->second.key() == k) 
-					return ite->second.ep();
-				++ite;
-			}
-			throw std::string("unknown key");
-		}
-
-		void remove_contact(const endpoint_proto& ep) {
-			for (iterator ite = this->begin(); ite != this->end(); ++ite) {
-				if (ite->second.ep() == ep) {
-					this->erase(ite);
-					ite = this->begin();
-					continue;
-				}
-			}
-		}
-		
-		void add_contact(
-			const key_t& k, 
-			const endpoint_proto& ep)
-		{
-			// avoid adding self to contact list
-			if (k == local_key_) return;
-			now_ = update_time();
-			unsigned int common = common_bits<KEY_SIZE>(
-				string_to_key<KEY_SIZE>(local_key_), 
-				string_to_key<KEY_SIZE>(k));
-			contact_proto c;
-			c.set_key(k);
-			c.mutable_ep()->set_address(ep.address());
-			c.mutable_ep()->set_port(ep.port());
-			assert(c.ep().address() != std::string(""));
-			assert(c.ep().port() != std::string(""));
-			c.set_time(to_time_t(now_));
-			std::pair<unsigned int, contact_proto> p(common, c);
-			// is key here
-			iterator ite = find_key(k);
-			// insert if key not present
-			if (ite == this->end()) {
-				size_t item_count = this->count(common);
-				// too many item in the bucket
-				if (item_count >= BUCKET_SIZE) {
-					ite = this->find(common);
-					std::map<uint64_t, iterator> map_time_ite;
-					for (unsigned int i = 0; i < item_count; ++i)
-						map_time_ite[ite->second.time()] = ite++;
-					this->erase(map_time_ite.begin()->second);
-				} 
-				this->insert(p);
-				changed_ = true;
-			} else {
-				// if not the same endpoint change it
-				if (ite->second.ep() != ep) {
-					ite->second.mutable_ep()->set_address(ep.address());
-					ite->second.mutable_ep()->set_port(ep.port());
-				}
-				ite->second.set_time(to_time_t(now_));
-			}
-		}
-		
-		iterator find_key(const key_t& k) {
-			unsigned int common = common_bits<KEY_SIZE>(
-				string_to_key<KEY_SIZE>(local_key_), 
-				string_to_key<KEY_SIZE>(k));
-			iterator ite = this->find(common);
-			for (unsigned int i = 0; i < this->count(common); ++i) {
-				if (ite->second.key() == k)
-					return ite;
-				++ite;
-			}
-			return this->end();
-		}
-		
+		bucket(const key_t& k);
+		endpoint_proto operator[](const key_t& k);
+		void remove_contact(const endpoint_proto& ep);
+		void add_contact(const key_t& k, const endpoint_proto& ep);
+		iterator find_key(const key_t& k);
 		const std::map<std::string, std::string>& build_proximity(
-			const key_t& k) 
-		{
-			if (!changed_) return map_proximity_;
-			map_proximity_.clear();
-			iterator itc;
-			std::bitset<KEY_SIZE> search_key = string_to_key<KEY_SIZE>(k);
-			for (itc = this->begin(); itc != this->end(); ++itc) {
-				std::bitset<KEY_SIZE> loop_key = 
-					string_to_key<KEY_SIZE>(itc->second.key());
-				// calculate the xor distance, not to preserve order
-				std::bitset<KEY_SIZE> result = ~(search_key ^ loop_key);
-				map_proximity_[result.to_string()] = itc->second.key();
-			}
-			changed_ = false;
-			return map_proximity_;
-		}
-		
-		std::string random_key_in_bucket(unsigned int bn) {
-			std::bitset<KEY_SIZE> ret = string_to_key<KEY_SIZE>(local_key_);
-			for (unsigned int i = bn; i < KEY_SIZE; ++i)
-				ret[i] = (random() % 2) != 0;
-			return key_to_string(ret);
-		}
+			const key_t& k);
+		std::string random_key_in_bucket(unsigned int bn);
 	};
 		
 } // end namespace miniDHT

@@ -279,7 +279,7 @@ namespace miniDHT {
 					update_time() - boost::posix_time::from_time_t(
 						itc->second.time());
 				if (td > tRefresh) {
-					send_PING_nolock(itc->second.ep());
+					send_PING_nolock(itc->second.key());
 					db_backup.remove(itc->second.key());
 					contact_list.erase(itc);
 					itc = contact_list.begin();
@@ -652,7 +652,7 @@ namespace miniDHT {
 			assert(c.ep().address() != std::string());
 			assert(c.ep().port() != std::string());
 			// contact_list.add_contact(c.key(), c.ep(), false);
-			send_PING_nolock(c.ep());
+			send_PING_nolock(c.key());
 			lc.push_back(c);				
 		}
 		replyIterative(lc, m.token(), m.to_id());
@@ -683,6 +683,10 @@ namespace miniDHT {
 			map_search[m.token()].value_callback(ld);
 			map_search.erase(m.token());
 		}
+	}
+
+	void miniDHT::send_MESSAGE(const message_proto& m) {
+		// TODO		
 	}
 
 	void miniDHT::send_MESSAGE(
@@ -738,7 +742,28 @@ namespace miniDHT {
 		assert(epp.address() != std::string(""));
 		assert(epp.port() != std::string(""));
 		boost::mutex::scoped_lock lock_it(giant_lock_);
-		send_PING_nolock(epp, t);
+		try {
+			send_PING_nolock(epp, t);
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
+	}
+
+	void miniDHT::send_PING(
+		const key_t& to_id,
+		const token_t& t)
+	{
+		assert(k != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
+		boost::mutex::scoped_lock lock_it(giant_lock_);
+		try {
+			send_PING_nolock(to_id, t);
+		} catch (std::exception& ex) {
+			giant_lock_.unlock();
+			throw ex;
+		}
 	}
 
 	void miniDHT::send_PING_nolock(
@@ -756,21 +781,44 @@ namespace miniDHT {
 			send_MESSAGE(m, epp);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_PING(" << epp.address()
-				<< ":" << epp.port()
+				<< "Exception in send_PING_nolock(" 
+				<< epp.address() << ":" << epp.port()
 				<< ") : " << e.what() 
 				<< std::endl;				
 		}
 	}
 
+	void miniDHT::send_PING_nolock(
+		const key_t& to_id,
+		const token_t& t)
+	{
+		assert(k != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
+		try {
+			message_proto m;
+			m.set_type(message_proto::SEND_PING);
+			m.set_from_id(id_);
+			m.set_to_id(to_id);
+			m.set_token(t);
+			map_pint_ttl[m.token()] = update_time();
+			send_MESSAGE(m);
+		} catch (std::exception& ex) {
+			std::cerr
+				<< "Exception in send_PING_nolock() : " 
+				<< e.what() 
+				<< std::endl;				
+		}
+	}
+
 	void miniDHT::send_STORE(
-		const endpoint_proto& epp,
 		const key_t& to_id,
 		const data_item_proto& cbf,
 		const token_t& t)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_STORE);
@@ -782,47 +830,45 @@ namespace miniDHT {
 			m.mutable_data_item()->set_title(cbf.title());
 			m.mutable_data_item()->set_data(cbf.data());
 			map_store_check_val[t] = cbf.data().size();
-			send_MESSAGE(m, epp);
+			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_STORE(" << epp.address()
-				<< ":" << epp.port() 
-				<< ") : " << e.what() 
+				<< "Exception in send_STORE() : " 
+				<< e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_FIND_NODE(
-		const endpoint_proto& epp,
 		const key_t& to_id,
 		const token_t& t)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_FIND_NODE);
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
-			send_MESSAGE(m, epp);
+			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_FIND_NODE(" << epp.address()
-				<< ":" << epp.port()
-				<< ") : " << e.what() 
+				<< "Exception in send_FIND_NODE() : " 
+				<< e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_FIND_VALUE(
-		const endpoint_proto& epp,
 		const key_t& to_id,
 		const token_t& t,
 		const std::string& hint)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::SEND_FIND_VALUE);
@@ -830,52 +876,54 @@ namespace miniDHT {
 			m.set_token(t);
 			m.set_to_id(to_id);
 			m.set_hint(hint);
-			send_MESSAGE(m, epp);
+			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in send_FIND_VALUE(" << epp.address()
-				<< ":" << epp.port()
-				<< ") : " << e.what() 
+				<< "Exception in send_FIND_VALUE() : " 
+				<< e.what() 
 				<< std::endl;				
 		}
 	}
 	
 	void miniDHT::reply_PING(
-		const endpoint_proto& epp, 
+		const key_t& to_id,
 		const token_t& t)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_PING);
 			m.set_from_id(id_);
+			m.set_to_id(to_id);
 			m.set_token(t);
-			send_MESSAGE(m, epp);
+			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in reply_PING(" << epp.address()
-				<< ":" << epp.port()
-				<< ") : " << e.what() 
+				<< "Exception in reply_PING() : " 
+				<< e.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::reply_STORE(
-		const endpoint_proto& epp,
+		const key_t& to_id,
 		const token_t& t,
 		const data_item_proto& cbf)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			digest_t digest;
 			message_proto m;
 			m.set_type(message_proto::REPLY_STORE);
 			m.set_from_id(id_);
+			m.set_to_id(to_id);
 			m.set_token(t);
 			m.set_check_val(cbf.data().size());
-			send_MESSAGE(m, epp);
+			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
 				<< "Exception in reply_STORE(" << epp.address()
@@ -886,12 +934,12 @@ namespace miniDHT {
 	}
 
 	void miniDHT::reply_FIND_NODE(
-		const endpoint_proto& epp,
-		const token_t& t,
-		const key_t& to_id)
+		const key_t& to_id,
+		const token_t& t)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_FIND_NODE);
@@ -906,7 +954,7 @@ namespace miniDHT {
 				if ((m.contact_list_size() >= ALPHA) || 
 					(bit == contact_list.end()))
 				{
-					send_MESSAGE(m, epp);
+					send_MESSAGE(m);
 					m.clear_contact_list();
 				}
 			}
@@ -920,13 +968,13 @@ namespace miniDHT {
 	}
 
 	void miniDHT::reply_FIND_VALUE(
-		const endpoint_proto& epp,
-		const token_t& t,
 		const key_t& to_id,
+		const token_t& t,
 		const std::string& hint)
 	{
-		assert(epp.address() != std::string(""));
-		assert(epp.port() != std::string(""));
+		assert(to_id != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
 		try {
 			message_proto m;
 			m.set_type(message_proto::REPLY_FIND_VALUE);
@@ -944,7 +992,7 @@ namespace miniDHT {
 				}
 			}
 			if (m.data_item_list_size() > 0) {
-				send_MESSAGE(m, epp);
+				send_MESSAGE(m);
 			}
 		} catch (std::exception& e) {
 			std::cerr 

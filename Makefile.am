@@ -31,7 +31,7 @@ miniDHT_recv_LDFLAGS = $(AM_LDFLAGS) -static libminiDHT-1.0.la
 
 lib_LTLIBRARIES = libminiDHT-1.0.la
 
-libminiDHT_1_0_la_SOURCES = miniDHT.cpp miniDHT.h miniDHT_db.cpp miniDHT_db.h miniDHT_const.cpp miniDHT_const.h miniDHT_bucket.h miniDHT_search.h miniDHT_session.h  
+libminiDHT_1_0_la_SOURCES = miniDHT.cpp miniDHT.h miniDHT_db.cpp miniDHT_db.h miniDHT_const.cpp miniDHT_const.h miniDHT_bucket.cpp miniDHT_bucket.h miniDHT_search.cpp miniDHT_search.h miniDHT_session.h  
 nodist_libminiDHT_1_0_la_SOURCES = miniDHT_proto.pb.h miniDHT_proto.pb.cc
 BUILT_SOURCES = miniDHT_proto.pb.h miniDHT_proto.pb.cc
 CLEANFILES = miniDHT_proto.pb.h miniDHT_proto.pb.cc
@@ -79,6 +79,12 @@ BitSmear.app: Info.plist BitSmear miniDHT_server miniDHT_send miniDHT_recv
 	cp -af @BOOST_LIB_DIR@/libboost_date_time-mt.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @BOOST_LIB_DIR@/libboost_filesystem-mt.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @BOOST_LIB_DIR@/libboost_regex-mt.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_thread.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_system.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_program_options.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_date_time.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_filesystem.dylib BitSmear.app/Contents/Frameworks/
+	cp -af @BOOST_LIB_DIR@/libboost_regex.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libprotobuf.7.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libSDL-1.2.0.dylib BitSmear.app/Contents/Frameworks/
 	cp -af @PORT_LIB_DIR@/libiconv.2.dylib BitSmear.app/Contents/Frameworks/

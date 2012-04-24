@@ -43,6 +43,21 @@
 
 namespace miniDHT {
 
+	// size in bit of the key (match SHA-256)
+	const unsigned int KEY_SIZE = 256;
+	// size in bit of the token (dont't change it is assume to be 32)
+	const unsigned int TOKEN_SIZE = 32;
+	// parallelism level, this is also the numbere of nodes per packet
+	// sent back in a FIND_NODE message.
+	const unsigned int ALPHA = 3;
+	// node (contact) per bucket
+	const unsigned int BUCKET_SIZE = 5;
+	// call back for clean up (minutes) this is also used as a timeout
+	// for the contact list (node list).
+	const size_t PERIODIC = 30;
+	// maximum size of a packet (1MB)
+	const size_t PACKET_SIZE = 1024 * 1024;
+	// digest length in bytes
 	const unsigned int DIGEST_LENGTH = 32;
 
 	class digest_t {

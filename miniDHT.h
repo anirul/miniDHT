@@ -52,21 +52,6 @@
 #include "miniDHT_search.h"
 
 namespace miniDHT {
-
-	// size in bit of the key (match SHA-256)
-	const unsigned int KEY_SIZE = 256;
-	// size in bit of the token (dont't change it is assume to be 32)
-	const unsigned int TOKEN_SIZE = 32;
-	// parallelism level, this is also the numbere of nodes per packet
-	// sent back in a FIND_NODE message.
-	const unsigned int ALPHA = 3;
-	// node (contact) per bucket
-	const unsigned int BUCKET_SIZE = 5;
-	// call back for clean up (minutes) this is also used as a timeout
-	// for the contact list (node list).
-	const size_t PERIODIC = 30;
-	// maximum size of a packet (1MB)
-	const size_t PACKET_SIZE = 1024 * 1024;
 		
 	class miniDHT {
 	
@@ -210,7 +195,12 @@ namespace miniDHT {
 		void handle_REPLY_FIND_NODE(const message_proto& m);
 		void handle_SEND_FIND_VALUE(const message_proto& m);
 		void handle_REPLY_FIND_VALUE(const message_proto& m);
-		void send_MESSAGE(const message_proto& m, const endpoint_proto& epp);
+
+	protected :
+
+		// generic send message
+		void send_MESSAGE_IP(const message_proto& m, const endpoint_proto& epp);
+		void send_MESSAGE(const message_proto& m);
 		
 	public :
 	
@@ -219,6 +209,9 @@ namespace miniDHT {
 		void send_PING(
 			const endpoint_proto& epp,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
+		void send_PING(
+			const key_t& to_id,
+			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 
 	protected :
 
@@ -226,20 +219,20 @@ namespace miniDHT {
 		void send_PING_nolock(
 			const endpoint_proto& epp,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
+		void send_PING_nolock(
+			const key_t& to_id,
+			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		
 	protected :
 
 		void send_STORE(
-			const endpoint_proto& epp,
 			const key_t& to_id,
 			const data_item_proto& cbf,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_NODE(
-			const endpoint_proto& epp,
 			const key_t& to_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_VALUE(
-			const endpoint_proto& epp,
 			const key_t& to_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong(),
 			const std::string& hint = std::string(""));
@@ -247,20 +240,18 @@ namespace miniDHT {
 	protected :
 	
 		void reply_PING(
-			const endpoint_proto& epp, 
+			const key_t& to_id,
 			const token_t& t);
 		void reply_STORE(
-			const endpoint_proto& epp,
+			const key_t& to_id,
 			const token_t& t,
 			const data_item_proto& cbf);
 		void reply_FIND_NODE(
-			const endpoint_proto& epp,
-			const token_t& t,
-			const key_t& to_id);
-		void reply_FIND_VALUE(
-			const endpoint_proto& epp,
-			const token_t& t,
 			const key_t& to_id,
+			const token_t& t);
+		void reply_FIND_VALUE(
+			const key_t& to_id,
+			const token_t& t,
 			const std::string& hint = std::string(""));
 
 	};
