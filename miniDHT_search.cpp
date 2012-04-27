@@ -25,13 +25,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <list>
+#include <map>
+#include <string>
+#include <boost/function.hpp>
+
 #include "miniDHT_search.h"
 
 namespace miniDHT {
 
 	search::search(
-		const key_t& src, 
-		const key_t& dest, 
+		const search::key_t& src, 
+		const search::key_t& dest, 
 		search_type_t t) : 
 			ttl(update_time()), 
 			destination(dest), 
@@ -61,8 +66,7 @@ namespace miniDHT {
 		for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
 			assert(ite->ep().address() != std::string(""));
 			assert(ite->ep().port() != std::string(""));
-			if (map_node_busy.find(string_to_key<KEY_SIZE>(ite->key())) == 
-					map_node_busy.end())
+			if (map_node_busy.find(ite->key()) == map_node_busy.end())
 				++i;
 		}
 		return i;
@@ -118,6 +122,22 @@ namespace miniDHT {
 		throw std::string("no endpoint found!");
 	}
 
+	search::key_t search::get_node_key() {
+		std::list<contact_proto>::const_iterator ite;
+		for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
+			assert(ite->key() != std::string(
+				"00000000000000000000000000000000"\
+				"00000000000000000000000000000000"));
+			assert(ite->ep().address() != std::string(""));
+			assert(ite->ep().port() != std::string(""));			
+			if (map_node_busy.find(ite->key()) == map_node_busy.end()) {
+				map_node_busy[ite->key()] = true;
+				return ite->key();
+			}
+		}
+		throw std::string("no key found!");
+	}
+
 	endpoint_proto search::get_value_endpoint() {
 		std::list<contact_proto>::iterator ite;
 		for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
@@ -128,9 +148,25 @@ namespace miniDHT {
 				return ite->ep();
 			}
 		}
-		throw std::string("no endpoint found!");
+		throw std::runtime_error("no endpoint found!");
 	}
 		
+	search::key_t search::get_value_key() {
+		std::list<contact_proto>::iterator ite;
+		for (ite = short_list.begin(); ite != short_list.end(); ++ite) {
+			assert(ite->key() != std::string(
+				"00000000000000000000000000000000"\
+				"00000000000000000000000000000000"));
+			assert(ite->ep().address() != std::string(""));
+			assert(ite->ep().port() != std::string(""));
+			if (map_value_busy.find(ite->key()) == map_value_busy.end()) {
+				map_value_busy[ite->key()] = true;
+				return ite->key();
+			}
+		}
+		throw std::runtime_error("no key found!");
+	}
+
 	bool search::update_list(const std::list<contact_proto>& lc) {
 		if (lc.size() == 0) return is_bucket_full();
 		map_key_contact_proto_t map_sorted;
@@ -158,13 +194,13 @@ namespace miniDHT {
 		if (short_list.size() && (short_list == temp)) 
 			return true;
 		short_list = temp;
-//		key_t k = map_sorted.begin()->first;
+//		search::key_t k = map_sorted.begin()->first;
 //		std::cout << k << "\t" << map_sorted.size() << std::endl;
 		return is_bucket_full();
 	}
 		
 	void search::call_node_callback() {
-		std::list<key_t> lk;
+		std::list<search::key_t> lk;
 		std::list<contact_proto>::iterator itc;
 		for (itc = short_list.begin(); itc != short_list.end(); ++itc)
 			lk.push_back(itc->key());

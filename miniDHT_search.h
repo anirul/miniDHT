@@ -46,7 +46,7 @@ namespace miniDHT {
 		typedef std::map<key_t, bool> map_key_bool_t;
 		typedef std::map<key_t, contact_proto> map_key_contact_proto_t;
 		typedef 
-			std::map<key_t, contact_proto>::iterator 
+			std::map<std::string, contact_proto>::iterator 
 			map_key_contact_proto_iterator;
 		
 		// callback declaration
@@ -85,12 +85,17 @@ namespace miniDHT {
 		bool is_bucket_full() const;
 		int nb_node_left() const;
 		bool is_node_full() const;
-		bool search::is_value_full() const;
+		bool is_value_full() const;
 		unsigned int short_list_in_bucket() const;
-		endpoint_proto get_node_endpoint();
-		endpoint_proto get_value_endpoint();
 		bool update_list(const std::list<contact_proto>& lc);
 		void call_node_callback();
+		key_t get_node_key();
+		key_t get_value_key();
+
+	protected :
+
+		endpoint_proto get_node_endpoint();
+		endpoint_proto get_value_endpoint();
 	};
 
 } // end namespace miniDHT

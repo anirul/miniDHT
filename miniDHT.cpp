@@ -442,7 +442,7 @@ namespace miniDHT {
 				i < ALPHA && !map_search[t].is_node_full(); 
 				++i)
 			{
-				send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
+				send_FIND_NODE(map_search[t].get_node_key(), k, t);
 			}
 		}
 	}
@@ -457,7 +457,7 @@ namespace miniDHT {
 		for (	unsigned int i = 0; 
 				i < ALPHA && !map_search[t].is_node_full(); 
 				++i)
-			send_FIND_VALUE(map_search[t].get_node_endpoint(), k, t);
+			send_FIND_VALUE(map_search[t].get_node_key(), k, t);
 	}
 		
 	void miniDHT::replyIterativeStoreSearch(
@@ -472,7 +472,7 @@ namespace miniDHT {
 			// iterativeStore
 			while (!map_search[t].is_value_full())
 				send_STORE(
-					map_search[t].get_value_endpoint(), 
+					map_search[t].get_value_key(), 
 					k, 
 					map_search[t].buffer, 
 					t);
@@ -482,7 +482,7 @@ namespace miniDHT {
 				for (	unsigned int i = 0; 
 						i < ALPHA && !map_search[t].is_node_full(); 
 						++i)
-				send_FIND_NODE(map_search[t].get_node_endpoint(), k, t);
+				send_FIND_NODE(map_search[t].get_node_key(), k, t);
 		}
 	}
 
@@ -528,9 +528,9 @@ namespace miniDHT {
 		const boost::asio::ip::tcp::endpoint& ep,
 		const basic_message<PACKET_SIZE>& msg)	
 	{
+		boost::mutex::scoped_lock lock_it(giant_lock_);
 		std::stringstream ss(std::string(msg.body(), msg.body_length()));
 		try {
-			boost::mutex::scoped_lock lock_it(giant_lock_);
 			sender_endpoint_ = ep;
 			endpoint_proto epp = endpoint_to_proto(ep);
 			message_proto m;
@@ -586,7 +586,7 @@ namespace miniDHT {
 	}
 
 	void miniDHT::handle_SEND_PING(const message_proto& m) {
-		reply_PING(endpoint_to_proto(sender_endpoint_), m.token());
+		reply_PING(m.from_id(), m.token());
 	}
 
 	void miniDHT::handle_REPLY_PING(const message_proto& m) {
@@ -616,7 +616,7 @@ namespace miniDHT {
 		data_item_proto di(m.data_item());
 		di.set_time(to_time_t(update_time()));
 		insert_db(m.to_id(), di);
-		reply_STORE(endpoint_to_proto(sender_endpoint_), m.token(), di);
+		reply_STORE(m.from_id(), m.token(), di);
 	}
 		
 	void miniDHT::handle_REPLY_STORE(const message_proto& m) {
@@ -635,10 +635,7 @@ namespace miniDHT {
 	}
 		
 	void miniDHT::handle_SEND_FIND_NODE(const message_proto& m) {
-		reply_FIND_NODE(
-			endpoint_to_proto(sender_endpoint_), 
-			m.token(), 
-			m.to_id());
+		reply_FIND_NODE(m.from_id(), m.token());
 	}
 		
 	void miniDHT::handle_REPLY_FIND_NODE(const message_proto& m) {
@@ -663,15 +660,13 @@ namespace miniDHT {
 		is_present = (db_storage.count(m.to_id()) != 0);
 		if (is_present) {
 			reply_FIND_VALUE(
-				endpoint_to_proto(sender_endpoint_), 
+				m.from_id(), 
 				m.token(), 
-				m.to_id(), 
 				m.hint());
 		} else {
 			reply_FIND_NODE(
-				endpoint_to_proto(sender_endpoint_), 
-				m.token(), 
-				m.to_id());
+				m.from_id(), 
+				m.token());
 		}
 	}
 		
@@ -686,7 +681,13 @@ namespace miniDHT {
 	}
 
 	void miniDHT::send_MESSAGE(const message_proto& m) {
-		// TODO		
+		assert(m.to_id() != std::string(
+			"00000000000000000000000000000000"\
+			"00000000000000000000000000000000"));
+		bucket::iterator ite = contact_list.find_key(m.to_id());
+		if (ite == contact_list.end())
+			throw std::runtime_error("No route to key : " + m.to_id());
+		send_MESSAGE(m, ite->second.ep());
 	}
 
 	void miniDHT::send_MESSAGE(
@@ -754,7 +755,7 @@ namespace miniDHT {
 		const key_t& to_id,
 		const token_t& t)
 	{
-		assert(k != std::string(
+		assert(to_id != std::string(
 			"00000000000000000000000000000000"\
 			"00000000000000000000000000000000"));
 		boost::mutex::scoped_lock lock_it(giant_lock_);
@@ -792,7 +793,7 @@ namespace miniDHT {
 		const key_t& to_id,
 		const token_t& t)
 	{
-		assert(k != std::string(
+		assert(to_id != std::string(
 			"00000000000000000000000000000000"\
 			"00000000000000000000000000000000"));
 		try {
@@ -801,18 +802,19 @@ namespace miniDHT {
 			m.set_from_id(id_);
 			m.set_to_id(to_id);
 			m.set_token(t);
-			map_pint_ttl[m.token()] = update_time();
+			map_ping_ttl[m.token()] = update_time();
 			send_MESSAGE(m);
 		} catch (std::exception& ex) {
 			std::cerr
 				<< "Exception in send_PING_nolock() : " 
-				<< e.what() 
+				<< ex.what() 
 				<< std::endl;				
 		}
 	}
 
 	void miniDHT::send_STORE(
 		const key_t& to_id,
+		const key_t& query_id,
 		const data_item_proto& cbf,
 		const token_t& t)
 	{
@@ -825,6 +827,7 @@ namespace miniDHT {
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
+			m.set_query_id(query_id);
 			m.mutable_data_item()->set_ttl(cbf.ttl());
 			m.mutable_data_item()->set_time(cbf.time());
 			m.mutable_data_item()->set_title(cbf.title());
@@ -841,6 +844,7 @@ namespace miniDHT {
 
 	void miniDHT::send_FIND_NODE(
 		const key_t& to_id,
+		const key_t& query_id,
 		const token_t& t)
 	{
 		assert(to_id != std::string(
@@ -852,6 +856,7 @@ namespace miniDHT {
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
+			m.set_query_id(query_id);
 			send_MESSAGE(m);
 		} catch (std::exception& e) {
 			std::cerr 
@@ -863,6 +868,7 @@ namespace miniDHT {
 
 	void miniDHT::send_FIND_VALUE(
 		const key_t& to_id,
+		const key_t& query_id,
 		const token_t& t,
 		const std::string& hint)
 	{
@@ -875,6 +881,7 @@ namespace miniDHT {
 			m.set_from_id(id_);
 			m.set_token(t);
 			m.set_to_id(to_id);
+			m.set_query_id(query_id);
 			m.set_hint(hint);
 			send_MESSAGE(m);
 		} catch (std::exception& e) {
@@ -924,11 +931,9 @@ namespace miniDHT {
 			m.set_token(t);
 			m.set_check_val(cbf.data().size());
 			send_MESSAGE(m);
-		} catch (std::exception& e) {
+		} catch (std::exception& ex) {
 			std::cerr 
-				<< "Exception in reply_STORE(" << epp.address()
-				<< ":" << epp.port()
-				<< ") : " << e.what() 
+				<< "Exception in reply_STORE() : " << ex.what() 
 				<< std::endl;				
 		}
 	}
@@ -960,9 +965,7 @@ namespace miniDHT {
 			}
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "\t\t\tException in reply_FIND_NODE(" << epp.address()
-				<< ":" << epp.port()
-				<< ") : " << e.what() 
+				<< "\t\t\tException in reply_FIND_NODE() : " << e.what() 
 				<< std::endl;
 		}
 	}
@@ -996,9 +999,7 @@ namespace miniDHT {
 			}
 		} catch (std::exception& e) {
 			std::cerr 
-				<< "Exception in reply_FIND_VALUE(" << epp.address()
-				<< ":" << epp.port() 
-				<< ") : " << e.what() 
+				<< "Exception in reply_FIND_VALUE() : " << e.what() 
 				<< std::endl;				
 		}
 	}

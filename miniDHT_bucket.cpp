@@ -101,7 +101,7 @@ namespace miniDHT {
 		}
 	}
 
-	iterator bucket::find_key(const key_t& k) {
+	bucket::iterator bucket::find_key(const key_t& k) {
 		unsigned int common = common_bits<KEY_SIZE>(
 			string_to_key<KEY_SIZE>(local_key_), 
 			string_to_key<KEY_SIZE>(k));

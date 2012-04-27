@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, Frederic DUBOUCHET
+ * Copyright (c) 2009-2012, Frederic DUBOUCHET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,8 +59,8 @@ namespace miniDHT {
 
 		typedef uint32_t token_t;
 		typedef std::string key_t;
-		typedef search<KEY_SIZE, BUCKET_SIZE> search_t;
-		typedef bucket<BUCKET_SIZE, KEY_SIZE> bucket_t;
+		typedef search search_t;
+		typedef bucket bucket_t;
 		typedef 
 			std::map<endpoint_proto, session<PACKET_SIZE>*> 
 			map_ep_proto_session_t;
@@ -68,7 +68,7 @@ namespace miniDHT {
 			std::map<endpoint_proto, session<PACKET_SIZE>*>::iterator
 			map_ep_proto_session_iterator;
 		typedef  
-			bucket<BUCKET_SIZE, KEY_SIZE>::iterator 
+			bucket::iterator 
 			bucket_iterator;
 		typedef std::map<key_t, time_t>::iterator map_key_time_iterator;
 			
@@ -199,7 +199,7 @@ namespace miniDHT {
 	protected :
 
 		// generic send message
-		void send_MESSAGE_IP(const message_proto& m, const endpoint_proto& epp);
+		void send_MESSAGE(const message_proto& m, const endpoint_proto& epp);
 		void send_MESSAGE(const message_proto& m);
 		
 	public :
@@ -227,13 +227,16 @@ namespace miniDHT {
 
 		void send_STORE(
 			const key_t& to_id,
+			const key_t& query_id,
 			const data_item_proto& cbf,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_NODE(
 			const key_t& to_id,
+			const key_t& query_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
 		void send_FIND_VALUE(
 			const key_t& to_id,
+			const key_t& query_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong(),
 			const std::string& hint = std::string(""));
 			
