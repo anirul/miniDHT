@@ -537,29 +537,29 @@ namespace miniDHT {
 			m.ParseFromIstream(&ss);
 			switch (m.type()) {
 				case message_proto::SEND_PING :
-					handle_SEND_PING(m);
 					contact_list.add_contact(m.from_id(), epp);
+					handle_SEND_PING(m);
 					break;
 				case message_proto::REPLY_PING :
 					handle_REPLY_PING(m);
 					break;
 				case message_proto::SEND_STORE :
-					handle_SEND_STORE(m);
 					contact_list.add_contact(m.from_id(), epp);
+					handle_SEND_STORE(m);
 					break;
 				case message_proto::REPLY_STORE :
 					handle_REPLY_STORE(m);	
 					break;
 				case message_proto::SEND_FIND_NODE :
-					handle_SEND_FIND_NODE(m);
 					contact_list.add_contact(m.from_id(), epp);
+					handle_SEND_FIND_NODE(m);
 					break;
 				case message_proto::REPLY_FIND_NODE :
 					handle_REPLY_FIND_NODE(m);
 					break;
 				case message_proto::SEND_FIND_VALUE :
-					handle_SEND_FIND_VALUE(m);
 					contact_list.add_contact(m.from_id(), epp);
+					handle_SEND_FIND_VALUE(m);
 					break;
 				case message_proto::REPLY_FIND_VALUE :
 					handle_REPLY_FIND_VALUE(m);
