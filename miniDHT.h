@@ -187,6 +187,10 @@ namespace miniDHT {
 			const boost::asio::ip::tcp::endpoint& ep,
 			const basic_message<PACKET_SIZE>& msg);
 		void handle_disconnect(const boost::asio::ip::tcp::endpoint& ep);
+      void handle_message(const message_proto& m);
+      void handle_message(
+            const message_proto& m,
+            const endpoint_proto& epp);
 		void handle_SEND_PING(const message_proto& m);
 		void handle_REPLY_PING(const message_proto& m);
 		void handle_SEND_STORE(const message_proto& m);
