@@ -1,4 +1,5 @@
-Welcome to the miniDHT project
+anirul (Frederic DUBOUCHET)
+mic (Michael JAUSSI)Welcome to the miniDHT project
 
 	My aim was to make a DHT (Distributed Hash Table) written in C++ with not
 	too many dependencies. The DHT itself is based on Kademlia protocol. This
@@ -17,3 +18,10 @@ Dependencies :
 	 - sqlite3 (database managment)
 	 - protobuf (google::protocole serialization)
 	 - wxWidget (if you want the GUI)
+TODO list
+
+ - watch clean up of memory at the exit of dialogs
+ - Finish the GUI (add download etc...)
+ - Add a routing algorithm (in receive and send)
+ - Find a way to speed it up!
+

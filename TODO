@@ -1,7 +1,0 @@
-TODO list
-
- - watch clean up of memory at the exit of dialogs
- - Finish the GUI (add download etc...)
- - Add a routing algorithm (in receive and send)
- - Find a way to speed it up!
-
