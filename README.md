@@ -4,7 +4,7 @@ miniDHT
 ##Authors
 
  - anirul (Frederic DUBOUCHET)
- - mic (Michael JAUSSI)Welcome to the miniDHT project
+ - mic (Michael JAUSSI)
 
 ##Description
 
