@@ -22,6 +22,8 @@ if(WIN32 OR APPLE)
         ${Boost_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/Sources
         ${PROJECT_SOURCE_DIR}/Tests
+        ${PROTOBUF_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}
     )
 endif(WIN32 OR APPLE)
 
@@ -33,6 +35,8 @@ if(UNIX AND NOT APPLE)
         ${Boost_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/Sources
         ${PROJECT_SOURCE_DIR}/Tests
+        ${PROTOBUF_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}
     )
 endif(UNIX AND NOT APPLE)
 
@@ -59,11 +63,20 @@ find_package(Boost 1.54.0 REQUIRED COMPONENTS
     python
 )
 
+find_package(Protobuf REQUIRED)
+PROTOBUF_GENERATE_CPP(
+    PROTO_SRCS
+    PROTO_HDRS
+    ${PROJECT_SOURCE_DIR}/Sources/miniDHT_proto.proto
+)
+
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found")
 endif()
 
 add_library(miniDHT STATIC
+    ${PROTO_SRCS}
+    ${PROTO_HDRS}
     ${PROJECT_SOURCE_DIR}/Sources/miniDHT.cpp
     ${PROJECT_SOURCE_DIR}/Sources/miniDHT.h
     ${PROJECT_SOURCE_DIR}/Sources/miniDHT_bucket.cpp
@@ -104,6 +117,11 @@ add_executable(dht_test
 )
 
 if(APPLE)
+    find_library(Z_LIBRARY
+        libz.a
+        /opt/local/lib
+    )
+
     find_library(SSL_LIBRARY
         libssl.a
         /opt/local/lib
@@ -118,34 +136,63 @@ if(APPLE)
         libsqlite3.a
         /opt/local/lib
     )
+
+    find_library(PROTOBUF_LIBRARY
+        libprotobuf.a
+        /opt/local/lib
+    )
 endif(APPLE)
 
 target_link_libraries(aes_crypt_test
     ${Boost_LIBRARIES}
+    ${Z_LIBRARY}
     ${CRYPTO_LIBRARY}
     ${SSL_LIBRARY}
 )
 
 target_link_libraries(db_key_value
     miniDHT
+    ${PROTOBUF_LIBRARY}
     ${Boost_LIBRARIES}
     ${SQLITE_LIBRARY}
 )
 
 target_link_libraries(db_multi_key_data
     miniDHT
+    ${PROTOBUF_LIBRARY}
     ${Boost_LIBRARIES}
     ${SQLITE_LIBRARY}
+    ${Z_LIBRARY}
+    ${CRYPTO_LIBRARY}
+    ${SSL_LIBRARY}
 )
 
 target_link_libraries(server
     miniDHT
+    ${PROTOBUF_LIBRARY}
     ${Boost_LIBRARIES}
     ${SQLITE_LIBRARY}
+    ${Z_LIBRARY}
+    ${CRYPTO_LIBRARY}
+    ${SSL_LIBRARY}
 )
 
-target_link_libraries(test
+target_link_libraries(session
     miniDHT
+    ${PROTOBUF_LIBRARY}
     ${Boost_LIBRARIES}
     ${SQLITE_LIBRARY}
+    ${Z_LIBRARY}
+    ${CRYPTO_LIBRARY}
+    ${SSL_LIBRARY}
+)
+
+target_link_libraries(dht_test
+    miniDHT
+    ${PROTOBUF_LIBRARY}
+    ${Boost_LIBRARIES}
+    ${SQLITE_LIBRARY}
+    ${Z_LIBRARY}
+    ${CRYPTO_LIBRARY}
+    ${SSL_LIBRARY}
 )

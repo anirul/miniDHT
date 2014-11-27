@@ -52,28 +52,28 @@
 #include "miniDHT_search.h"
 
 namespace miniDHT {
-		
+
 	class miniDHT {
-	
+
 	public :
 
 		typedef uint32_t token_t;
 		typedef std::string key_t;
 		typedef search search_t;
 		typedef bucket bucket_t;
-		typedef 
-			std::map<endpoint_proto, session<PACKET_SIZE>*> 
+		typedef
+			std::map<endpoint_proto, session<PACKET_SIZE>*>
 			map_ep_proto_session_t;
-		typedef 
+		typedef
 			std::map<endpoint_proto, session<PACKET_SIZE>*>::iterator
 			map_ep_proto_session_iterator;
-		typedef  
-			bucket::iterator 
+		typedef
+			bucket::iterator
 			bucket_iterator;
 		typedef std::map<key_t, time_t>::iterator map_key_time_iterator;
-			
+
 	private :
-	
+
 		const boost::posix_time::time_duration periodic_;
 		key_t id_;
 		size_t max_records_;
@@ -99,43 +99,43 @@ namespace miniDHT {
 		std::map<token_t, unsigned int> map_store_check_val;
 		// session pointers
 		map_ep_proto_session_t map_ep_proto_session;
-			
+
 	public :
-	
+
 		miniDHT(
-			boost::asio::io_service& io_service, 
+			boost::asio::io_service& io_service,
 			const boost::asio::ip::tcp::endpoint& ep,
 			const std::string& path = std::string("./"),
 			size_t max_records = DEFAULT_MAX_RECORDS);
 		virtual ~miniDHT();
 
 	public :
-				
+
 		// callback declaration
-		typedef boost::function<void (const std::list<key_t>& k)> 
+		typedef boost::function<void (const std::list<key_t>& k)>
 			node_callback_t;
-		typedef boost::function<void (const std::list<data_item_proto>& b)>  
+		typedef boost::function<void (const std::list<data_item_proto>& b)>
 			value_callback_t;
 		// iterative messages
 		void iterativeStore(const std::string& k, const data_item_proto& b);
 		void iterativeFindNode(const std::string& k);
 		void iterativeFindNode(
-			const key_t& k, 
+			const key_t& k,
 			const node_callback_t& c);
 		void iterativeFindValue(
-			const key_t& k, 
+			const key_t& k,
 			const value_callback_t& c,
 			const std::string& hint = std::string(""));
-		
+
 	protected :
 
 		void iterativeStore_nolock(
-			const key_t& k, 
+			const key_t& k,
 			const data_item_proto& b);
 		void iterativeFindNode_nolock(const key_t& k);
-		
+
 	public :
-	
+
 		std::list<contact_proto> nodes_description();
 		size_t storage_size();
 		size_t bucket_size();
@@ -144,9 +144,9 @@ namespace miniDHT {
 		size_t storage_wait_queue() const;
 		void set_max_record(size_t val);
 		size_t get_max_record() const;
-			
+
 	protected :
-	
+
 		void restore_from_backup(
 			const std::string& path,
 			unsigned short port);
@@ -155,26 +155,26 @@ namespace miniDHT {
 		void periodic();
 		void startNodeLookup(const token_t& t, const key_t& k);
 		std::map<key_t, key_t> build_proximity(
-			const key_t& k, 
+			const key_t& k,
 			const std::list<contact_proto>& lc);
-		
+
 	protected :
 
 		void replyIterative(
-			const std::list<contact_proto>& lc, 
-			const token_t& t, 
+			const std::list<contact_proto>& lc,
+			const token_t& t,
 			const key_t& k);
 		void replyIterativeNodeSearch(
-			const std::list<contact_proto>& lc, 
-			const token_t& t, 
+			const std::list<contact_proto>& lc,
+			const token_t& t,
 			const key_t& k);
 		void replyIterativeValueSearch(
-			const std::list<contact_proto>& lc, 
-			const token_t& t, 
+			const std::list<contact_proto>& lc,
+			const token_t& t,
 			const key_t& k);
 		void replyIterativeStoreSearch(
-			const std::list<contact_proto>& lc, 
-			const token_t& t, 
+			const std::list<contact_proto>& lc,
+			const token_t& t,
 			const key_t& k);
 
 	protected :
@@ -205,9 +205,9 @@ namespace miniDHT {
 		// generic send message
 		void send_MESSAGE(const message_proto& m, const endpoint_proto& epp);
 		void send_MESSAGE(const message_proto& m);
-		
+
 	public :
-	
+
 		// ping is now public so that you can bootstrap to a network after
 		// class initialization.
 		void send_PING(
@@ -226,7 +226,7 @@ namespace miniDHT {
 		void send_PING_nolock(
 			const key_t& to_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong());
-		
+
 	protected :
 
 		void send_STORE(
@@ -243,9 +243,9 @@ namespace miniDHT {
 			const key_t& query_id,
 			const token_t& t = random_bitset<TOKEN_SIZE>().to_ulong(),
 			const std::string& hint = std::string(""));
-			
+
 	protected :
-	
+
 		void reply_PING(
 			const key_t& to_id,
 			const token_t& t);
@@ -266,4 +266,3 @@ namespace miniDHT {
 } // end of namespace miniDHT
 
 #endif // MINIDHT_HEADER_DEFINED
-

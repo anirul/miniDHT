@@ -41,17 +41,23 @@ void handle_accept(
 void handle_receive(
 	const boost::asio::ip::tcp::endpoint& ep,
 	const miniDHT::basic_message<PACKET_SIZE>& s);
+void handle_disconnected(
+	const boost::asio::ip::tcp::endpoint& ep)
+{
+	std::cerr << ep << " got discronnected." << std::endl;
+}
 
 void start_accept() {
-	miniDHT::session<PACKET_SIZE>* accept_session = 
+	miniDHT::session<PACKET_SIZE>* accept_session =
 		new miniDHT::session<PACKET_SIZE>(
 		ios,
 		handle_receive,
+		handle_disconnected,
 		map_ep_proto_session);
 	acceptor->async_accept(
 		accept_session->socket(),
 		boost::bind(
-			&handle_accept, accept_session, 
+			&handle_accept, accept_session,
 			boost::asio::placeholders::error));
 }
 
@@ -70,12 +76,12 @@ void handle_receive(
 {
 	std::cout << "receive packet from : " << ep << std::endl;
 	std::cout << std::string(s.body(), s.body_length()) << std::endl;
-	miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite = 
+	miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite =
 		map_ep_proto_session.find(
 			miniDHT::endpoint_to_proto(ep));
 	if (ite == map_ep_proto_session.end()) {
-		std::cout 
-			<< "could not find : " << ep 
+		std::cout
+			<< "could not find : " << ep
 			<< " in the session list..." << std::endl;
 		return;
 	}
@@ -102,18 +108,18 @@ int main(int ac, char** av) {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
 			("help,h", "produce help message")
-			("listen,l", boost::program_options::value<unsigned short>(), 
+			("listen,l", boost::program_options::value<unsigned short>(),
 				"set the listen port")
-			("port,p", boost::program_options::value<unsigned short>(), 
+			("port,p", boost::program_options::value<unsigned short>(),
 				"set the bootstrap port")
-			("address,a", boost::program_options::value<std::string>(), 
+			("address,a", boost::program_options::value<std::string>(),
 				"set the bootstrap address")
 		;
 		boost::program_options::variables_map vm;
 		boost::program_options::store(
 			boost::program_options::command_line_parser(
-				ac, 
-				av).options(desc).run(), 
+				ac,
+				av).options(desc).run(),
 			vm);
 		boost::program_options::notify(vm);
 		if (vm.count("help")) {
@@ -121,9 +127,9 @@ int main(int ac, char** av) {
 			return 1;
 		}
 		if (vm.count("listen")) {
-			std::cout 
+			std::cout
 				<< "Listen port was set to "
-				<< vm["listen"].as<unsigned short>() 
+				<< vm["listen"].as<unsigned short>()
 				<< "." << std::endl;
 			listen = vm["listen"].as<unsigned short>();
 			if (!is_port_valid(listen)) {
@@ -138,7 +144,7 @@ int main(int ac, char** av) {
 		if (vm.count("port")) {
 			std::cout
 				<< "Bootstrap port was set to "
-				<< vm["port"].as<unsigned short>() 
+				<< vm["port"].as<unsigned short>()
 				<< "." << std::endl;
 			port = vm["port"].as<unsigned short>();
 			if (!is_port_valid(port)) {
@@ -154,7 +160,7 @@ int main(int ac, char** av) {
 		if (vm.count("address")) {
 			std::cout
 				<< "Bootstrap address was set to "
-				<< vm["address"].as<std::string>() 
+				<< vm["address"].as<std::string>()
 				<< "." << std::endl;
 			address = vm["address"].as<std::string>();
 			is_address = true;
@@ -163,9 +169,9 @@ int main(int ac, char** av) {
 				<< "Bootstrap address was not set."
 				<< std::endl;
 		}
-		{ // listen to the socket	
+		{ // listen to the socket
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::tcp::v4(), 
+				boost::asio::ip::tcp::v4(),
 				listen);
 			listen_port = listen;
 			acceptor = new boost::asio::ip::tcp::acceptor(ios, ep);
@@ -186,7 +192,7 @@ int main(int ac, char** av) {
 						resolver.resolve(query);
 					uep = *iterator;
 				}
-				miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite = 
+				miniDHT::session<PACKET_SIZE>::map_ep_proto_session_iterator ite =
 					map_ep_proto_session.find(
 						miniDHT::endpoint_to_proto(uep));
 				std::string hello = "hello world!";
@@ -196,10 +202,11 @@ int main(int ac, char** av) {
 				msg.listen_port(listen);
 				msg.encode_header();
 				if (ite == map_ep_proto_session.end()) {
-					miniDHT::session<PACKET_SIZE>* new_session = 
+					miniDHT::session<PACKET_SIZE>* new_session =
 						new miniDHT::session<PACKET_SIZE>(
 						ios,
 						handle_receive,
+						handle_disconnected,
 						map_ep_proto_session);
 					new_session->connect(uep);
 					new_session->deliver(msg);
@@ -215,4 +222,3 @@ int main(int ac, char** av) {
 	}
 	return 0;
 }
-
