@@ -121,7 +121,7 @@ int main(int ac, char** av) {
 		fseeko(ifd, 0, SEEK_SET);
 #endif
 		buffer.resize(total);
-		int rd = fread(&buffer[0], 1, buffer.size(), ifd);
+		size_t rd = fread(&buffer[0], 1, buffer.size(), ifd);
 		buffer.resize(rd);
 		if (encrypt) {
 			buffer = ac.encrypt(buffer);
