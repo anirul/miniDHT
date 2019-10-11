@@ -63,36 +63,66 @@ void watch(boost::asio::deadline_timer* t) {
 				}
 			}
 			std::cout << "<<";
-			if (!found_key)
+			if (!found_key) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[31m";
+#endif
+			}
 			for (int i = 0; i < 4; ++i)
 				std::cout << ite->key()[i];
 			std::cout << "...";
 			size_t last = ite->key().size();
 			for (size_t i = last - 4; i < last; ++i)
 				std::cout << ite->key()[i];
-			if (!found_key)
+			if (!found_key) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[0m";
+#endif
+			}
 			std::cout << ">>";
 			std::cout << " - [";
-			if (!found_time)
+			if (!found_time) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[31m";
+#endif
+			}
 			{
 				time_t time = ite->time();
 				boost::posix_time::ptime recv_time = 
 					boost::posix_time::from_time_t(time);
 				std::cout << recv_time;
 			}
-			if (!found_time)
+			if (!found_time) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[0m";
+#endif
+			}
 			std::cout << "]"
 				<< " - {";
-			if (!found_endpoint)
+			if (!found_endpoint) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[31m";
+#endif
+			}
 			std::cout << ite->ep().address() << ":" 
 				<< ite->ep().port();
-			if (!found_endpoint)
+			if (!found_endpoint) {
+#ifdef _WIN64
+				std::cout << " - ";
+#else
 				std::cout << "\x1B[0m";
+#endif
+			}
 			std::cout  << "}" << std::endl;
 		}
 		s_ls = ls;
