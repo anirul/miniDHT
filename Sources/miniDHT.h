@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2012, Frederic DUBOUCHET
+ * Copyright (c) 2009-2019, Frederic DUBOUCHET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -96,7 +96,7 @@ namespace miniDHT {
 		db_key_value db_backup;
 		// token related storage
 		std::map<token_t, boost::posix_time::ptime> map_ping_ttl;
-		std::map<token_t, unsigned int> map_store_check_val;
+		std::map<token_t, size_t> map_store_check_val;
 		// session pointers
 		map_ep_proto_session_t map_ep_proto_session;
 

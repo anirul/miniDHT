@@ -1,4 +1,18 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
+
+if(NOT DEFINED ENV{VCPKG_TARGET_TRIPLET})
+	if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET})
+		set(VCPKG_TARGET_TRIPLET "$ENV{VCPKG_DEFAULT_TRIPLET}")
+		message("Set the target triplet to := " ${VCPKG_TARGET_TRIPLET})
+	endif()
+endif()
+
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      CACHE STRING "")
+endif()
+
+set(VCPKG_TARGET_ARCHITECTURE x64)
 
 project(miniDHT)
 
@@ -14,12 +28,13 @@ if(APPLE)
 endif(APPLE)
 
 if(WIN32 OR APPLE)
-    include_directories(
+    find_path(BOOST_INCLUDE_DIR boost)
+	include_directories(
         /opt/local/include
         /opt/local/include/freetype2
         /usr/local/include
         /usr/include
-        ${Boost_INCLUDE_DIRS}
+        ${BOOST_INCLUDE_DIR}
         ${PROJECT_SOURCE_DIR}/Sources
         ${PROJECT_SOURCE_DIR}/Tests
         ${PROTOBUF_INCLUDE_DIRS}
@@ -45,14 +60,13 @@ if(WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DATE_TIME_NO_LIB")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_REGEX_NO_LIB")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_SERIALIZATION_NO_LIB")
-    set(BOOST_ROOT "${PROJECT_SOURCE_DIR}/Thirdparty/boost_1_55_0")
 endif(WIN32)
 
 if(WIN32 OR APPLE)
     set(Boost_USE_STATIC_LIBS ON)
 endif(WIN32 OR APPLE)
 
-find_package(Boost 1.54.0 REQUIRED COMPONENTS
+find_package(Boost REQUIRED COMPONENTS
     thread
     program_options
     filesystem
@@ -60,15 +74,20 @@ find_package(Boost 1.54.0 REQUIRED COMPONENTS
     date_time
     chrono
     regex
-    python
 )
 
 find_package(Protobuf REQUIRED)
-PROTOBUF_GENERATE_CPP(
+protobuf_generate_cpp(
     PROTO_SRCS
     PROTO_HDRS
     ${PROJECT_SOURCE_DIR}/Sources/miniDHT_proto.proto
 )
+
+if(WIN32)
+	find_package(Sqlite3 CONFIG REQUIRED)
+	find_package(OpenSSL REQUIRED)
+	find_package(ZLIB REQUIRED)
+endif(WIN32)
 
 if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found")
@@ -142,6 +161,14 @@ if(APPLE)
         /opt/local/lib
     )
 endif(APPLE)
+
+if(WIN32)
+	set(SQLITE_LIBRARY sqlite3)
+	set(PROTOBUF_LIBRARY protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+	set(SSL_LIBRARY OpenSSL::SSL)
+	set(CRYPTO_LIBRARY OpenSSL::Crypto)
+	set(Z_LIBRARY ZLIB::ZLIB)
+endif(WIN32)
 
 target_link_libraries(aes_crypt_test
     ${Boost_LIBRARIES}

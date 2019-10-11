@@ -51,9 +51,15 @@ void add(
 			ss << "Could not open file [" << file << "]!";
 			throw std::runtime_error(ss.str());
 		}
+#if defined(_WIN64)
+		_fseeki64(pfile, 0, SEEK_END);
+		size_t total_size = _ftelli64(pfile);
+		_fseeki64(pfile, 0, SEEK_SET);
+#else
 		fseeko(pfile, 0, SEEK_END);
 		size_t total_size = ftello(pfile);
 		fseeko(pfile, 0, SEEK_SET);
+#endif
 		item.mutable_data()->resize(total_size);
 		size_t bytes_read = fread(
 			&((*item.mutable_data())[0]), 
