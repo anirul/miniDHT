@@ -29,6 +29,10 @@ db_key_value
 db_multi_key_data
 test
 
+# Build files #
+###############
+build/**
+
 # Compiled source #
 ###################
 *.com

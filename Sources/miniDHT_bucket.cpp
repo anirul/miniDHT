@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2012, anirul
+ * Copyright (c) 2009-2019, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -74,7 +74,7 @@ namespace miniDHT {
 		c.mutable_ep()->set_port(ep.port());
 		assert(c.ep().address() != std::string(""));
 		assert(c.ep().port() != std::string(""));
-		c.set_time(to_time_t(now_));
+		c.set_time(boost::posix_time::to_time_t(now_));
 		std::pair<unsigned int, contact_proto> p(common, c);
 		// is key here
 		iterator ite = find_key(k);
@@ -97,7 +97,7 @@ namespace miniDHT {
 				ite->second.mutable_ep()->set_address(ep.address());
 				ite->second.mutable_ep()->set_port(ep.port());
 			}
-			ite->second.set_time(to_time_t(now_));
+			ite->second.set_time(boost::posix_time::to_time_t(now_));
 		}
 	}
 

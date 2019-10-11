@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, anirul
+ * Copyright (c) 2011-2019, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include <stdio.h>
 
 #include <boost/program_options.hpp>
 
@@ -109,9 +111,15 @@ int main(int ac, char** av) {
 	try {
 		aes_crypt<5, 42> ac(key);
 		std::string buffer;
+#if defined(_WIN64) 
+		_fseeki64(ifd, 0, SEEK_END);
+		size_t total = _ftelli64(ifd);
+		_fseeki64(ifd, 0, SEEK_SET);
+#else
 		fseeko(ifd, 0, SEEK_END);
 		size_t total = ftello(ifd);
 		fseeko(ifd, 0, SEEK_SET);
+#endif
 		buffer.resize(total);
 		int rd = fread(&buffer[0], 1, buffer.size(), ifd);
 		buffer.resize(rd);

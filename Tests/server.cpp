@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, anirul
+ * Copyright (c) 2010-2019, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,19 +64,19 @@ void watch(boost::asio::deadline_timer* t) {
 			}
 			std::cout << "<<";
 			if (!found_key)
-				std::cout << "\e[31m";
+				std::cout << "\x1B[31m";
 			for (int i = 0; i < 4; ++i)
 				std::cout << ite->key()[i];
 			std::cout << "...";
 			size_t last = ite->key().size();
-			for (int i = last - 4; i < last; ++i)
+			for (size_t i = last - 4; i < last; ++i)
 				std::cout << ite->key()[i];
 			if (!found_key)
-				std::cout << "\e[0m";
+				std::cout << "\x1B[0m";
 			std::cout << ">>";
 			std::cout << " - [";
 			if (!found_time)
-				std::cout << "\e[31m";
+				std::cout << "\x1B[31m";
 			{
 				time_t time = ite->time();
 				boost::posix_time::ptime recv_time = 
@@ -84,15 +84,15 @@ void watch(boost::asio::deadline_timer* t) {
 				std::cout << recv_time;
 			}
 			if (!found_time)
-				std::cout << "\e[0m";
+				std::cout << "\x1B[0m";
 			std::cout << "]"
 				<< " - {";
 			if (!found_endpoint)
-				std::cout << "\e[31m";
+				std::cout << "\x1B[31m";
 			std::cout << ite->ep().address() << ":" 
 				<< ite->ep().port();
 			if (!found_endpoint)
-				std::cout << "\e[0m";
+				std::cout << "\x1B[0m";
 			std::cout  << "}" << std::endl;
 		}
 		s_ls = ls;

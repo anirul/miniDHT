@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, anirul
+ * Copyright (c) 2011-2019, anirul
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,27 +44,17 @@ namespace miniDHT {
 	}
 
 	db_key_value::~db_key_value() { 
-		try {
-			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-  	      if(need_mutex_) local_lock_.lock();
-			sqlite3_close(db_);	
-			db_ = NULL;
-		} catch (std::exception& ex) {
-			local_lock_.unlock();
-			throw ex;
-		}
+		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
+  	    if(need_mutex_) local_lock_.lock();
+		sqlite3_close(db_);	
+		db_ = NULL;
 	}
 
 	db_multi_key_data::~db_multi_key_data() {
-		try {
-			boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
-			if(need_mutex_) local_lock_.lock();
-			sqlite3_close(db_);
-			db_ = NULL;
-		} catch (std::exception& ex) {
-			local_lock_.unlock();
-			throw ex;
-		}
+		boost::mutex::scoped_lock lock_it(local_lock_, boost::defer_lock);
+		if(need_mutex_) local_lock_.lock();
+		sqlite3_close(db_);
+		db_ = NULL;
 	}
 
 	void db_key_value::open(const std::string& file_name) {
@@ -526,7 +516,7 @@ namespace miniDHT {
 			rc = sqlite3_prepare_v2(
 				db_, 
 				ss.str().c_str(),
-				ss.str().size(),
+				(int)ss.str().size(),
 				&stmt,
 				NULL);
 		}
@@ -542,7 +532,7 @@ namespace miniDHT {
 			stmt, 
 			1, 
 			&(data[0]), 
-			data.size(), 
+			(int)data.size(), 
 			SQLITE_STATIC);
 		if (rc != SQLITE_OK) {
 			local_lock_.unlock();
@@ -928,7 +918,7 @@ namespace miniDHT {
 					di.set_data(sqlite3_column_blob(stmt, i), data_size);
 				}
 			}
-			out.insert(std::make_pair<std::string, data_item_proto>(key, di));				
+			out.insert({ key, di });
 		}
 		rc = sqlite3_finalize(stmt);
 		if (rc != SQLITE_OK) {

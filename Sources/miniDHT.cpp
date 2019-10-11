@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2011, Frederic DUBOUCHET
+ * Copyright (c) 2009-2019, Frederic DUBOUCHET
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -337,7 +337,7 @@ namespace miniDHT {
                iterativeStore_nolock(ite->key, item);
             }
             periodic_thread_->yield();
-            usleep(100000);
+			std::this_thread::sleep_for(std::chrono::microseconds(100000));
          }
       } catch (std::exception& ex) {
          giant_lock_.unlock();
@@ -640,7 +640,7 @@ namespace miniDHT {
 
    void miniDHT::handle_SEND_STORE(const message_proto& m) {
       data_item_proto di(m.data_item());
-      di.set_time(to_time_t(update_time()));
+      di.set_time(boost::posix_time::to_time_t(update_time()));
       insert_db(m.to_id(), di);
       reply_STORE(m.from_id(), m.token(), di);
    }
