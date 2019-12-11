@@ -34,8 +34,10 @@
 
 #include "miniDHT.h"
 
-miniDHT::miniDHT* pDht = nullptr;
-bool g_enable_ansi = false;
+namespace {
+	std::unique_ptr<miniDHT::miniDHT> g_dht;
+	bool g_enable_ansi = false;
+}
 
 bool is_port_valid(unsigned short port) {
 	return ((port > 0) && (port < 0xc000));
@@ -46,7 +48,7 @@ void watch(boost::asio::deadline_timer* t) {
 	std::list<miniDHT::contact_proto> ls;
 	std::list<miniDHT::contact_proto>::const_iterator ite;
 	std::list<miniDHT::contact_proto>::const_iterator s_ite;
-	ls = pDht->nodes_description();
+	ls = g_dht->nodes_description();
 	if (ls != s_ls) {
 		std::cout << std::endl;
 		std::cout << miniDHT::update_time() << std::endl;
@@ -220,10 +222,10 @@ int main(int ac, char** av) {
 			boost::asio::ip::tcp::endpoint ep(
 				boost::asio::ip::tcp::v4(),
 				listen);
-			pDht = new miniDHT::miniDHT(ios_dht, ep);
+			g_dht = std::make_unique<miniDHT::miniDHT>(ios_dht, ep);
 			if (is_port && is_address)
-				pDht->send_PING(miniDHT::create_endpoint_proto(address, port));
-			if (is_max_record) pDht->set_max_record(max_record);
+				g_dht->send_PING(miniDHT::create_endpoint_proto(address, port));
+			if (is_max_record) g_dht->set_max_record(max_record);
 			boost::asio::deadline_timer t(
 				ios_watch, 
 				boost::posix_time::seconds(5));

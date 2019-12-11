@@ -54,51 +54,25 @@ bool is_port_valid(unsigned short port) {
 
 void store_value(boost::asio::deadline_timer* t);
 
-void myValue (const list<miniDHT::data_item_proto>& b) {
+void myValue(const list<miniDHT::data_item_proto>& b) {
 	g_receive_count++;
 	static unsigned long lost_nb = 0;
-//	if (lost_nb != g_send_count - g_receive_count) {
-		lost_nb = g_send_count - g_receive_count;
-		double percentage = (double)(lost_nb) / (double)g_send_count;
-		percentage *= 100.0;
-		std::cout << ">> RECEIVE loose ratio " << lost_nb
-			<< "/" << g_send_count
-			<< "(" << percentage << "%)"
-			<< std::endl;
-//	}
+	lost_nb = g_send_count - g_receive_count;
+	double percentage = (double)(lost_nb) / (double)g_send_count;
+	percentage *= 100.0;
+	std::cout << ">> RECEIVE loose ratio " << lost_nb
+		<< "/" << g_send_count
+		<< "(" << percentage << "%)"
+		<< std::endl;
 	list<miniDHT::data_item_proto>::const_iterator ite = b.begin();
-	for (; ite != b.end(); ++ite) {
-//		std::cout 
-//			<< "<" << ite->time 
-//			<< ", " << ite->ttl << "> " 
-//			<< "<[" << ite->title 
-//			<< "], [" << ite->data << "]>"
-//			<< std::endl;
-	}
 }
 
 void retrieve_value(boost::asio::deadline_timer* t) {
 	g_send_count++;
 	std::vector<miniDHT::miniDHT*>::iterator ite;
-//	int i = 0;
-//	for (ite = list_ptd.begin(); ite != list_ptd.end(); ++ite) {
-//		std::cout 
-//			<< "[" << i++ << "] : nb of data : " 
-//			<< (*ite)->storage_size() << " <<" 
-//			<< miniDHT::key_to_string((*ite)->get_local_key()) 
-//			<< ">> IP " << (*ite)->get_local_endpoint() 
-//			<< std::endl;
-//	}
 	miniDHT::miniDHT::value_callback_t vc = &myValue;
 	unsigned long position = random() % list_ptd.size();
 	miniDHT::miniDHT* pDHT = list_ptd.at(position);
-//	std::cout << "|| node : " << position << " knows : " 
-//		<< pDHT->bucket_size() << " nodes." << std::endl;
-//	std::cout << std::endl;
-//	std::cout << std::endl;
-//	std::cout << std::endl;
-//	std::cout << "|| find value <<" << miniDHT::key_to_string(g_key) << ">>" << std::endl;
-//	std::cout << "|| from node  <<" << miniDHT::key_to_string(pDHT->get_local_key()) << ">>" << std::endl;
 	pDHT->iterativeFindValue(miniDHT::key_to_string(g_key), vc, "test");
 	t->expires_at(t->expires_at() + boost::posix_time::millisec(milli_wait));
 	static int local_count = 0;
@@ -125,13 +99,6 @@ void store_value(boost::asio::deadline_timer* t) {
 	data.set_title(string("test.message"));
 	data.set_data(&test[0], test.size());
 	miniDHT::miniDHT* pDHT = list_ptd.at(random() % list_ptd.size());
-//	std::list<std::string> ls = pDHT->nodes_description();
-//	std::cout 
-//		<< "get local ID <<"
-//		<< miniDHT::key_to_string<key_size>(pDHT->get_local_key())
-//		<< ">> & IP " << pDHT->get_local_endpoint() << std::endl;
-//	for (std::list<std::string>::iterator ite = ls.begin(); ite != ls.end(); ++ite)
-//		std::cout << (*ite) << std::endl;
 	pDHT->iterativeStore(miniDHT::key_to_string(g_key), data);
 	std::cout << std::endl;
 	t->expires_at(t->expires_at() + boost::posix_time::millisec(milli_wait));
@@ -248,4 +215,3 @@ int main(int ac, char** av) {
 	}
 	return 0;
 }
-
