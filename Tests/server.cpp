@@ -34,7 +34,8 @@
 
 #include "miniDHT.h"
 
-miniDHT::miniDHT* pDht = NULL;
+miniDHT::miniDHT* pDht = nullptr;
+bool g_enable_ansi = false;
 
 bool is_port_valid(unsigned short port) {
 	return ((port > 0) && (port < 0xc000));
@@ -63,36 +64,54 @@ void watch(boost::asio::deadline_timer* t) {
 				}
 			}
 			std::cout << "<<";
-			if (!found_key)
-				std::cout << "\x1B[31m";
+			if (g_enable_ansi) {
+				if (!found_key) {
+					std::cout << "\x1B[31m";
+				}
+			}
 			for (int i = 0; i < 4; ++i)
 				std::cout << ite->key()[i];
 			std::cout << "...";
 			size_t last = ite->key().size();
 			for (size_t i = last - 4; i < last; ++i)
 				std::cout << ite->key()[i];
-			if (!found_key)
-				std::cout << "\x1B[0m";
+			if (g_enable_ansi) {
+				if (!found_key) {
+					std::cout << "\x1B[0m";
+				}
+			}
 			std::cout << ">>";
 			std::cout << " - [";
-			if (!found_time)
-				std::cout << "\x1B[31m";
+			if (g_enable_ansi) {
+				if (!found_time) {
+					std::cout << "\x1B[31m";
+				}
+			}
 			{
 				time_t time = ite->time();
 				boost::posix_time::ptime recv_time = 
 					boost::posix_time::from_time_t(time);
 				std::cout << recv_time;
 			}
-			if (!found_time)
-				std::cout << "\x1B[0m";
+			if (g_enable_ansi) {
+				if (!found_time) {
+					std::cout << "\x1B[0m";
+				}
+			}
 			std::cout << "]"
 				<< " - {";
-			if (!found_endpoint)
-				std::cout << "\x1B[31m";
+			if (g_enable_ansi) {
+				if (!found_endpoint) {
+					std::cout << "\x1B[31m";
+				}
+			}
 			std::cout << ite->ep().address() << ":" 
 				<< ite->ep().port();
-			if (!found_endpoint)
-				std::cout << "\x1B[0m";
+			if (g_enable_ansi) {
+				if (!found_endpoint) {
+					std::cout << "\x1B[0m";
+				}
+			}
 			std::cout  << "}" << std::endl;
 		}
 		s_ls = ls;
@@ -113,14 +132,16 @@ int main(int ac, char** av) {
 		boost::program_options::options_description desc("Allowed options");
 		desc.add_options()
 			("help,h", "produce help message")
-			("listen,l", boost::program_options::value<unsigned short>(), 
+			("listen,l", boost::program_options::value<unsigned short>(),
 				"set the listen port")
-			("port,p", boost::program_options::value<unsigned short>(), 
+			("port,p", boost::program_options::value<unsigned short>(),
 				"set the bootstrap port")
-			("address,a", boost::program_options::value<std::string>(), 
+			("address,a", boost::program_options::value<std::string>(),
 				"set the bootstrap address")
-			("max-record,m", boost::program_options::value<size_t>(), 
+			("max-record,m", boost::program_options::value<size_t>(),
 				"set the maximum number of local record")
+			("enable-ansi,s", boost::program_options::value<bool>(),
+				"enable use of ANSI as output")
 		;
 		boost::program_options::variables_map vm;
 		boost::program_options::store(
@@ -187,6 +208,11 @@ int main(int ac, char** av) {
 			std::cout
 				<< "Max record was not set (default is 8Gb)."
 				<< std::endl;
+		}
+		if (vm.count("enable-ansi")) {
+			g_enable_ansi = true;
+		} else {
+			g_enable_ansi = false;
 		}
 		{
 			boost::asio::io_service ios_dht;

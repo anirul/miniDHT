@@ -34,7 +34,6 @@ namespace miniDHT {
 		changed_ = true;
 	}
 
-
 	endpoint_proto bucket::operator[](const key_t& k) {
 		unsigned int common = common_bits<KEY_SIZE>(
 			string_to_key<KEY_SIZE>(local_key_), 
@@ -52,8 +51,7 @@ namespace miniDHT {
 		for (iterator ite = this->begin(); ite != this->end(); ++ite) {
 			if (ite->second.ep() == ep) {
 				this->erase(ite);
-				ite = this->begin();
-				continue;
+				return;
 			}
 		}
 	}
@@ -139,5 +137,4 @@ namespace miniDHT {
 		return key_to_string(ret);
 	}
 
-}
-
+} // End namespace miniDHT.

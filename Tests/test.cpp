@@ -145,6 +145,7 @@ void start_operation(boost::asio::deadline_timer* t)
 } 
 
 int main(int ac, char** av) {
+	const std::string localhost = "127.0.0.1";
 	try {
 		// nb of server
 		short port = 4048;
@@ -223,15 +224,15 @@ int main(int ac, char** av) {
 			ss << port;
 			string next_port = ss.str();
 			miniDHT::miniDHT* ptd = NULL;
-			list_name.push_back(std::string("localhost"));
+			list_name.push_back(localhost);
 			list_port.push_back(previous_port);
 			boost::asio::ip::tcp::endpoint ep(
-				boost::asio::ip::address::from_string("localhost"),
-				atoi(next_port.c_str()));
+				boost::asio::ip::address::from_string(localhost),
+				std::stoi(next_port));
 			ptd = new miniDHT::miniDHT(io_service, ep);
 			ptd->send_PING(
 				miniDHT::create_endpoint_proto(
-					string("localhost"), // list_name, 
+					localhost, // list_name, 
 					previous_port)); // list_port);
 			previous_port = next_port;
 			list_ptd.push_back(ptd);
